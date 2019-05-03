@@ -443,20 +443,19 @@ void PathPlanningWidget::loadPointsFromFile()
 					geometry_msgs::Pose pose;
 					tf::Transform pose_tf;
 
-					double x,y,z,rx, ry, rz;
+					double x,y,z;
+          double qx, qy, qz, qw;
+
 					name = doc[i]["name"].as<std::string>();
 					x = doc[i]["point"][0].as<double>();
 					y = doc[i]["point"][1].as<double>();
 					z = doc[i]["point"][2].as<double>();
-					rx = doc[i]["point"][3].as<double>();
-					ry = doc[i]["point"][4].as<double>();
-					rz = doc[i]["point"][5].as<double>();
+					qx = doc[i]["point"][3].as<double>();
+					qy = doc[i]["point"][4].as<double>();
+					qz = doc[i]["point"][5].as<double>();
+					qw = doc[i]["point"][6].as<double>();
 
-					rx = DEG2RAD(rx);
-					ry = DEG2RAD(ry);
-					rz = DEG2RAD(rz);
-
-					pose_tf = tf::Transform(tf::createQuaternionFromRPY(rx,ry,rz),tf::Vector3(x,y,z));
+					pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw),tf::Vector3(x,y,z));
 
 					percent_complete = (i+1)*100/end_of_doc;
 					ui_.progressBar->setValue(percent_complete);

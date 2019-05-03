@@ -649,13 +649,14 @@ void AddWayPoint::saveWayPointsToFile()
       points_vec.push_back(waypoints_pos[i].getOrigin().y());
       points_vec.push_back(waypoints_pos[i].getOrigin().z());
 
-      double rx, ry, rz;
+      tf::Quaternion q;
 
       tf::Matrix3x3 m(waypoints_pos[i].getRotation());
-      m.getRPY(rx, ry, rz,1);
-      points_vec.push_back(RAD2DEG(rx));
-      points_vec.push_back(RAD2DEG(ry));
-      points_vec.push_back(RAD2DEG(rz));
+      m.getRotation(q);
+      points_vec.push_back(q.x());
+      points_vec.push_back(q.y());
+      points_vec.push_back(q.z());
+      points_vec.push_back(q.w());
 
       out << YAML::Key << "name";
       out << YAML::Value << (i+1);
