@@ -174,31 +174,7 @@ void GenerateCartesianPath::checkWayPointValidity(const geometry_msgs::Pose& way
       /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
           In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
       */
-      geometry_msgs::TransformStamped waypoint_trans;
-      waypoint_trans.header.stamp = ros::Time::now();
-      waypoint_trans.header.frame_id = "elevator_link";
-      waypoint_trans.child_frame_id = "pose_frame";
-      waypoint_trans.transform.translation.x = waypoint.position.x;
-      waypoint_trans.transform.translation.y = waypoint.position.y;
-      waypoint_trans.transform.translation.z = waypoint.position.z;
-
-      waypoint_trans.transform.rotation.x = waypoint.orientation.x;
-      waypoint_trans.transform.rotation.y = waypoint.orientation.y;
-      waypoint_trans.transform.rotation.z = waypoint.orientation.z;
-      waypoint_trans.transform.rotation.w = waypoint.orientation.w;
-      
-      Eigen::Affine3d trans, res_trans;
-      trans = kinematic_state_->getFrameTransform("elevator_link");
-
-      Eigen::Affine3d const& const_trans = trans;
-      tf2::doTransform(const_trans, res_trans, waypoint_trans);
-      Eigen::Affine3d const const_res_trans = res_trans;
-
-      // const Eigen::Affine3d(res_trans);
-
-      geometry_msgs::Pose transformed_waypoint_pose = tf2::toMsg(const_res_trans);
-
-      bool found_ik = kinematic_state_->setFromIK(joint_model_group_, transformed_waypoint_pose, 3, 0.006);
+       bool found_ik = kinematic_state_->setFromIK(joint_model_group_, waypoint, 3, 0.006);
 
          if(found_ik)
         {
