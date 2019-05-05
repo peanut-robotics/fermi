@@ -639,34 +639,44 @@ void AddWayPoint::saveWayPointsToFile()
       }
 
     YAML::Emitter out;
-    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << YAML::Key << "frame_id";
+    out << YAML::Value << "elevator_link";
 
+    out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
+    
     for(int i=0;i<waypoints_pos.size();i++)
   {
       out << YAML::BeginMap;
-      std::vector <double> points_vec;
-      points_vec.push_back(waypoints_pos[i].getOrigin().x());
-      points_vec.push_back(waypoints_pos[i].getOrigin().y());
-      points_vec.push_back(waypoints_pos[i].getOrigin().z());
+      
+      out << YAML::Key << "position";
+      out << YAML::Value;
+      out << YAML::BeginMap;
+      out << YAML::Key << "x" << YAML::Value << waypoints_pos[i].getOrigin().x();
+      out << YAML::Key << "y" << YAML::Value << waypoints_pos[i].getOrigin().y();
+      out << YAML::Key << "z" << YAML::Value << waypoints_pos[i].getOrigin().z();
+      out << YAML::EndMap;
+
+      out << YAML::Key << "orientation";
+      out << YAML::Value;
 
       tf::Quaternion q;
-
       tf::Matrix3x3 m(waypoints_pos[i].getRotation());
       m.getRotation(q);
-      points_vec.push_back(q.x());
-      points_vec.push_back(q.y());
-      points_vec.push_back(q.z());
-      points_vec.push_back(q.w());
-
-      out << YAML::Key << "name";
-      out << YAML::Value << (i+1);
-      out << YAML::Key << "point";
-      out << YAML::Value << YAML::Flow << points_vec;
+      out << YAML::BeginMap;
+      out << YAML::Key << "x" << YAML::Value << q.x();
+      out << YAML::Key << "y" << YAML::Value << q.y();
+      out << YAML::Key << "z" << YAML::Value << q.z();
+      out << YAML::Key << "w" << YAML::Value << q.w();
       out << YAML::EndMap;
+
+      out << YAML::EndMap;
+
   }
 
 
-      out << YAML::EndSeq;
+    out << YAML::EndSeq; // End list of points
+    out << YAML::EndMap;
 
       std::ofstream myfile;
       myfile.open (fileName.toStdString().c_str());

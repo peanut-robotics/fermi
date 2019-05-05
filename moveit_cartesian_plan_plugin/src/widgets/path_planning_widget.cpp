@@ -446,14 +446,14 @@ void PathPlanningWidget::loadPointsFromFile()
 					double x,y,z;
           double qx, qy, qz, qw;
 
-					name = doc[i]["name"].as<std::string>();
-					x = doc[i]["point"][0].as<double>();
-					y = doc[i]["point"][1].as<double>();
-					z = doc[i]["point"][2].as<double>();
-					qx = doc[i]["point"][3].as<double>();
-					qy = doc[i]["point"][4].as<double>();
-					qz = doc[i]["point"][5].as<double>();
-					qw = doc[i]["point"][6].as<double>();
+					name = std::to_string(i);
+					x = doc["points"][i]["position"]["x"].as<double>();
+					y = doc["points"][i]["position"]["y"].as<double>();
+					z = doc["points"][i]["position"]["z"].as<double>();
+					qx = doc["points"][i]["orientation"]["x"].as<double>();
+					qy = doc["points"][i]["orientation"]["y"].as<double>();
+					qz = doc["points"][i]["orientation"]["z"].as<double>();
+					qw = doc["points"][i]["orientation"]["w"].as<double>();
 
 					pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw),tf::Vector3(x,y,z));
 
