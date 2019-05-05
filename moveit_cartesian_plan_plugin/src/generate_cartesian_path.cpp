@@ -14,6 +14,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseArray.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 
 GenerateCartesianPath::GenerateCartesianPath(QObject *parent)
@@ -192,9 +193,7 @@ void GenerateCartesianPath::checkWayPointValidity(const geometry_msgs::Pose& way
 
       Eigen::Affine3d const& const_trans = trans;
       tf2::doTransform(const_trans, res_trans, waypoint_trans);
-      Eigen::Affine3d const const_res_trans = res_trans;
-
-      // const Eigen::Affine3d(res_trans);
+      Eigen::Affine3d const& const_res_trans = res_trans;
 
       geometry_msgs::Pose transformed_waypoint_pose = tf2::toMsg(const_res_trans);
 
