@@ -381,7 +381,7 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
 
         ROS_INFO_STREAM("Markers frame is: "<< target_frame_);
 
-        int_marker.header.frame_id = "target_frame_";
+        int_marker.header.frame_id = target_frame_;
 
          ROS_DEBUG_STREAM("Markers has frame id: "<< int_marker.header.frame_id);
 
