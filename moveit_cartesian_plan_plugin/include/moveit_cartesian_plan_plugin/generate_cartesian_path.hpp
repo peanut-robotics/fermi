@@ -49,12 +49,17 @@ public:
 public Q_SLOTS:
 	//! Get the Way-Points from the RViz enviroment and use them to generate Cartesian Path.
   void moveToPose(std::vector<geometry_msgs::Pose> waypoints);
+
+	void moveToConfig(std::vector<double> config);
+
   //! Checks if the Way-Point is in the valid IK solution for the Robot.
 	void checkWayPointValidity(const geometry_msgs::Pose& waypoints,const int marker_name);
 	//! Slot for letting the Cartesian Path planning class that the RViz has finished with its initialization.
 	void initRvizDone();
 	//! Function for setting time consuming Cartesian Path Execution function to a separate thread.
 	void cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints);
+
+	void freespacePathHandler(std::vector<double> config);
 	//! Get the User entered MoveIt and Cartesian Path parameters and pass them to the corresponding private variables.
 	void setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_);
 

@@ -16,6 +16,18 @@
 #include <geometry_msgs/PoseArray.h>
 #include <tf2_eigen/tf2_eigen.h>
 
+#include <pluginlib/class_loader.h>
+
+// MoveIt!
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/kinematic_constraints/utils.h>
+#include <moveit_msgs/DisplayTrajectory.h>
+#include <moveit_msgs/PlanningScene.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
+
 
 GenerateCartesianPath::GenerateCartesianPath(QObject *parent)
 {
@@ -118,6 +130,26 @@ void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_siz
   AVOID_COLLISIONS_ = avoid_collisions_;
 }
 
+void GenerateCartesianPath::moveToConfig(std::vector<double> config) 
+{
+    Q_EMIT cartesianPathExecuteStarted();
+
+    ROS_INFO("starting plan to config");
+
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+    moveit_group_->setPlanningTime(PLAN_TIME_);
+    moveit_group_->allowReplanning (MOVEIT_REPLAN_);
+
+    moveit_group_->setJointValueTarget(config);
+
+    bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    ROS_INFO_NAMED("tutorial", "Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
+    moveit_group_->execute(my_plan);
+
+    Q_EMIT cartesianPathExecuteFinished();
+
+}
+
 void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints)
 {
     /*!
@@ -167,6 +199,15 @@ void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose
   */
   ROS_INFO("Starting concurrent process for Cartesian Path");
   QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToPose, waypoints);
+}
+
+void GenerateCartesianPath::freespacePathHandler(std::vector<double> config)
+{
+  /*! Since the execution of the Cartesian path is time consuming and can lead to locking up of the Plugin and the RViz enviroment the function for executing the Cartesian Path Plan has been placed in a separtate thread.
+      This prevents the RViz and the Plugin to lock.
+  */
+  ROS_INFO("Starting concurrent process for Freespace Planning");
+  QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToConfig, config);
 }
 
 

@@ -64,6 +64,7 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.treeView->selectionModel(),SIGNAL(currentChanged(const QModelIndex& , const QModelIndex& )),this,SLOT(treeViewDataChanged(const QModelIndex& , const QModelIndex&)));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(parseWayPointBtn_slot()));
+      connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parseConfigBtn_slot()));
       connect(ui_.btn_LoadPath,SIGNAL(clicked()),this,SLOT(loadPointsFromFile()));
       connect(ui_.btn_SavePath,SIGNAL(clicked()),this,SLOT(savePointsToFile()));
       connect(ui_.btn_ClearAllPoints,SIGNAL(clicked()),this,SLOT(clearAllPoints_slot()));
@@ -232,37 +233,37 @@ namespace moveit_cartesian_plan_plugin
       QModelIndex chldind_orient = model->index(1, 0, ind);
       model->setData(chldind_pos, QVariant("Position"), Qt::EditRole);
       model->setData(chldind_orient, QVariant("Orientation"), Qt::EditRole);
-//*****************************Set the children for the position**********************************************************
-      //now add information about each child separately. For the position we have coordinates for X,Y,Z axis.
-      //therefore we add 3 rows of information
-      model->insertRows(0, 3, chldind_pos);
+      //*****************************Set the children for the position**********************************************************
+            //now add information about each child separately. For the position we have coordinates for X,Y,Z axis.
+            //therefore we add 3 rows of information
+            model->insertRows(0, 3, chldind_pos);
 
-      //next we set up the data for each of these columns. First the names
-      model->setData(model->index(0, 0, chldind_pos), QVariant("X:"), Qt::EditRole);
-      model->setData(model->index(1, 0, chldind_pos), QVariant("Y:"), Qt::EditRole);
-      model->setData(model->index(2, 0, chldind_pos), QVariant("Z:"), Qt::EditRole);
+            //next we set up the data for each of these columns. First the names
+            model->setData(model->index(0, 0, chldind_pos), QVariant("X:"), Qt::EditRole);
+            model->setData(model->index(1, 0, chldind_pos), QVariant("Y:"), Qt::EditRole);
+            model->setData(model->index(2, 0, chldind_pos), QVariant("Z:"), Qt::EditRole);
 
-      //second we add the current position information, for each position axis separately
-      model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
-      model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
-      model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
-//***************************************************************************************************************************
+            //second we add the current position information, for each position axis separately
+            model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
+            model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
+            model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
+      //***************************************************************************************************************************
 
-//*****************************Set the children for the orientation**********************************************************
-      //now we repeat everything again,similar as the position for adding the children for the orientation
-      model->insertRows(0, 3, chldind_orient);
-      //next we set up the data for each of these columns. First the names
-      model->setData(model->index(0, 0, chldind_orient), QVariant("Rx:"), Qt::EditRole);
-      model->setData(model->index(1, 0, chldind_orient), QVariant("Ry:"), Qt::EditRole);
-      model->setData(model->index(2, 0, chldind_orient), QVariant("Rz:"), Qt::EditRole);
+      //*****************************Set the children for the orientation**********************************************************
+            //now we repeat everything again,similar as the position for adding the children for the orientation
+            model->insertRows(0, 3, chldind_orient);
+            //next we set up the data for each of these columns. First the names
+            model->setData(model->index(0, 0, chldind_orient), QVariant("Rx:"), Qt::EditRole);
+            model->setData(model->index(1, 0, chldind_orient), QVariant("Ry:"), Qt::EditRole);
+            model->setData(model->index(2, 0, chldind_orient), QVariant("Rz:"), Qt::EditRole);
 
-      //second we add the current position information, for each position axis separately
-      model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
-      model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
-      model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-//****************************************************************************************************************************
+            //second we add the current position information, for each position axis separately
+            model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
+            model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
+            model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
+      //****************************************************************************************************************************
       pointRange();
-    }
+      }
 
     }
     void PathPlanningWidget::removeRow(int marker_nr)
@@ -324,7 +325,7 @@ namespace moveit_cartesian_plan_plugin
       {
 
           int changed_marker = atoi(marker_name);
-    //**********************update the positions and orientations of the children as well***********************************************************************************************
+      //**********************update the positions and orientations of the children as well***********************************************************************************************
           QModelIndex ind = model->index(changed_marker, 0);
           QModelIndex chldind_pos = model->index(0, 0, ind);
           QModelIndex chldind_orient = model->index(1, 0, ind);
@@ -339,7 +340,7 @@ namespace moveit_cartesian_plan_plugin
           model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
           model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
           model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-//*****************************************************************************************************************************************************************************************
+      //*****************************************************************************************************************************************************************************************
       }
 
     }
@@ -396,77 +397,109 @@ namespace moveit_cartesian_plan_plugin
       */
       Q_EMIT parseWayPointBtn_signal();
     }
+    void PathPlanningWidget::parseConfigBtn_slot(){
+      std::vector<double> config;
 
-void PathPlanningWidget::loadPointsFromFile()
-{
-	/*! Slot that takes care of opening a previously saved Way-Points yaml file.
-			Opens Qt Dialog for selecting the file, opens the file and parses the data.
-			After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
-	*/
-	QString fileName = QFileDialog::getOpenFileName(this,
-				tr("Open Way Points File"), "",
-				tr("Way Points (*.yaml);;All Files (*)"));
+      config.push_back(ui_.LineEdit_j1->text().toDouble());
+      config.push_back(ui_.LineEdit_j2->text().toDouble());
+      config.push_back(ui_.LineEdit_j3->text().toDouble());
+      config.push_back(ui_.LineEdit_j4->text().toDouble());
+      config.push_back(ui_.LineEdit_j5->text().toDouble());
+      config.push_back(ui_.LineEdit_j6->text().toDouble());
+      config.push_back(ui_.LineEdit_j7->text().toDouble());
 
-			if (fileName.isEmpty())
-			{
-				ui_.tabWidget->setEnabled(true);
-				ui_.progressBar->hide();
-				return;
-			}
-		else {
-				ui_.tabWidget->setEnabled(false);
-				ui_.progressBar->show();
-				QFile file(fileName);
+      Q_EMIT parseConfigBtn_signal(config);
+    }
+    void PathPlanningWidget::loadPointsFromFile()
+      {
+        /*! Slot that takes care of opening a previously saved Way-Points yaml file.
+            Opens Qt Dialog for selecting the file, opens the file and parses the data.
+            After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
+        */
 
-				if (!file.open(QIODevice::ReadOnly)) {
-						QMessageBox::information(this, tr("Unable to open file"),
-								file.errorString());
-						file.close();
-						ui_.tabWidget->setEnabled(true);
-						ui_.progressBar->hide();
-						return;
-				}
-					//clear all the scene before loading all the new points from the file!!
-					clearAllPoints_slot();
+        QString fileName = QFileDialog::getOpenFileName(this,
+              tr("Open Way Points File"), "",
+              tr("Way Points (*.yaml);;All Files (*)"));
 
-					ROS_INFO_STREAM("Opening the file: "<<fileName.toStdString());
-					std::string fin(fileName.toStdString());
+            if (fileName.isEmpty())
+            {
+              ui_.tabWidget->setEnabled(true);
+              ui_.progressBar->hide();
+              return;
+            }
+          else {
+          ui_.tabWidget->setEnabled(false);
+          ui_.progressBar->show();
+          QFile file(fileName);
 
-		YAML::Node doc;
-			doc = YAML::LoadFile(fin);
-				//define double for percent of completion
-				double percent_complete;
-				int end_of_doc = doc.size();
+          if (!file.open(QIODevice::ReadOnly)) {
+              QMessageBox::information(this, tr("Unable to open file"),
+                  file.errorString());
+              file.close();
+              ui_.tabWidget->setEnabled(true);
+              ui_.progressBar->hide();
+              return;
+          }
+            //clear all the scene before loading all the new points from the file!!
+            clearAllPoints_slot();
 
-				for (size_t i = 0; i < end_of_doc; i++) {
-					std::string name;
-					geometry_msgs::Pose pose;
-					tf::Transform pose_tf;
+            ROS_INFO_STREAM("Opening the file: "<<fileName.toStdString());
+            std::string fin(fileName.toStdString());
 
-					double x,y,z;
-          double qx, qy, qz, qw;
+        try {
+          YAML::Node doc;
+          doc = YAML::LoadFile(fin);
+            //define double for percent of completion
+            double percent_complete;
+            int end_of_doc = doc.size();
 
-					name = std::to_string(i);
-					x = doc["points"][i]["position"]["x"].as<double>();
-					y = doc["points"][i]["position"]["y"].as<double>();
-					z = doc["points"][i]["position"]["z"].as<double>();
-					qx = doc["points"][i]["orientation"]["x"].as<double>();
-					qy = doc["points"][i]["orientation"]["y"].as<double>();
-					qz = doc["points"][i]["orientation"]["z"].as<double>();
-					qw = doc["points"][i]["orientation"]["w"].as<double>();
+            std::vector<double> startConfig = doc["start_config"].as<std::vector<double>>();
 
-					pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw),tf::Vector3(x,y,z));
+            ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+            ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+            ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+            ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+            ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+            ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+            ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
 
-					percent_complete = (i+1)*100/end_of_doc;
-					ui_.progressBar->setValue(percent_complete);
-					Q_EMIT addPoint(pose_tf);
-				}
-				ui_.tabWidget->setEnabled(true);
-				ui_.progressBar->hide();
-			}
-}
-void PathPlanningWidget::savePointsToFile()
-{
+            for (size_t i = 0; i < end_of_doc; i++) {
+              std::string name;
+              geometry_msgs::Pose pose;
+              tf::Transform pose_tf;
+
+              double x,y,z;
+              double qx, qy, qz, qw;
+
+              name = std::to_string(i);
+              x = doc["points"][i]["position"]["x"].as<double>();
+              y = doc["points"][i]["position"]["y"].as<double>();
+              z = doc["points"][i]["position"]["z"].as<double>();
+              qx = doc["points"][i]["orientation"]["x"].as<double>();
+              qy = doc["points"][i]["orientation"]["y"].as<double>();
+              qz = doc["points"][i]["orientation"]["z"].as<double>();
+              qw = doc["points"][i]["orientation"]["w"].as<double>();
+
+              pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw),tf::Vector3(x,y,z));
+
+              percent_complete = (i+1)*100/end_of_doc;
+              ui_.progressBar->setValue(percent_complete);
+              Q_EMIT addPoint(pose_tf);
+            }
+        }
+        catch (char *excp){ 
+          ROS_INFO("bla de bla, first error");
+          ROS_INFO_STREAM("Caught " << excp); 
+        }
+        catch (...){
+          ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
+        }
+          ui_.tabWidget->setEnabled(true);
+          ui_.progressBar->hide();
+        }
+    }
+    void PathPlanningWidget::savePointsToFile()
+    {
       /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
       Q_EMIT saveToFileBtn_press();

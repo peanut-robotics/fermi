@@ -78,7 +78,7 @@ void AddWayPoint::onInitialize()
 
     connect(path_generate,SIGNAL(getRobotModelFrame_signal(const std::string,const tf::Transform)),widget_,SLOT(setAddPointUIStartPos(const std::string,const tf::Transform)));
 
-    connect(widget_,SIGNAL(addPoint(tf::Transform)),this,SLOT( addPointFromUI( tf::Transform)));
+    connect(widget_,SIGNAL(addPoint(tf::Transform)), this,SLOT( addPointFromUI( tf::Transform)));
     connect(widget_,SIGNAL(pointDelUI_signal(std::string)),this,SLOT(pointDeleted( std::string)));
     connect(this,SIGNAL(addPointRViz(const tf::Transform&,const int)),widget_,SLOT(insertRow(const tf::Transform&,const int)));
     connect(this,SIGNAL(pointPoseUpdatedRViz(const tf::Transform&,const char*)),widget_,SLOT(pointPosUpdated_slot(const tf::Transform&,const char*)));
@@ -91,6 +91,8 @@ void AddWayPoint::onInitialize()
 
     connect(widget_,SIGNAL(parseWayPointBtn_signal()),this,SLOT(parseWayPoints()));
     connect(this,SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)),path_generate,SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
+    connect(widget_,SIGNAL(parseConfigBtn_signal(std::vector<double>)),path_generate,SLOT(freespacePathHandler(std::vector<double>)));
+
     connect(widget_,SIGNAL(saveToFileBtn_press()),this,SLOT(saveWayPointsToFile()));
     connect(widget_,SIGNAL(clearAllPoints_signal()),this,SLOT(clearAllPointsRViz()));
 
