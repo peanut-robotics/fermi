@@ -64,7 +64,8 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.treeView->selectionModel(),SIGNAL(currentChanged(const QModelIndex& , const QModelIndex& )),this,SLOT(treeViewDataChanged(const QModelIndex& , const QModelIndex&)));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(parseWayPointBtn_slot()));
-      connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parseConfigBtn_slot()));
+      connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parsePlanConfigBtn_slot()));
+      connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(parsePlanExecuteConfigBtn_slot()));
       connect(ui_.btn_LoadPath,SIGNAL(clicked()),this,SLOT(loadPointsFromFile()));
       connect(ui_.btn_SavePath,SIGNAL(clicked()),this,SLOT(savePointsToFile()));
       connect(ui_.btn_ClearAllPoints,SIGNAL(clicked()),this,SLOT(clearAllPoints_slot()));
@@ -397,7 +398,7 @@ namespace moveit_cartesian_plan_plugin
       */
       Q_EMIT parseWayPointBtn_signal();
     }
-    void PathPlanningWidget::parseConfigBtn_slot(){
+    void PathPlanningWidget::parsePlanConfigBtn_slot(){
       std::vector<double> config;
 
       config.push_back(ui_.LineEdit_j1->text().toDouble());
@@ -408,8 +409,25 @@ namespace moveit_cartesian_plan_plugin
       config.push_back(ui_.LineEdit_j6->text().toDouble());
       config.push_back(ui_.LineEdit_j7->text().toDouble());
 
-      Q_EMIT parseConfigBtn_signal(config);
+      bool plan_only = true;
+      Q_EMIT parseConfigBtn_signal(config, plan_only);
     }
+
+    void PathPlanningWidget::parsePlanExecuteConfigBtn_slot(){
+      std::vector<double> config;
+
+      config.push_back(ui_.LineEdit_j1->text().toDouble());
+      config.push_back(ui_.LineEdit_j2->text().toDouble());
+      config.push_back(ui_.LineEdit_j3->text().toDouble());
+      config.push_back(ui_.LineEdit_j4->text().toDouble());
+      config.push_back(ui_.LineEdit_j5->text().toDouble());
+      config.push_back(ui_.LineEdit_j6->text().toDouble());
+      config.push_back(ui_.LineEdit_j7->text().toDouble());
+
+      bool plan_only = false;
+      Q_EMIT parseConfigBtn_signal(config, plan_only);
+    }
+
     void PathPlanningWidget::loadPointsFromFile()
       {
         /*! Slot that takes care of opening a previously saved Way-Points yaml file.

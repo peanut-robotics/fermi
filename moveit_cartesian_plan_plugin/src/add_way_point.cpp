@@ -91,7 +91,7 @@ void AddWayPoint::onInitialize()
 
     connect(widget_,SIGNAL(parseWayPointBtn_signal()),this,SLOT(parseWayPoints()));
     connect(this,SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)),path_generate,SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
-    connect(widget_,SIGNAL(parseConfigBtn_signal(std::vector<double>)),path_generate,SLOT(freespacePathHandler(std::vector<double>)));
+    connect(widget_,SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)),path_generate,SLOT(freespacePathHandler(std::vector<double>, bool)));
 
     connect(widget_,SIGNAL(saveToFileBtn_press()),this,SLOT(saveWayPointsToFile()));
     connect(widget_,SIGNAL(clearAllPoints_signal()),this,SLOT(clearAllPointsRViz()));

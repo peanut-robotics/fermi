@@ -124,7 +124,8 @@ namespace moveit_cartesian_plan_plugin
 
 			//! Create a slot to call a signal on which the Move the robot to home position function is called
 			void moveToHomeFromUI();
-			void parseConfigBtn_slot();
+			void parsePlanConfigBtn_slot();
+			void parsePlanExecuteConfigBtn_slot();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
@@ -136,7 +137,7 @@ namespace moveit_cartesian_plan_plugin
 		    //! Signal to notify the Cartesian Path Planning Class that an Execute Cartesian Plan button has been pressed.
 		    void parseWayPointBtn_signal();
 
-			void parseConfigBtn_signal(std::vector<double> config);
+			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    //! Save to file button has been pressed.
 		    void saveToFileBtn_press();
 		    //! Signal that clear all points button has been pressed.
