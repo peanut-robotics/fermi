@@ -7,8 +7,10 @@ namespace moveit_cartesian_plan_plugin
 	namespace widgets {
 
 		PathPlanningWidget::PathPlanningWidget(std::string ns):
+
 		param_ns_(ns)
 		{
+      robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
       /*! Constructor which calls the init() function.
 
       */
@@ -66,6 +68,14 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(parseWayPointBtn_slot()));
       connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parsePlanConfigBtn_slot()));
       connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(parsePlanExecuteConfigBtn_slot()));
+      connect(ui_.LineEdit_j1,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j2,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j3,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j4,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j5,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j6,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+      connect(ui_.LineEdit_j7,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
+
       connect(ui_.btn_LoadPath,SIGNAL(clicked()),this,SLOT(loadPointsFromFile()));
       connect(ui_.btn_SavePath,SIGNAL(clicked()),this,SLOT(savePointsToFile()));
       connect(ui_.btn_ClearAllPoints,SIGNAL(clicked()),this,SLOT(clearAllPoints_slot()));
@@ -411,6 +421,68 @@ namespace moveit_cartesian_plan_plugin
 
       bool plan_only = true;
       Q_EMIT parseConfigBtn_signal(config, plan_only);
+    }
+
+    void PathPlanningWidget::visualizeGoalConfig(){
+      try {
+        ROS_DEBUG("Visualizing goal configuration");
+        
+        std::vector<double> config;
+
+        moveit_msgs::DisplayRobotState rstate;
+        std::vector<std::string> link_names;
+        link_names = {"base_link", "shoulder_link", "half_arm_1_link", "half_arm_2_link","forearm_link", "spherical_wrist_1_link", "spherical_wrist_2_link", "bracelet_link", "end_effector_link"};
+        
+        std_msgs::ColorRGBA highlight_color;
+        highlight_color.a = 0.5;
+        highlight_color.r = 0;
+        highlight_color.g = 1;
+        highlight_color.b = 0;
+        
+        std::vector<moveit_msgs::ObjectColor> highlight_links;
+        for(auto const& link_name: link_names) {
+            moveit_msgs::ObjectColor o_color;
+            o_color.color = highlight_color;
+            o_color.id = link_name;
+            highlight_links.push_back(o_color);
+        }
+        ros::Duration timeout_dur(1.0);
+        sensor_msgs::JointStateConstPtr joint_state = ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states", timeout_dur);
+        std::map<std::string, double> m;
+        assert(joint_state->position.size() == joint_state->name.size());
+        for (size_t i = 0; i < joint_state->name.size(); ++i) {
+            m[joint_state->name[i]] = joint_state->position[i];
+        }
+        
+        m["joint_1"] = ui_.LineEdit_j1->text().toDouble();
+        m["joint_2"] = ui_.LineEdit_j2->text().toDouble();
+        m["joint_3"] = ui_.LineEdit_j3->text().toDouble();
+        m["joint_4"] = ui_.LineEdit_j4->text().toDouble();
+        m["joint_5"] = ui_.LineEdit_j5->text().toDouble();
+        m["joint_6"] = ui_.LineEdit_j6->text().toDouble();
+        m["joint_7"] = ui_.LineEdit_j7->text().toDouble();
+
+        std::vector<double> positions;
+        std::vector<std::string> joint_names;
+        for( std::map<std::string, double>::iterator it = m.begin(); it != m.end(); ++it ) {
+          joint_names.push_back( it->first );
+          positions.push_back( it->second );
+        }
+        rstate.highlight_links = highlight_links;
+        rstate.state.is_diff = false;
+        rstate.state.joint_state.position = positions;
+        rstate.state.joint_state.name = joint_names;
+        rstate.state.joint_state.header.frame_id = "/odom";
+        rstate.state.multi_dof_joint_state.header.frame_id = "/odom";
+        rstate.state.multi_dof_joint_state.joint_names = {"odom_virtual_joint"};
+        geometry_msgs::Transform odom_virtual_transform;
+        odom_virtual_transform.translation.z = 0.102;
+        rstate.state.multi_dof_joint_state.transforms = {odom_virtual_transform};
+        robot_goal_pub.publish(rstate);
+      }
+      catch (...) {
+        ROS_ERROR("Got an error while trying to visualize goal config");
+      }
     }
 
     void PathPlanningWidget::parsePlanExecuteConfigBtn_slot(){

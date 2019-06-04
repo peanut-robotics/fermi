@@ -32,6 +32,13 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressBar>
+#include <moveit_msgs/DisplayRobotState.h>
+#include <moveit_msgs/ObjectColor.h>
+#include <std_msgs/ColorRGBA.h>
+#include <moveit_msgs/ObjectColor.h>
+#include <sensor_msgs/JointState.h>
+#include <geometry_msgs/Transform.h>
+#include <map>
 
 // macros
 #ifndef DEG2RAD
@@ -67,6 +74,9 @@ namespace moveit_cartesian_plan_plugin
 			{
 				return "RobotPathPlanner";
 			}
+			ros::NodeHandle nh_;
+  			ros::Publisher robot_goal_pub;
+
 		protected:
 			//! Widget Initialization.
 			void init();
@@ -98,6 +108,9 @@ namespace moveit_cartesian_plan_plugin
 			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
 			//! Slot for parsing the Way-Points and notifying the MoveIt.
 			void parseWayPointBtn_slot();
+			
+			void visualizeGoalConfig();
+
 			//! Send a signal that a save the Way-Points to a file button has been pressed.
 			void savePointsToFile();
 			//! Send a signal that a load the Way-Points from a file button has been pressed.
