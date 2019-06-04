@@ -541,7 +541,7 @@ namespace moveit_cartesian_plan_plugin
           doc = YAML::LoadFile(fin);
             //define double for percent of completion
             double percent_complete;
-            int end_of_doc = doc.size();
+            int end_of_points = doc["points"].size();
 
             std::vector<double> startConfig = doc["start_config"].as<std::vector<double>>();
 
@@ -552,8 +552,8 @@ namespace moveit_cartesian_plan_plugin
             ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
             ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
             ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
-
-            for (size_t i = 0; i < end_of_doc; i++) {
+            std::cout << end_of_points << "end of doc" << std::endl;
+            for (size_t i = 0; i < end_of_points; i++) {
               std::string name;
               geometry_msgs::Pose pose;
               tf::Transform pose_tf;
@@ -572,7 +572,7 @@ namespace moveit_cartesian_plan_plugin
 
               pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw),tf::Vector3(x,y,z));
 
-              percent_complete = (i+1)*100/end_of_doc;
+              percent_complete = (i+1)*100/end_of_points;
               ui_.progressBar->setValue(percent_complete);
               Q_EMIT addPoint(pose_tf);
             }
