@@ -38,7 +38,9 @@
 #include <moveit_msgs/ObjectColor.h>
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Transform.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <map>
+#include <tf2_ros/transform_listener.h>
 
 // macros
 #ifndef DEG2RAD

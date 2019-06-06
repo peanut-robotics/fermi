@@ -473,11 +473,21 @@ namespace moveit_cartesian_plan_plugin
         rstate.state.joint_state.position = positions;
         rstate.state.joint_state.name = joint_names;
         rstate.state.joint_state.header.frame_id = "/odom";
+
+        tf2_ros::Buffer tfBuffer;
+        tf2_ros::TransformListener tfListener(tfBuffer);
+        geometry_msgs::TransformStamped transformStamped;
+        try {
+          transformStamped = tfBuffer.lookupTransform("map", "mobile_base_link", ros::Time::now(), ros::Duration(3.0));
+        }
+        catch (tf2::TransformException &ex) {
+          ROS_ERROR_STREAM("Failed to get transform between map and odom for goal state visualization, error: "<< ex.what());
+          return;
+        }
+
         rstate.state.multi_dof_joint_state.header.frame_id = "/odom";
         rstate.state.multi_dof_joint_state.joint_names = {"odom_virtual_joint"};
-        geometry_msgs::Transform odom_virtual_transform;
-        odom_virtual_transform.translation.z = 0.102;
-        rstate.state.multi_dof_joint_state.transforms = {odom_virtual_transform};
+        rstate.state.multi_dof_joint_state.transforms = {transformStamped.transform};
         robot_goal_pub.publish(rstate);
       }
       catch (...) {
