@@ -478,7 +478,7 @@ namespace moveit_cartesian_plan_plugin
         tf2_ros::TransformListener tfListener(tfBuffer);
         geometry_msgs::TransformStamped transformStamped;
         try {
-          transformStamped = tfBuffer.lookupTransform("map", "mobile_base_link", ros::Time::now(), ros::Duration(3.0));
+          transformStamped = tfBuffer.lookupTransform("map", "mobile_base_link", ros::Time(0), ros::Duration(3.0));
         }
         catch (tf2::TransformException &ex) {
           ROS_ERROR_STREAM("Failed to get transform between map and odom for goal state visualization, error: "<< ex.what());
