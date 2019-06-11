@@ -299,7 +299,7 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDefault( InteractiveMarke
   InteractiveMarkerControl control_move3d;
   control_move3d.always_visible = true;
 
-  control_move3d.interaction_mode = InteractiveMarkerControl::MOVE_ROTATE_3D;
+  control_move3d.interaction_mode = InteractiveMarkerControl::MENU;
   control_move3d.name = "move";
   control_move3d.markers.push_back( makeWayPoint(msg) );
   msg.controls.push_back( control_move3d );
