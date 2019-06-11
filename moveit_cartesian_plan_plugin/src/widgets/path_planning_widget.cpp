@@ -66,6 +66,9 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.treeView->selectionModel(),SIGNAL(currentChanged(const QModelIndex& , const QModelIndex& )),this,SLOT(treeViewDataChanged(const QModelIndex& , const QModelIndex&)));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(parseWayPointBtn_slot()));
+      connect(ui_.playSubset_btn,SIGNAL(clicked()),this,SLOT(playUntilPointBtn()));
+      connect(ui_.playSubset_btn,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
+
       connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parsePlanConfigBtn_slot()));
       connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(parsePlanExecuteConfigBtn_slot()));
       connect(ui_.LineEdit_j1,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
@@ -408,6 +411,15 @@ namespace moveit_cartesian_plan_plugin
       /*! Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
       */
       Q_EMIT parseWayPointBtn_signal();
+    }
+    void PathPlanningWidget::playUntilPointBtn()
+    {
+      /*! Let the cartesain planner class plan from start to stop index
+      */
+      int start_idx = ui_.start_idx->text().toInt();
+      int stop_idx = ui_.stop_idx->text().toInt();
+
+      Q_EMIT parseWayPointBtnGoto_signal(start_idx, stop_idx);
     }
     void PathPlanningWidget::parsePlanConfigBtn_slot(){
       std::vector<double> config;

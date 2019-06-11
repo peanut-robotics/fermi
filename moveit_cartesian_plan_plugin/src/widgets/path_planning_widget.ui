@@ -512,6 +512,49 @@
 								<string>Clear Boxes</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="playSubset_btn">
+							<property name="geometry">
+								<rect>
+									<x>200</x>
+									<y>340</y>
+									<width>181</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Play Start to Stop</string>
+							</property>
+						</widget>
+						<widget class="QLineEdit" name="start_idx">
+							<property name="styleSheet">
+								<string notr="true">border-style: outset;
+											border-width: 2px;
+											border-color :rgb(48, 48, 48)</string>
+							</property>
+							<property name="geometry">
+								<rect>
+									<x>200</x>
+									<y>380</y>
+									<width>27</width>
+									<height>27</height>
+								</rect>
+							</property>
+						</widget>
+						<widget class="QLineEdit" name="stop_idx">
+							<property name="styleSheet">
+								<string notr="true">border-style: outset;
+											border-width: 2px;
+											border-color :rgb(48, 48, 48)</string>
+							</property>
+							<property name="geometry">
+								<rect>
+									<x>230</x>
+									<y>380</y>
+									<width>27</width>
+									<height>27</height>
+								</rect>
+							</property>
+						</widget>
 					</widget>
 					<widget class="QWidget" name="tab_3">
 						<attribute name="title">

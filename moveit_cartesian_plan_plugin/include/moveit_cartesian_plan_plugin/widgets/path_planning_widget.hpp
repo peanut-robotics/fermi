@@ -108,6 +108,8 @@ namespace moveit_cartesian_plan_plugin
 			void selectedPoint(const QModelIndex& current, const QModelIndex& previous);
 			//! Handle the even when the data in the TreeView has been changed.
 			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
+			//! Slot for when the play until button is pressed
+			void playUntilPointBtn();
 			//! Slot for parsing the Way-Points and notifying the MoveIt.
 			void parseWayPointBtn_slot();
 			
@@ -151,6 +153,7 @@ namespace moveit_cartesian_plan_plugin
 		    void pointDelUI_signal( std::string marker_name);
 		    //! Notify RViz enviroment that a new Way-Point has been modified from RQT.
 		    void pointPosUpdated_signal( const tf::Transform& position, const char* marker_name);
+			void parseWayPointBtnGoto_signal(int start_index, int stop_index);
 		    //! Signal to notify the Cartesian Path Planning Class that an Execute Cartesian Plan button has been pressed.
 		    void parseWayPointBtn_signal();
 

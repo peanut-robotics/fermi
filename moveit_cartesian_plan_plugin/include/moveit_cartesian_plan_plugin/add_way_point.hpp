@@ -123,6 +123,8 @@ public Q_SLOTS:
 	void addPointFromUI( const tf::Transform point_pos);
 	//! Slot for handling when the user updates the position of the Interactive Markers.
 	void pointPoseUpdated(const tf::Transform& point_pos, const char* marker_name);
+	//! add slot for playing a path from a minimum to maximum index
+	void parseWayPointsGoto(int min_index, int max_index);
 	//! Slot for parsing the Way-Points before sending them to the MoveIt class.
 	void parseWayPoints();
 	//! Save all the Way-Points to a yaml file.

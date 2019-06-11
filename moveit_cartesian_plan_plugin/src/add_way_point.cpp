@@ -90,6 +90,7 @@ void AddWayPoint::onInitialize()
     connect(widget_,SIGNAL(moveToHomeFromUI_signal()),path_generate,SLOT(moveToHome()));
 
     connect(widget_,SIGNAL(parseWayPointBtn_signal()),this,SLOT(parseWayPoints()));
+    connect(widget_,SIGNAL(parseWayPointBtnGoto_signal(int, int)),this,SLOT(parseWayPointsGoto(int, int)));
     connect(this,SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)),path_generate,SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
     connect(widget_,SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)),path_generate,SLOT(freespacePathHandler(std::vector<double>, bool)));
 
@@ -639,6 +640,24 @@ void AddWayPoint::parseWayPoints()
 
   Q_EMIT wayPoints_signal(waypoints);
 
+}
+void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
+{
+  geometry_msgs::Pose target_pose;
+  std::vector<geometry_msgs::Pose> waypoints;
+
+  try{
+    for(int i=min_index;i<max_index;i++)
+    {
+      tf::poseTFToMsg (waypoints_pos[i], target_pose);
+      waypoints.push_back(target_pose);
+    }
+  }
+  catch (...){
+    ROS_ERROR("Unknown error when slicing points to go to a specific point, check your min and max indicies");
+  }
+  ROS_INFO_STREAM("Playing subset of waypoints from start index (inclusive, zero indexed)" << std::to_string(min_index) << " to ending index (exclusive)" << std::to_string(max_index));
+  Q_EMIT wayPoints_signal(waypoints);
 }
 void AddWayPoint::saveWayPointsToFile()
 {
