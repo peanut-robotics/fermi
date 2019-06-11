@@ -428,7 +428,7 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         s << count_arrow;
         ROS_DEBUG("end of make arrow, count is:%d, positions count:%ld",count,waypoints_pos.size());
         int_marker.name = s.str();
-        // int_marker.description = s.str();
+        int_marker.description = s.str();
 
         makeArrowControlDefault(int_marker);
         server->insert( int_marker);
