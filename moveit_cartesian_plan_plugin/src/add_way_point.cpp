@@ -95,6 +95,7 @@ void AddWayPoint::onInitialize()
 
     connect(widget_,SIGNAL(saveToFileBtn_press()),this,SLOT(saveWayPointsToFile()));
     connect(widget_,SIGNAL(clearAllPoints_signal()),this,SLOT(clearAllPointsRViz()));
+    connect(widget_,SIGNAL(clearAllInteractiveBoxes_signal()),this,SLOT(clearAllInteractiveBoxes()));
 
 
 
@@ -205,7 +206,7 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
       {
         if(state == interactive_markers::MenuHandler::UNCHECKED)
         {
-          ROS_INFO("The selected marker is shown with 6DOF control");
+          ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown with 6DOF control");
           menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::CHECKED );
           geometry_msgs::Pose pose;
           changeMarkerControlAndPose( feedback->marker_name.c_str(),true);
@@ -213,8 +214,8 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
         }
         else
         {
+          ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown as default");
           menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::UNCHECKED );
-          ROS_INFO("The selected marker is shown as default");
           geometry_msgs::Pose pose;
           changeMarkerControlAndPose( feedback->marker_name.c_str(),false);
           break;
@@ -436,6 +437,26 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         menu_handler.apply(*server,int_marker.name);
         //server->applyChanges();
         Q_EMIT onUpdatePosCheckIkValidity(int_marker.pose,count_arrow);
+}
+
+void AddWayPoint::clearAllInteractiveBoxes()
+{
+    /*! Function for clearing all the boxes from the scene, change everything back to a standard arrow
+    */
+    for(int i=1;i<=waypoints_pos.size();i++)
+    {
+      ROS_INFO_STREAM("clearing box for " << std::to_string(i));
+      changeMarkerControlAndPose(std::to_string(i), true);
+      //get the menu item which is pressed
+      interactive_markers::MenuHandler::EntryHandle menu_item = i;
+      interactive_markers::MenuHandler::CheckState state;
+      ROS_INFO_STREAM("The selected marker: " << std::to_string(i) << " is shown as default");
+      menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::UNCHECKED );
+      menu_handler.apply( *server, std::to_string(i) );
+      geometry_msgs::Pose pose;
+      changeMarkerControlAndPose(std::to_string(i),false);
+      server->applyChanges();
+    }
 }
 
 void AddWayPoint::changeMarkerControlAndPose(std::string marker_name,bool set_control)

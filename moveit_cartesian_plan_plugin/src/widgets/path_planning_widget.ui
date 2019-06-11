@@ -499,6 +499,19 @@
 								<string>Move to Home</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="btn_ClearAllBoxes">
+							<property name="geometry">
+								<rect>
+									<x>200</x>
+									<y>300</y>
+									<width>181</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Clear Boxes</string>
+							</property>
+						</widget>
 					</widget>
 					<widget class="QWidget" name="tab_3">
 						<attribute name="title">

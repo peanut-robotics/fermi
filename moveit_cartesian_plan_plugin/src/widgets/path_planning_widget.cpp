@@ -79,6 +79,7 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.btn_LoadPath,SIGNAL(clicked()),this,SLOT(loadPointsFromFile()));
       connect(ui_.btn_SavePath,SIGNAL(clicked()),this,SLOT(savePointsToFile()));
       connect(ui_.btn_ClearAllPoints,SIGNAL(clicked()),this,SLOT(clearAllPoints_slot()));
+      connect(ui_.btn_ClearAllBoxes,SIGNAL(clicked()),this,SLOT(clearAllInteractiveBoxes_slot()));
 
       connect(ui_.btn_moveToHome,SIGNAL(clicked()),this,SLOT(moveToHomeFromUI()));
 
@@ -617,6 +618,10 @@ namespace moveit_cartesian_plan_plugin
       pointRange();
 
       Q_EMIT clearAllPoints_signal();
+    }
+    void PathPlanningWidget::clearAllInteractiveBoxes_slot()
+    {
+      Q_EMIT clearAllInteractiveBoxes_signal();
     }
     void PathPlanningWidget::setAddPointUIStartPos(const std::string robot_model_frame,const tf::Transform end_effector)
     {

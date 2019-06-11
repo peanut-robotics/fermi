@@ -81,7 +81,7 @@ public:
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
-
+	
 private:
 	//! Function for creating a way-point marker
 	Marker makeWayPoint( InteractiveMarker &msg );
@@ -127,6 +127,10 @@ public Q_SLOTS:
 	void parseWayPoints();
 	//! Save all the Way-Points to a yaml file.
 	void saveWayPointsToFile();
+
+	//! clear all the 3d interaction point boxes
+	void clearAllInteractiveBoxes();
+
 	//! Clear all the Way-Points
 	void clearAllPointsRViz();
 	//! Slot for handling the even when a way-point is out of the IK solution of the loaded robot.

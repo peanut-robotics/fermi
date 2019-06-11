@@ -117,6 +117,8 @@ namespace moveit_cartesian_plan_plugin
 			void savePointsToFile();
 			//! Send a signal that a load the Way-Points from a file button has been pressed.
 			void loadPointsFromFile();
+			//! slot connected to clear all the boxes for interaction around points
+			void clearAllInteractiveBoxes_slot();
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
 			//! Set the start pose of the User Interactive Marker to correspond to the loaded robot base frame.
@@ -157,6 +159,8 @@ namespace moveit_cartesian_plan_plugin
 		    void saveToFileBtn_press();
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
+			//! signal that the clear all boxes button has been pressed.
+			void clearAllInteractiveBoxes_signal();
 		    //! Signal that the Cartesian Plan execution button has been pressed.
 		    void cartesianPathParamsFromUI_signal(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_);
 
