@@ -143,9 +143,9 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
     moveit_group_->setJointValueTarget(config);
 
     bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
+    ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
     
-    if (!plan_only){
+    if (!plan_only && success){
       moveit_group_->execute(my_plan);
     }
 

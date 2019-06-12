@@ -71,6 +71,7 @@ namespace moveit_cartesian_plan_plugin
 
       connect(ui_.btn_plan_config,SIGNAL(clicked()), this, SLOT(parsePlanConfigBtn_slot()));
       connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(parsePlanExecuteConfigBtn_slot()));
+      connect(ui_.btn_planexecute_config,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
       connect(ui_.LineEdit_j1,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
       connect(ui_.LineEdit_j2,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
       connect(ui_.LineEdit_j3,SIGNAL(editingFinished()),this,SLOT(visualizeGoalConfig()));
