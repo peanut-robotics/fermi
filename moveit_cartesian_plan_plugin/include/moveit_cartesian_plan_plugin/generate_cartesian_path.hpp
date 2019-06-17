@@ -14,7 +14,7 @@
 #include <QTimer>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
-
+#include <math.h>
 
 #ifndef GENERATE_CARTESIAN_PATH_H_
 #define GENERATE_CARTESIAN_PATH_H_
