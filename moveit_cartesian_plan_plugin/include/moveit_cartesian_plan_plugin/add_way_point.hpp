@@ -81,7 +81,7 @@ public:
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
-	
+
 private:
 	//! Function for creating a way-point marker
 	Marker makeWayPoint( InteractiveMarker &msg );
@@ -106,6 +106,8 @@ private:
 	//! The position of the User handlable Interactive Marker.
 	tf::Transform box_pos;
 
+	std::vector<double> config;
+
     //! Variable for storing the count of the Way-Points.
 	int count;
     //! Target Frame for the Transformation.
@@ -119,6 +121,8 @@ protected Q_SLOTS:
 public Q_SLOTS:
 	//! Slot for handling the event of way-point deletion.
 	virtual void pointDeleted(std::string marker_name);
+	void cacheConfig(std::vector<double> config);
+
 	//! Slot for handling the add way-point event from the RQT UI.
 	void addPointFromUI( const tf::Transform point_pos);
 	//! Slot for handling when the user updates the position of the Interactive Markers.

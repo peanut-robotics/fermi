@@ -67,6 +67,7 @@ void AddWayPoint::onInitialize()
     this->parentWidget()->resize(widget_->width(),widget_->height());
     QHBoxLayout* main_layout = new QHBoxLayout(this);
     main_layout->addWidget(widget_);
+    config = {0,0,0,0,0,0,0};
 
     //! Inform the user that the RViz is initializing
     ROS_INFO("initializing..");
@@ -93,7 +94,7 @@ void AddWayPoint::onInitialize()
     connect(widget_,SIGNAL(parseWayPointBtnGoto_signal(int, int)),this,SLOT(parseWayPointsGoto(int, int)));
     connect(this,SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)),path_generate,SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
     connect(widget_,SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)),path_generate,SLOT(freespacePathHandler(std::vector<double>, bool)));
-
+    connect(widget_,SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
     connect(widget_,SIGNAL(saveToFileBtn_press()),this,SLOT(saveWayPointsToFile()));
     connect(widget_,SIGNAL(clearAllPoints_signal()),this,SLOT(clearAllPointsRViz()));
     connect(widget_,SIGNAL(clearAllInteractiveBoxes_signal()),this,SLOT(clearAllInteractiveBoxes()));
@@ -153,6 +154,10 @@ void AddWayPoint::addPointFromUI( const tf::Transform point_pos)
   ROS_INFO("Point Added");
   makeArrow(point_pos,count);
   server->applyChanges();
+}
+
+void AddWayPoint::cacheConfig(std::vector<double> config){
+  AddWayPoint::config = config;
 }
 
 void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback )
@@ -685,6 +690,7 @@ void AddWayPoint::saveWayPointsToFile()
     out << YAML::Key << "frame_id";
     out << YAML::Value << "elevator_link";
 
+  //todo save the config here.
     out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
     
     for(int i=0;i<waypoints_pos.size();i++)
@@ -718,6 +724,10 @@ void AddWayPoint::saveWayPointsToFile()
 
 
     out << YAML::EndSeq; // End list of points
+
+    out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
+    out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
+    out << YAML::EndSeq;// and configuration list
     out << YAML::EndMap;
 
       std::ofstream myfile;

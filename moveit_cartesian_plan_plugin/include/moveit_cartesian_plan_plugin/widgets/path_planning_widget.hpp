@@ -157,6 +157,7 @@ namespace moveit_cartesian_plan_plugin
 		    //! Signal to notify the Cartesian Path Planning Class that an Execute Cartesian Plan button has been pressed.
 		    void parseWayPointBtn_signal();
 
+			void configEdited_signal(std::vector<double> config);
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    //! Save to file button has been pressed.
 		    void saveToFileBtn_press();

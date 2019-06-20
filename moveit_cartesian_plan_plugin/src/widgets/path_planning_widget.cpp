@@ -503,6 +503,7 @@ namespace moveit_cartesian_plan_plugin
         rstate.state.multi_dof_joint_state.joint_names = {"odom_virtual_joint"};
         rstate.state.multi_dof_joint_state.transforms = {transformStamped.transform};
         robot_goal_pub.publish(rstate);
+        Q_EMIT configEdited_signal(config);
       }
       catch (...) {
         ROS_ERROR("Got an error while trying to visualize goal config");
@@ -599,6 +600,7 @@ namespace moveit_cartesian_plan_plugin
               percent_complete = (i+1)*100/end_of_points;
               ui_.progressBar->setValue(percent_complete);
               Q_EMIT addPoint(pose_tf);
+              Q_EMIT configEdited_signal(startConfig);
             }
         }
         catch (char *excp){ 
