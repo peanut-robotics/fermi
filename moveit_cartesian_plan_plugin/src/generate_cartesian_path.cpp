@@ -167,22 +167,6 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
     moveit_msgs::RobotTrajectory trajectory_;
-    const std::string end_effector_link = "end_effector_link";
-    geometry_msgs::PoseStamped 	curr_eef_pose = moveit_group_->getCurrentPose (end_effector_link);
-    bool is_x_close = fabs(waypoints.at(0).position.x - curr_eef_pose.pose.position.x) < 0.001;
-    bool is_y_close = fabs(waypoints.at(0).position.y - curr_eef_pose.pose.position.y) < 0.001;
-    bool is_z_close = fabs(waypoints.at(0).position.z - curr_eef_pose.pose.position.z) < 0.001;
-    bool is_qx_close = fabs(waypoints.at(0).orientation.x - curr_eef_pose.pose.orientation.x) < 0.001;
-    bool is_qy_close = fabs(waypoints.at(0).orientation.y - curr_eef_pose.pose.orientation.y) < 0.001;
-    bool is_qz_close = fabs(waypoints.at(0).orientation.z - curr_eef_pose.pose.orientation.z) < 0.001;
-    bool is_qw_close = fabs(waypoints.at(0).orientation.w - curr_eef_pose.pose.orientation.w) < 0.001;
-
-    bool is_close = is_x_close && is_y_close && is_z_close && is_qx_close && is_qy_close && is_qz_close && is_qw_close;
-
-    if (!is_close){
-      // if the start point is not close to the first point in the path, add a point to the path
-      waypoints.insert(waypoints.begin(), curr_eef_pose.pose);
-    }
     double fraction = moveit_group_->computeCartesianPath(waypoints,CART_STEP_SIZE_,CART_JUMP_THRESH_,trajectory_,AVOID_COLLISIONS_);
     robot_trajectory::RobotTrajectory rt(kmodel_, group_names[selected_plan_group]);
 
