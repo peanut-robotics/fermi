@@ -139,7 +139,7 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
-    moveit_group_->setStartStateToCurrentState();
+
     moveit_group_->setJointValueTarget(config);
 
     bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
@@ -163,7 +163,6 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
     moveit_group_->setPoseReferenceFrame("elevator_link");
-    moveit_group_->setStartStateToCurrentState();
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
