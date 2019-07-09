@@ -121,8 +121,10 @@ protected Q_SLOTS:
 public Q_SLOTS:
 	//! Slot for handling the event of way-point deletion.
 	virtual void pointDeleted(std::string marker_name);
-	void cacheConfig(std::vector<double> config);
+	virtual void duplicateWaypoint(std::string marker_name);
 
+	void cacheConfig(std::vector<double> config);
+	
 	//! Slot for handling the add way-point event from the RQT UI.
 	void addPointFromUI( const tf::Transform point_pos);
 	//! Slot for handling when the user updates the position of the Interactive Markers.

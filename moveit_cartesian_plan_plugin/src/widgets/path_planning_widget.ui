@@ -133,6 +133,13 @@
 											</property>
 										</widget>
 									</item>
+									<item row="9" column="0">
+										<widget class="QPushButton" name="btnDuplicatePoint">
+											<property name="text">
+												<string>Duplicate Point</string>
+											</property>
+										</widget>
+									</item>
 									<item row="4" column="0">
 										<widget class="QComboBox" name="combo_planGroup"/>
 									</item>

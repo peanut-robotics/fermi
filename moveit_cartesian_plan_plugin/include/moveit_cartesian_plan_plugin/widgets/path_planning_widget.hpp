@@ -96,6 +96,7 @@ namespace moveit_cartesian_plan_plugin
 		    void initTreeView();
 		    //! Handle the event of a Way-Point deleted from the RQT UI.
 			void pointDeletedUI();
+			void duplicateWaypointUI();
 			//! Handle the event of a Way-Point added from the RQT UI.
 			void pointAddUI();
 			//! Insert a row in the TreeView.
@@ -148,6 +149,8 @@ namespace moveit_cartesian_plan_plugin
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
+
+		    void duplicateWaypoint_signal( std::string marker_name);
 
 		    //! Notify RViz enviroment that a new Way-Point has been deleted from RQT.
 		    void pointDelUI_signal( std::string marker_name);

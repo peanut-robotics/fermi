@@ -81,6 +81,7 @@ void AddWayPoint::onInitialize()
 
     connect(widget_,SIGNAL(addPoint(tf::Transform)), this,SLOT( addPointFromUI( tf::Transform)));
     connect(widget_,SIGNAL(pointDelUI_signal(std::string)),this,SLOT(pointDeleted( std::string)));
+    connect(widget_,SIGNAL(duplicateWaypoint_signal(std::string)),this,SLOT(duplicateWaypoint( std::string)));
     connect(this,SIGNAL(addPointRViz(const tf::Transform&,const int)),widget_,SLOT(insertRow(const tf::Transform&,const int)));
     connect(this,SIGNAL(pointPoseUpdatedRViz(const tf::Transform&,const char*)),widget_,SLOT(pointPosUpdated_slot(const tf::Transform&,const char*)));
     connect(widget_,SIGNAL(pointPosUpdated_signal(const tf::Transform&,const char*)),this,SLOT(pointPoseUpdated(const tf::Transform&,const char*)));
@@ -416,7 +417,7 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         */
         else if ((it_pos == (waypoints_pos.end())) || (point_pos.getOrigin() != waypoints_pos.at(count_arrow-1).getOrigin())) // && (point_pos.getOrigin() != waypoints_pos.at(count_arrow-1).getOrigin()) //(it_pos == waypoints_pos.end()) &&
         {
-
+            ROS_INFO("at line 420 in makeArrow");
             count_arrow++;
             count=count_arrow;
 
@@ -425,11 +426,11 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
             ROS_INFO("Adding new arrow!");
             Q_EMIT addPointRViz(point_pos,count);
         }
-    else
-    {
+        else
+        {
             //if we have arrow, ignore adding new one and inform the user that there is arrow (waypoint at that location)
             ROS_INFO("There is already a arrow at that location, can't add new one!!");
-    }
+        }
 /*******************************************************************************************************************************************************************************************************************/
         std::stringstream s;
         s << count_arrow;
@@ -518,6 +519,36 @@ void AddWayPoint::pointDeleted(std::string marker_name)
            }
            count--;
            server->applyChanges();
+}
+void AddWayPoint::duplicateWaypoint(std::string marker_name)
+{
+  int index = atoi(marker_name.c_str());
+  tf::Transform new_waypoint = waypoints_pos.at(index);
+  // waypoints_pos.insert(waypoints_pos.begin() + index+1, new_waypoint);
+  
+  std::vector<tf::Transform> waypoints_pos_copy(waypoints_pos);
+
+  waypoints_pos.clear();
+
+  ROS_INFO_STREAM("waypoints_pos_copy len " << waypoints_pos_copy.size());
+  ROS_INFO_STREAM("waypoints_pos len " << waypoints_pos.size());
+
+  ROS_INFO_STREAM("DuplicateWaypoint line 529 with waypoint: " << marker_name << " count " << std::to_string(count));
+  for(int i=0; i<waypoints_pos_copy.size(); i++)
+  {
+    ROS_INFO_STREAM("\nErasing arrow at index "<< std::to_string(i));
+    server->erase(std::to_string(i+1));
+  }
+  server->applyChanges();
+
+  for(int i=0; i<waypoints_pos_copy.size(); i++)
+  {
+    ROS_INFO_STREAM("\nmaking new arrow at index "<< std::to_string(i));
+    addPointFromUI(waypoints_pos_copy.at(i));
+  }
+  waypoints_pos = waypoints_pos_copy;
+  count++;
+  server->applyChanges();
 }
 
 Marker AddWayPoint::makeInterArrow( InteractiveMarker &msg )

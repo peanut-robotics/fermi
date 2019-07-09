@@ -62,6 +62,7 @@ namespace moveit_cartesian_plan_plugin
 
       connect(ui_.btnAddPoint,SIGNAL(clicked()),this,SLOT(pointAddUI()));
       connect(ui_.btnRemovePoint,SIGNAL(clicked()),this,SLOT(pointDeletedUI()));
+      connect(ui_.btnDuplicatePoint,SIGNAL(clicked()),this,SLOT(duplicateWaypointUI()));
       connect(ui_.treeView->selectionModel(),SIGNAL(currentChanged(const QModelIndex& , const QModelIndex& )),this,SLOT(selectedPoint(const QModelIndex& , const QModelIndex&)));
       connect(ui_.treeView->selectionModel(),SIGNAL(currentChanged(const QModelIndex& , const QModelIndex& )),this,SLOT(treeViewDataChanged(const QModelIndex& , const QModelIndex&)));
       connect(ui_.targetPoint,SIGNAL(clicked()),this,SLOT(sendCartTrajectoryParamsFromUI()));
@@ -199,6 +200,26 @@ namespace moveit_cartesian_plan_plugin
           pointRange();
           Q_EMIT pointDelUI_signal(marker_name.c_str());
         }
+    }
+    void PathPlanningWidget::duplicateWaypointUI()
+    {
+      /*! Function for deleting a Way-Point from the RQT GUI.
+          The name of the Way-Point that needs to be deleted corresponds to the txtPointName line edit field.
+          This slot is connected to the Remove Point button signal. After completion of this function a signal is send to Inform the RViz enviroment that a Way-Point has been deleted from the RQT Widget.
+      */
+      std::string marker_name;
+      QString qtPointNr = ui_.txtPointName->text();
+      marker_name = qtPointNr.toUtf8().constData();
+
+      ROS_INFO_STREAM("\n\nduplicateWaypointUI button pressed, duplicating: "<< marker_name);
+
+      const int waypoint_to_duplicate_count = stoi(marker_name);
+      
+      tf::Transform point_pos;
+      point_pos.setIdentity();
+
+      pointRange();
+      Q_EMIT duplicateWaypoint_signal(std::to_string(waypoint_to_duplicate_count));
     }
     void PathPlanningWidget::insertRow(const tf::Transform& point_pos,const int count)
     {
