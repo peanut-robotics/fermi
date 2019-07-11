@@ -324,7 +324,7 @@
 							<property name="geometry">
 								<rect>
 									<x>10</x>
-									<y>250</y>
+									<y>320</y>
 									<width>181</width>
 									<height>27</height>
 								</rect>
@@ -375,7 +375,7 @@
 									<x>0</x>
 									<y>100</y>
 									<width>311</width>
-									<height>131</height>
+									<height>200</height>
 									</rect>
 								</property>
 								<property name="font">
@@ -435,7 +435,7 @@
 															border-color :rgb(48, 48, 48)</string>
 									</property>
 									<property name="text">
-										<string/>
+									<string/>
 									</property>
 								</widget>
 								<widget class="QLabel" name="label_6">
@@ -464,6 +464,34 @@
 										<string>Avoid Collisions</string>
 									</property>
 								</widget>
+								<widget class="QLabel" name="label_frame_name">
+									<property name="geometry">
+										<rect>
+											<x>10</x>
+											<y>130</y>
+											<width>101</width>
+											<height>31</height>
+										</rect>
+									</property>
+									<property name="text">
+										<string>Pose Frame :</string>
+									</property>
+								</widget>
+								<widget class="QLineEdit" name="robot_model_frame">
+									<property name="geometry">
+										<rect>
+											<x>160</x>
+											<y>130</y>
+											<width>113</width>
+											<height>27</height>
+										</rect>
+									</property>
+									<property name="styleSheet">
+										<string notr="true">border-style: outset;
+															border-width: 2px;
+															border-color :rgb(48, 48, 48)</string>
+									</property>
+								</widget>
 							</widget>
 						<widget class="QLabel" name="lbl_cartPathCompleted">
 							<property name="geometry">
@@ -490,7 +518,7 @@
 							<property name="geometry">
 								<rect>
 									<x>200</x>
-									<y>250</y>
+									<y>320</y>
 									<width>181</width>
 									<height>27</height>
 								</rect>
@@ -503,7 +531,7 @@
 							<property name="geometry">
 								<rect>
 									<x>200</x>
-									<y>300</y>
+									<y>360</y>
 									<width>181</width>
 									<height>27</height>
 								</rect>
@@ -516,7 +544,7 @@
 							<property name="geometry">
 								<rect>
 									<x>200</x>
-									<y>340</y>
+									<y>400</y>
 									<width>181</width>
 									<height>27</height>
 								</rect>
@@ -534,7 +562,7 @@
 							<property name="geometry">
 								<rect>
 									<x>200</x>
-									<y>380</y>
+									<y>430</y>
 									<width>27</width>
 									<height>27</height>
 								</rect>
@@ -549,7 +577,7 @@
 							<property name="geometry">
 								<rect>
 									<x>230</x>
-									<y>380</y>
+									<y>430</y>
 									<width>27</width>
 									<height>27</height>
 								</rect>

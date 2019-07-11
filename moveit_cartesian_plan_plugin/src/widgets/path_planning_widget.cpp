@@ -120,8 +120,9 @@ namespace moveit_cartesian_plan_plugin
 
         moveit_replan_    = ui_.chk_AllowReplanning->isChecked();
         avoid_collisions_ = ui_.chk_AvoidColl->isChecked();
+        std::string robot_model_frame = ui_.robot_model_frame->text().toStdString();
 
-        Q_EMIT cartesianPathParamsFromUI_signal(plan_time_,cart_step_size_,cart_jump_thresh_,moveit_replan_,avoid_collisions_);
+        Q_EMIT cartesianPathParamsFromUI_signal(plan_time_,cart_step_size_,cart_jump_thresh_,moveit_replan_,avoid_collisions_, robot_model_frame);
 
     }
     void PathPlanningWidget::pointRange()

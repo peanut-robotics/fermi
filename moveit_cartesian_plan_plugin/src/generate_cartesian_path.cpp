@@ -112,7 +112,7 @@ void GenerateCartesianPath::init()
   joint_model_group_ = kmodel_->getJointModelGroup(group_names[selected_plan_group]);
 }
 
-void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_)
+void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_)
 {
   /*! Set the necessary parameters for the MoveIt and the Cartesian Path Planning.
       These parameters correspond to the ones that the user has entered or the default ones before the execution of the Cartesian Path Planner.
@@ -121,13 +121,16 @@ void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_siz
                   <<"\n Cartesian Path Step Size:"<<cart_step_size_
                   <<"\n Jump Threshold:"<<cart_jump_thresh_
                   <<"\n Replanning:"<<moveit_replan_
-                  <<"\n Avoid Collisions:"<<avoid_collisions_);
+                  <<"\n Avoid Collisions:"<<avoid_collisions_
+                  <<"\n Robot model frame: "<<robot_model_frame_);
 
   PLAN_TIME_        = plan_time_;
   MOVEIT_REPLAN_    = moveit_replan_;
   CART_STEP_SIZE_   = cart_step_size_;
   CART_JUMP_THRESH_ = cart_jump_thresh_;
   AVOID_COLLISIONS_ = avoid_collisions_;
+  ROBOT_MODEL_FRAME_ = robot_model_frame_;
+
 }
 
 void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_only) 
@@ -162,7 +165,9 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
 
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
-    moveit_group_->setPoseReferenceFrame("elevator_link");
+    moveit_group_->setPoseReferenceFrame("base_link");
+
+    //TODO convert the poses here to the base link from the robot_model_frame
 
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
@@ -172,7 +177,8 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
 
     rt.setRobotTrajectoryMsg(*kinematic_state_, trajectory_);
 
-    ROS_INFO_STREAM("Pose reference frame: " << moveit_group_->getPoseReferenceFrame ());
+    ROS_INFO_STREAM("Frame which moveit requests plans in (it transforms to this frame before sending plan): " << moveit_group_->getPoseReferenceFrame());
+    ROS_INFO_STREAM("Frame which poses are represented in " << ROBOT_MODEL_FRAME_);
 
     // Third create a IterativeParabolicTimeParameterization object
     trajectory_processing::IterativeParabolicTimeParameterization iptp;
@@ -280,7 +286,7 @@ void GenerateCartesianPath::initRvizDone()
     const Eigen::Affine3d &end_effector_state = kinematic_state_->getGlobalLinkTransform(joint_names.at(0));
     //tf::Transform end_effector;
     tf::transformEigenToTF(end_effector_state, end_effector);
-    Q_EMIT getRobotModelFrame_signal(moveit_group_->getPoseReferenceFrame(),end_effector);
+    Q_EMIT getRobotModelFrame_signal(ROBOT_MODEL_FRAME_,end_effector);
   }
   else
   {
@@ -290,7 +296,7 @@ void GenerateCartesianPath::initRvizDone()
     //tf::Transform end_effector;
     tf::transformEigenToTF(end_effector_state, end_effector);
 
-    Q_EMIT getRobotModelFrame_signal(moveit_group_->getPoseReferenceFrame(),end_effector);
+    Q_EMIT getRobotModelFrame_signal(ROBOT_MODEL_FRAME_,end_effector);
   }
 
     Q_EMIT sendCartPlanGroup(group_names);
@@ -328,6 +334,6 @@ void GenerateCartesianPath::getSelectedGroupIndex(int index)
   const Eigen::Affine3d &end_effector_state = kinematic_state_->getGlobalLinkTransform(moveit_group_->getEndEffectorLink());
   tf::transformEigenToTF(end_effector_state, end_effector);
 
-  Q_EMIT getRobotModelFrame_signal(moveit_group_->getPoseReferenceFrame(),end_effector);
+  Q_EMIT getRobotModelFrame_signal(ROBOT_MODEL_FRAME_, end_effector);
 
 }

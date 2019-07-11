@@ -61,7 +61,7 @@ public Q_SLOTS:
 
 	void freespacePathHandler(std::vector<double> config, bool plan_only);
 	//! Get the User entered MoveIt and Cartesian Path parameters and pass them to the corresponding private variables.
-	void setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_);
+	void setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_);
 
 	void getSelectedGroupIndex(int index);
 
@@ -107,6 +107,7 @@ protected:
     bool MOVEIT_REPLAN_;
     //! Generate Cartesian Path that avoids collisions.
     bool AVOID_COLLISIONS_;
+		std::string ROBOT_MODEL_FRAME_;
 
 };
 

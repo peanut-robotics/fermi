@@ -86,7 +86,7 @@ void AddWayPoint::onInitialize()
     connect(widget_,SIGNAL(pointPosUpdated_signal(const tf::Transform&,const char*)),this,SLOT(pointPoseUpdated(const tf::Transform&,const char*)));
     connect(this,SIGNAL(pointDeleteRviz(int)),widget_,SLOT(removeRow(int)));
 
-    connect(widget_,SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool )),path_generate,SLOT(setCartParams(double, double, double, bool, bool)));
+    connect(widget_,SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool, std::string)),path_generate,SLOT(setCartParams(double, double, double, bool, bool, std::string)));
 
     connect(widget_,SIGNAL(moveToHomeFromUI_signal()),path_generate,SLOT(moveToHome()));
 
