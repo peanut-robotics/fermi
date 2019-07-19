@@ -5,7 +5,8 @@
 
 #include <tf/tf.h>
 #include <tf_conversions/tf_eigen.h>
-
+#include <tf/transform_datatypes.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <pluginlib/class_loader.h>
 #include <std_msgs/String.h>
@@ -107,7 +108,10 @@ protected:
     bool MOVEIT_REPLAN_;
     //! Generate Cartesian Path that avoids collisions.
     bool AVOID_COLLISIONS_;
+	
 		std::string ROBOT_MODEL_FRAME_;
+	tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener* tfListener;
 
 };
 
