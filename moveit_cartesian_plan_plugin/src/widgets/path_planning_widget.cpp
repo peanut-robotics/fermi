@@ -86,6 +86,7 @@ namespace moveit_cartesian_plan_plugin
       connect(ui_.btn_ClearAllBoxes,SIGNAL(clicked()),this,SLOT(clearAllInteractiveBoxes_slot()));
 
       connect(ui_.btn_moveToHome,SIGNAL(clicked()),this,SLOT(moveToHomeFromUI()));
+      connect(ui_.transform_robot_model_frame,SIGNAL(clicked()),this,SLOT(transformPointsToFrame()));
 
 			connect(ui_.combo_planGroup,SIGNAL(currentIndexChanged ( int )),this,SLOT(selectedPlanGroup(int)));
 
@@ -561,7 +562,7 @@ namespace moveit_cartesian_plan_plugin
 
             ROS_INFO_STREAM("Opening the file: "<<fileName.toStdString());
             std::string fin(fileName.toStdString());
-
+            std::string frame_id;
         try {
           YAML::Node doc;
           doc = YAML::LoadFile(fin);
@@ -579,6 +580,7 @@ namespace moveit_cartesian_plan_plugin
             ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
             ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
             std::cout << end_of_points << "end of doc" << std::endl;
+            frame_id = doc["frame_id"].as<std::string>();
             for (size_t i = 0; i < end_of_points; i++) {
               std::string name;
               geometry_msgs::Pose pose;
@@ -611,8 +613,11 @@ namespace moveit_cartesian_plan_plugin
         catch (...){
           ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
         }
+          // TODO call same pathway as button
           ui_.tabWidget->setEnabled(true);
           ui_.progressBar->hide();
+          ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+          PathPlanningWidget::transformPointsToFrame();
         }
     }
     void PathPlanningWidget::savePointsToFile()
@@ -620,6 +625,14 @@ namespace moveit_cartesian_plan_plugin
       /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
       Q_EMIT saveToFileBtn_press();
+    }
+    void PathPlanningWidget::transformPointsToFrame()
+    {
+      PathPlanningWidget::sendCartTrajectoryParamsFromUI();
+      //TODO get frame name
+      std::string frame = ui_.robot_model_frame->text().toStdString();
+      
+      Q_EMIT transformPointsViz(frame);
     }
     void PathPlanningWidget::clearAllPoints_slot()
     {

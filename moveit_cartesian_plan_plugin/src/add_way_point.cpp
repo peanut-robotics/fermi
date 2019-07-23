@@ -50,6 +50,7 @@ AddWayPoint::~AddWayPoint()
 {
   /*! The object destructor resets the Interactive Marker server on the Object Destruction. */
   server.reset();
+  delete tfListener;
 
 }
 
@@ -97,6 +98,7 @@ void AddWayPoint::onInitialize()
     connect(widget_,SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
     connect(widget_,SIGNAL(saveToFileBtn_press()),this,SLOT(saveWayPointsToFile()));
     connect(widget_,SIGNAL(clearAllPoints_signal()),this,SLOT(clearAllPointsRViz()));
+    connect(widget_,SIGNAL(transformPointsViz(std::string)),this,SLOT(transformPointsViz(std::string)));
     connect(widget_,SIGNAL(clearAllInteractiveBoxes_signal()),this,SLOT(clearAllInteractiveBoxes()));
 
 
@@ -122,6 +124,7 @@ void AddWayPoint::onInitialize()
     Q_EMIT initRviz();
     ROS_INFO("ready.");
 
+    tfListener = new tf2_ros::TransformListener(tfBuffer);
 }
 
 void AddWayPoint::load(const rviz::Config& config)
@@ -387,12 +390,12 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         /*! Function for adding a new Way-Point in the RViz scene and here we send the signal to notify the RQT Widget that a new Way-Point has been added.
         */
         InteractiveMarker int_marker;
-
-        ROS_INFO_STREAM("Markers frame is: "<< target_frame_);
+        ROS_WARN_STREAM("Adding point! " << std::to_string(count_arrow));
+        ROS_INFO_STREAM("Markers intractive frame is: "<< target_frame_);
 
         int_marker.header.frame_id = target_frame_;
 
-         ROS_DEBUG_STREAM("Markers has frame id: "<< int_marker.header.frame_id);
+        ROS_DEBUG_STREAM("Markers has frame id: "<< int_marker.header.frame_id);
 
         int_marker.scale = INTERACTIVE_MARKER_SCALE;
 
@@ -404,32 +407,30 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         */
         if (waypoints_pos.empty() )
         {
+          ROS_INFO("Adding first arrow!");
+          count_arrow++;
+          count=count_arrow;
 
-            ROS_INFO("Adding first arrow!");
-            count_arrow++;
-            count=count_arrow;
-
-            waypoints_pos.push_back( point_pos );
-            Q_EMIT addPointRViz(point_pos,count);
+          waypoints_pos.push_back( point_pos );
+          Q_EMIT addPointRViz(point_pos,count);
         }
         /*! Check if we have points in the same position in the scene. If we do, do not add one and notify the RQT Widget so it can also add it to the TreeView.
         */
         else if ((it_pos == (waypoints_pos.end())) || (point_pos.getOrigin() != waypoints_pos.at(count_arrow-1).getOrigin())) // && (point_pos.getOrigin() != waypoints_pos.at(count_arrow-1).getOrigin()) //(it_pos == waypoints_pos.end()) &&
         {
+          count_arrow++;
+          count=count_arrow;
 
-            count_arrow++;
-            count=count_arrow;
+          waypoints_pos.push_back( point_pos );
 
-            waypoints_pos.push_back( point_pos );
-
-            ROS_INFO("Adding new arrow!");
-            Q_EMIT addPointRViz(point_pos,count);
+          ROS_INFO_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
+          Q_EMIT addPointRViz(point_pos,count);
         }
-    else
-    {
-            //if we have arrow, ignore adding new one and inform the user that there is arrow (waypoint at that location)
-            ROS_INFO("There is already a arrow at that location, can't add new one!!");
-    }
+        else
+        {
+          //if we have arrow, ignore adding new one and inform the user that there is arrow (waypoint at that location)
+          ROS_INFO("There is already a arrow at that location, can't add new one!!");
+        }
 /*******************************************************************************************************************************************************************************************************************/
         std::stringstream s;
         s << count_arrow;
@@ -688,7 +689,7 @@ void AddWayPoint::saveWayPointsToFile()
     YAML::Emitter out;
     out << YAML::BeginMap;
     out << YAML::Key << "frame_id";
-    out << YAML::Value << "elevator_link";
+    out << YAML::Value << target_frame_;
 
   //todo save the config here.
     out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
@@ -737,6 +738,41 @@ void AddWayPoint::saveWayPointsToFile()
      }
 }
 
+void AddWayPoint::transformPointsViz(std::string frame)
+{
+  ROS_INFO_STREAM("The frame we want the points in is " << frame << " the frame we are currently in is" << target_frame_);
+  geometry_msgs::TransformStamped transformStamped;
+  try{
+    transformStamped = tfBuffer.lookupTransform(frame, target_frame_, ros::Time(0));
+  }
+  catch (tf2::TransformException &ex) {
+    ROS_ERROR("%s",ex.what());
+  }
+  target_frame_.assign(frame);
+
+  // TODO Call setCartParams
+  std::vector<tf::Transform> waypoints_pos_copy;
+
+  const geometry_msgs::Transform constTransform = transformStamped.transform;
+  ROS_INFO_STREAM("transform: " << transformStamped);
+  tf::Transform transform_old_new;
+  tf::transformMsgToTF(constTransform, transform_old_new);
+
+  for (int i=0; i<waypoints_pos.size(); i++)
+  {
+    waypoints_pos_copy.push_back(waypoints_pos[i]);
+    waypoints_pos_copy[i] = transform_old_new*waypoints_pos_copy[i];
+  }
+  waypoints_pos.clear();
+  server->clear();
+  for (int i=0; i<waypoints_pos_copy.size(); i++)
+    makeArrow(waypoints_pos_copy[i], i);
+  
+  waypoints_pos = waypoints_pos_copy;
+  //delete the waypoints_pos vector
+  server->applyChanges();
+}
+
 void AddWayPoint::clearAllPointsRViz()
 {
   waypoints_pos.clear();
@@ -759,6 +795,7 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out)
 
   if(control_size == 0)
   {
+    ROS_ERROR("The control size is zero, this is not allowed");
     return;
   }
   else
@@ -775,8 +812,8 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out)
   {
     int_marker.controls.at(control_size).markers.at(0).color = WAY_POINT_COLOR;
   }
-
-    server->insert( int_marker);
+  server->insert( int_marker);
+  server->applyChanges();
 
 }
 

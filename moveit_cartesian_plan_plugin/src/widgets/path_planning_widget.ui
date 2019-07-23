@@ -492,6 +492,19 @@
 															border-color :rgb(48, 48, 48)</string>
 									</property>
 								</widget>
+								<widget class="QPushButton" name="transform_robot_model_frame">
+									<property name="geometry">
+										<rect>
+											<x>160</x>
+											<y>160</y>
+											<width>120</width>
+											<height>27</height>
+										</rect>
+									</property>
+									<property name="text">
+										<string>Transform points</string>
+									</property>
+								</widget>
 							</widget>
 						<widget class="QLabel" name="lbl_cartPathCompleted">
 							<property name="geometry">

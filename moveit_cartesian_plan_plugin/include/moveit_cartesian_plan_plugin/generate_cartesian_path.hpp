@@ -109,7 +109,7 @@ protected:
     //! Generate Cartesian Path that avoids collisions.
     bool AVOID_COLLISIONS_;
 	
-		std::string ROBOT_MODEL_FRAME_;
+	std::string ROBOT_MODEL_FRAME_;
 	tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener* tfListener;
 

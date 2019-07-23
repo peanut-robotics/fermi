@@ -16,6 +16,8 @@
 #include <rviz/default_plugin/interactive_markers/interactive_marker.h>
 #include <tf/LinearMath/Vector3.h>
 #include <tf/LinearMath/Scalar.h>
+#include <tf/transform_datatypes.h>
+#include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PointStamped.h>
 #include <std_msgs/ColorRGBA.h>
@@ -113,6 +115,9 @@ private:
     //! Target Frame for the Transformation.
     std::string target_frame_;
 
+	tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener* tfListener;
+
 protected Q_SLOTS:
 	//! rviz::Panel virtual functions for loading Panel Configuration.
 	virtual void load(const rviz::Config& config);
@@ -139,6 +144,7 @@ public Q_SLOTS:
 
 	//! Clear all the Way-Points
 	void clearAllPointsRViz();
+	void transformPointsViz(std::string frame);
 	//! Slot for handling the even when a way-point is out of the IK solution of the loaded robot.
 	void wayPointOutOfIK_slot(int point_number,int out);
 	//! Get the name of the Transformation frame of the Robot.
