@@ -247,58 +247,47 @@ void GenerateCartesianPath::freespacePathHandler(std::vector<double> config, boo
 
 void GenerateCartesianPath::checkWayPointValidity(const geometry_msgs::Pose& waypoint, const int point_number)
 {
-    /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
-        In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
-    */
-  try {
-    if (ROBOT_MODEL_FRAME_.empty()){
-      ROS_ERROR_STREAM("the robot model frame is empty for point number " << point_number);
-      Q_EMIT wayPointOutOfIK(point_number,0);
-      return;
-    }
-    ROS_INFO_STREAM("The frame ik is in is map the frame we are currently in is " << ROBOT_MODEL_FRAME_ << " transforming");
-    geometry_msgs::TransformStamped transformStamped;
-    try{
-      transformStamped = tfBuffer.lookupTransform("mobile_base_link", ROBOT_MODEL_FRAME_, ros::Time(0));
-    }
-    catch (tf2::TransformException &ex) {
-      ROS_ERROR("transform error in check waypoint validity");
-      ROS_ERROR("%s",ex.what());
-      Q_EMIT wayPointOutOfIK(point_number,0);
-      return;
-    }
-      geometry_msgs::Pose waypoint_pose_copy;
-      waypoint_pose_copy.position = waypoint.position;
-      waypoint_pose_copy.orientation = waypoint.orientation;
+      /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
+          In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
+      */
+      Eigen::Affine3d trans, waypoint_trans, res_trans;
 
-    const geometry_msgs::Transform constTransform = transformStamped.transform;
-    ROS_INFO_STREAM("transform used to transform into planning frame of base_link: " << transformStamped);
-    tf::Transform transform_old_new;
-    tf::transformMsgToTF(constTransform, transform_old_new);
+      tf2::fromMsg (waypoint, waypoint_trans);
+      Eigen::Affine3d const& const_waypoint_trans = waypoint_trans;
+      /**Get the transform corresponding to the frame \e id. This will be known if \e id is a link name, an attached
+     body id or a collision object.
+      Return identity when no transform is available. Use knowsFrameTransform() to test if this function will be
+     successful or not. This function also
+      updates the link transforms of \e state. */
+      trans = kinematic_state_->getFrameTransform(ROBOT_MODEL_FRAME_);
 
-    tf::Transform waypoint_tf;
-    tf::poseMsgToTF (waypoint_pose_copy, waypoint_tf);
-    waypoint_tf = transform_old_new*waypoint_tf;
-    tf::poseTFToMsg (waypoint_tf, waypoint_pose_copy);
+      // Eigen::IOFormat HeavyFmt(StreamPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
+      // std::cout << trans.format(HeavyFmt) << sep;
+      // std::cout << trans << std::end;
+      geometry_msgs::TransformStamped trans_el_b = tf2::eigenToTransform(trans);
 
-    ROS_INFO_STREAM("the frame the solver expects is  " << joint_model_group_->getSolverInstance()->getTipFrame());
-    ROS_INFO_STREAM("the frame of the is robot model" << kinematic_state_->getRobotModel()->getModelFrame().c_str());
-      // kinematic_state_->getRobotModel()->printModelInfo(std::cout);
+      trans_el_b.header.frame_id = "mobile_base_link";
+      trans_el_b.header.stamp = ros::Time::now();
+      trans_el_b.child_frame_id = ROBOT_MODEL_FRAME_;
 
-    bool found_ik = kinematic_state_->setFromIK(joint_model_group_, waypoint_pose_copy, 1, 0.05);
+      //  * \param t_in The frame to transform, as a timestamped Eigen Affine3d transform.
+      //  * \param t_out The transformed frame, as a timestamped Eigen Affine3d transform.
+      //  * \param transform The timestamped transform to apply, as a TransformStamped message.
+      tf2::doTransform(const_waypoint_trans, res_trans, trans_el_b);
+      Eigen::Affine3d const& const_res_trans = res_trans;
 
-    if(found_ik)
-    {
-      Q_EMIT wayPointOutOfIK(point_number,0);
-    }
-    else
-    {
-      Q_EMIT wayPointOutOfIK(point_number,1);
-    }
-  }
-  catch (...) {
-    ROS_ERROR("Something happened in checkWayPointValidity, steve doesnt know what");
-  }
+      geometry_msgs::Pose transformed_waypoint_pose = tf2::toMsg(const_res_trans);
+
+      bool found_ik = kinematic_state_->setFromIK(joint_model_group_, transformed_waypoint_pose, 3, 0.01);
+
+      if(found_ik)
+      {
+        Q_EMIT wayPointOutOfIK(point_number,0);
+      }
+      else
+      {
+        Q_EMIT wayPointOutOfIK(point_number,1);
+      }
 }
 
 void GenerateCartesianPath::initRvizDone()
