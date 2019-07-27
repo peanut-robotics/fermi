@@ -167,6 +167,10 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
     moveit_group_->setPoseReferenceFrame("base_link");
+    // moveit_group_->setStartStateToCurrentState();
+    robot_state::RobotStatePtr start_state = moveit_group_->getCurrentState(10.0);
+    ROS_INFO_STREAM("the start state of the robot is " << start_state);
+    moveit_group_->setStartState(*start_state);
 
     ROS_INFO_STREAM("The frame planning occurs in is base_link the frame we are currently in is " << ROBOT_MODEL_FRAME_ << " transforming");
     geometry_msgs::TransformStamped transformStamped;
@@ -193,30 +197,68 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       waypoints_pose_copy.push_back(waypoint_pose);
     }
 
+
+    // ROS_INFO_STREAM("the start state of the robot is " << moveit_group_->getStartState());
+
+    // // //
+    // 1. compute cartesian path
+    // // //
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
     moveit_msgs::RobotTrajectory trajectory_;
     double fraction = moveit_group_->computeCartesianPath(waypoints_pose_copy,CART_STEP_SIZE_,CART_JUMP_THRESH_,trajectory_,AVOID_COLLISIONS_);
     robot_trajectory::RobotTrajectory rt(kmodel_, group_names[selected_plan_group]);
 
-    rt.setRobotTrajectoryMsg(*kinematic_state_, trajectory_);
+    // rt.setRobotTrajectoryMsg(*kinematic_state_, trajectory_);
 
     ROS_INFO_STREAM("Frame which moveit requests plans in (it transforms to this frame before sending plan): " << moveit_group_->getPoseReferenceFrame());
     ROS_INFO_STREAM("Frame which poses are represented in " << ROBOT_MODEL_FRAME_);
 
     // Third create a IterativeParabolicTimeParameterization object
-    trajectory_processing::IterativeParabolicTimeParameterization iptp;
-    bool success = iptp.computeTimeStamps(rt);
-    ROS_INFO("Computed time stamp %s",success?"SUCCEDED":"FAILED");
+    // trajectory_processing::IterativeParabolicTimeParameterization iptp;
+    // bool success = iptp.computeTimeStamps(rt);
+    // ROS_INFO("Computed time stamp %s",success?"SUCCEDED":"FAILED");
 
 
-    // Get RobotTrajectory_msg from RobotTrajectory
-    rt.getRobotTrajectoryMsg(trajectory_);
+    // // Get RobotTrajectory_msg from RobotTrajectory
+    // rt.getRobotTrajectoryMsg(trajectory_);
     // Finally plan and execute the trajectory
     plan.trajectory_ = trajectory_;
     ROS_INFO("Visualizing plan (cartesian path) (%.2f%% acheived)",fraction * 100.0);
+    bool success = fraction>0.50;
     Q_EMIT cartesianPathCompleted(fraction);
+    if (!success){
+      ROS_ERROR("cartesian planning was not successful, returning");
+      Q_EMIT cartesianPathExecuteFinished();
+      return;
+    }
+    // // //
+    // 2. compute and execute freespace plan
+    // // //
+    bool start_state_fixed = AVOID_COLLISIONS_;
+    if (!start_state_fixed){ // Avoid collisions really means fix the start state and do a freespace plan to it
+      moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+      moveit_group_->setPlanningTime(PLAN_TIME_);
+      moveit_group_->allowReplanning (MOVEIT_REPLAN_);
+      std::vector<double> start_config = trajectory_.joint_trajectory.points.front().positions;
+      moveit_group_->setJointValueTarget(start_config);
 
+      bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+      ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
+      
+      if (success){
+        moveit_group_->execute(my_plan);
+      }
+      else {
+        ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
+        Q_EMIT cartesianPathExecuteFinished();
+        return;
+      }
+    }
+
+    // // //
+    // 3. execute cartesian path
+    // // //
     moveit_group_->execute(plan);
 
     kinematic_state_ = moveit_group_->getCurrentState();
