@@ -74,7 +74,9 @@ void AddWayPoint::onInitialize()
     ROS_INFO("initializing..");
 
     menu_handler.insert( "Delete", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
-    menu_handler.setCheckState(menu_handler.insert( "Fine adjustment", boost::bind( &AddWayPoint::processFeedback, this, _1 )),interactive_markers::MenuHandler::UNCHECKED);
+    menu_handler.insert( "adjust_frame", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
+    menu_handler.insert( "adjust_eef", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
+    menu_handler.insert( "adjust_hide", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
 
     connect(path_generate,SIGNAL(getRobotModelFrame_signal(const std::string,const tf::Transform)),this,SLOT(getRobotModelFrame_slot(const std::string,const tf::Transform)));
 
@@ -200,38 +202,37 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
       //get the menu item which is pressed
       interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
       interactive_markers::MenuHandler::CheckState state;
-
-      menu_handler.getCheckState(menu_item,state);
+      std::string marker_name = feedback->marker_name;
 
       if(menu_item == 1)
       {
-           std::string marker_name = feedback->marker_name;
-           int marker_nr = atoi(marker_name.c_str());
-           Q_EMIT pointDeleteRviz(marker_nr);
-           pointDeleted(marker_name);
-           break;
+        int marker_nr = atoi(marker_name.c_str());
+        Q_EMIT pointDeleteRviz(marker_nr);
+        pointDeleted(marker_name);
+      }
+      else if (menu_item == 2)
+      {
+        ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown with in frame fine adjustment");
+        std::string control_mode = "adjust_frame";
+        changeMarkerControlAndPose( feedback->marker_name.c_str(), control_mode);
+      }
+      else if (menu_item == 3)
+      {
+        std::string control_mode = "adjust_eef";
+        ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown with in eef fine adjustment");
+        changeMarkerControlAndPose( feedback->marker_name.c_str(), control_mode);
+      }
+      else if (menu_item == 4)
+      {
+        std::string control_mode = "adjust_hide";
+        ROS_INFO_STREAM("Turning off fine adjustment");
+        changeMarkerControlAndPose( feedback->marker_name.c_str(), control_mode);
       }
       else
       {
-        if(state == interactive_markers::MenuHandler::UNCHECKED)
-        {
-          ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown with 6DOF control");
-          menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::CHECKED );
-          geometry_msgs::Pose pose;
-          changeMarkerControlAndPose( feedback->marker_name.c_str(),true);
-          break;
-        }
-        else
-        {
-          ROS_INFO_STREAM("The selected marker:" << feedback->marker_name.c_str() << "is shown as default");
-          menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::UNCHECKED );
-          geometry_msgs::Pose pose;
-          changeMarkerControlAndPose( feedback->marker_name.c_str(),false);
-          break;
-        }
+        ROS_ERROR_STREAM("an unknown menu_item selection was caught in feedback, the menu_item is: " << std::to_string(menu_item));
       }
       break;
-
     }
   }
   server->applyChanges();
@@ -301,8 +302,8 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDefault( InteractiveMarke
   control_menu.interaction_mode = InteractiveMarkerControl::MENU;
 
   control_menu.name = "menu_select";
-  msg.controls.push_back( control_menu );
   control_menu.markers.push_back( makeWayPoint(msg) );
+  msg.controls.push_back( control_menu );
 
 
   InteractiveMarkerControl control_move3d;
@@ -317,7 +318,7 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDefault( InteractiveMarke
 
 }
 
-InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarker &msg )
+InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarker &msg, bool is_fixed_frame )
 {
 
   InteractiveMarkerControl control_menu;
@@ -326,11 +327,15 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarke
   control_menu.interaction_mode = InteractiveMarkerControl::MENU;
   control_menu.name = "menu_select";
   msg.controls.push_back( control_menu );
-  control_menu.markers.push_back(makeWayPoint(msg));
 
- InteractiveMarkerControl control_view_details;
- control_view_details.always_visible = true;
-//*************rotate and move around the x-axis********************
+  InteractiveMarkerControl control_view_details;
+  control_view_details.always_visible = true;
+  if (is_fixed_frame)
+  {
+    control_view_details.orientation_mode = InteractiveMarkerControl::FIXED;
+  }
+
+  //*************rotate and move around the x-axis********************
   control_view_details.orientation.w = 1;
   control_view_details.orientation.x = 1;
   control_view_details.orientation.y = 0;
@@ -343,9 +348,9 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarke
   control_view_details.name = "move_x";
   control_view_details.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
   msg.controls.push_back( control_view_details );
-//*****************************************************************
+  //*****************************************************************
 
-//*************rotate and move around the z-axis********************
+  //*************rotate and move around the z-axis********************
   control_view_details.orientation.w = 1;
   control_view_details.orientation.x = 0;
   control_view_details.orientation.y = 1;
@@ -358,10 +363,10 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarke
   control_view_details.name = "move_z";
   control_view_details.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
   msg.controls.push_back( control_view_details );
-//*****************************************************************
+  //*****************************************************************
 
 
-//*************rotate and move around the y-axis********************
+  //*************rotate and move around the y-axis********************
   control_view_details.orientation.w = 1;
   control_view_details.orientation.x = 0;
   control_view_details.orientation.y = 0;
@@ -376,12 +381,17 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarke
   control_view_details.name = "move_y";
   control_view_details.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
   msg.controls.push_back( control_view_details );
-  control_view_details.markers.push_back( makeWayPoint(msg) );
 
   msg.controls.push_back( control_view_details );
+  InteractiveMarkerControl arrow_viz_control;
+  arrow_viz_control.always_visible = true;
 
-//*****************************************************************
-  return msg.controls.back();
+  arrow_viz_control.interaction_mode = InteractiveMarkerControl::MOVE_ROTATE_3D;
+  arrow_viz_control.name = "arrow";
+  arrow_viz_control.markers.push_back( makeWayPoint(msg) );
+  msg.controls.push_back( arrow_viz_control );
+  //*****************************************************************
+  return control_menu;
 
 }
 
@@ -450,23 +460,16 @@ void AddWayPoint::clearAllInteractiveBoxes()
 {
     /*! Function for clearing all the boxes from the scene, change everything back to a standard arrow
     */
+    std::string default_string = "adjust_hide";
     for(int i=1;i<=waypoints_pos.size();i++)
     {
       ROS_INFO_STREAM("clearing box for " << std::to_string(i));
-      changeMarkerControlAndPose(std::to_string(i), true);
-      //get the menu item which is pressed
-      interactive_markers::MenuHandler::EntryHandle menu_item = i;
-      interactive_markers::MenuHandler::CheckState state;
-      ROS_INFO_STREAM("The selected marker: " << std::to_string(i) << " is shown as default");
-      menu_handler.setCheckState( menu_item, interactive_markers::MenuHandler::UNCHECKED );
-      menu_handler.apply( *server, std::to_string(i) );
-      geometry_msgs::Pose pose;
-      changeMarkerControlAndPose(std::to_string(i),false);
+      changeMarkerControlAndPose(std::to_string(i), default_string);
       server->applyChanges();
     }
 }
 
-void AddWayPoint::changeMarkerControlAndPose(std::string marker_name,bool set_control)
+void AddWayPoint::changeMarkerControlAndPose(std::string marker_name, std::string control_mode)
 {
 
    /*! Handling the events from the clicked Menu Items for the Control of the Way-Point.
@@ -474,16 +477,25 @@ void AddWayPoint::changeMarkerControlAndPose(std::string marker_name,bool set_co
    */
     InteractiveMarker int_marker;
     server->get(marker_name, int_marker);
+    int_marker.controls.clear();
 
-    if(set_control)
+    if(control_mode=="adjust_eef")
     {
-      int_marker.controls.clear();
-      makeArrowControlDetails(int_marker);
+      bool fixed_frame = false;
+      makeArrowControlDetails(int_marker, fixed_frame);
     }
-    else if(!set_control)
+    else if(control_mode=="adjust_frame")
     {
-      int_marker.controls.clear();
+      bool fixed_frame = true;
+      makeArrowControlDetails(int_marker, fixed_frame);
+    }
+    else if (control_mode=="adjust_hide")
+    {
       makeArrowControlDefault(int_marker);
+    }
+    else
+    {
+      ROS_ERROR_STREAM("unknown control mode :" << control_mode);
     }
 
     server->insert( int_marker);
@@ -499,7 +511,7 @@ void AddWayPoint::pointDeleted(std::string marker_name)
        This function handles the event of removing a point from the RViz enviroment. It finds the name of the selected marker which the user wants to delete and updates the RViz enviroment and the vector that contains all the Way-Points.
     */
     for( int i=0;i<waypoints_pos.size();i++)
-            ROS_DEBUG_STREAM( "vecotr before delete: \n"<<"x:"<< waypoints_pos[i].getOrigin().x()<<"; " << waypoints_pos[i].getOrigin().y()<< "; "<<waypoints_pos[i].getOrigin().z()<<";\n");
+      ROS_DEBUG_STREAM( "vecotr before delete: \n"<<"x:"<< waypoints_pos[i].getOrigin().x()<<"; " << waypoints_pos[i].getOrigin().y()<< "; "<<waypoints_pos[i].getOrigin().z()<<";\n");
 
 
     //get the index of the selected marker
@@ -553,8 +565,8 @@ InteractiveMarkerControl& AddWayPoint::makeInteractiveMarkerControl( Interactive
 
   msg.controls.push_back( control_button );
   //server.reset( new interactive_markers::InteractiveMarkerServer("moveit_cartesian_plan_plugin","",false));
-InteractiveMarkerControl control_inter_arrow;
- control_inter_arrow.always_visible = true;
+  InteractiveMarkerControl control_inter_arrow;
+  control_inter_arrow.always_visible = true;
 //*************rotate and move around the x-axis********************
   control_inter_arrow.orientation.w = 1;
   control_inter_arrow.orientation.x = 1;

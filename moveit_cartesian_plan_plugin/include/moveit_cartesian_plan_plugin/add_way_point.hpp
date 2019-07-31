@@ -92,12 +92,12 @@ private:
 	//! Create controls for each different marker. Here we have control for the defaulot starting control ArrowMarkers(the cartesian way points)
 	InteractiveMarkerControl& makeArrowControlDefault(InteractiveMarker &msg );
     //! 6DOF control for the Ingteractive Markers
-	InteractiveMarkerControl& makeArrowControlDetails(InteractiveMarker &msg );
+	InteractiveMarkerControl& makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
 
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
 	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
     //! Function to handle the entries made from the Way-Points interactive markers Menu.
-	virtual void changeMarkerControlAndPose(std::string marker_name,bool set_control);
+	virtual void changeMarkerControlAndPose(std::string marker_name, std::string control_mode);
 
     //! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
