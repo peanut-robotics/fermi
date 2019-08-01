@@ -259,6 +259,8 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 3. execute cartesian path
     // // //
+    // update the starting point to be the correct time
+    plan.trajectory_.joint_trajectory.header.stamp = ros::Time::now();
     moveit_group_->execute(plan);
 
     kinematic_state_ = moveit_group_->getCurrentState();
