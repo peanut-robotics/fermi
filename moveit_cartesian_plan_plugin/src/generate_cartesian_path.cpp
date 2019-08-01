@@ -179,6 +179,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     }
     catch (tf2::TransformException &ex) {
       ROS_ERROR("%s",ex.what());
+      Q_EMIT cartesianPathExecuteFinished();
     }
     std::vector<geometry_msgs::Pose> waypoints_pose_copy;
 
@@ -197,8 +198,25 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       waypoints_pose_copy.push_back(waypoint_pose);
     }
 
+    bool start_state_fixed = AVOID_COLLISIONS_;
+    if (start_state_fixed){ // If the start state is fixed then append the current pose to the list of poses for cartesian planning
+      geometry_msgs::TransformStamped eef_pos;
+      try{
+        eef_pos = tfBuffer.lookupTransform("base_link", "end_effector_link" , ros::Time(0));
+      }
+      catch (tf2::TransformException &ex) {
+        ROS_ERROR("%s",ex.what());
+        Q_EMIT cartesianPathExecuteFinished();
+        return;
+      }
+      geometry_msgs::Pose waypoint_pose;
+      tf::Transform eef_pos_tf;
+      tf::transformMsgToTF(eef_pos.transform, eef_pos_tf);
+      tf::poseTFToMsg (eef_pos_tf, waypoint_pose);
 
-    // ROS_INFO_STREAM("the start state of the robot is " << moveit_group_->getStartState());
+      std::vector<geometry_msgs::Pose>::iterator it = waypoints_pose_copy.begin();
+      waypoints_pose_copy.insert(it, waypoint_pose);
+    }
 
     // // //
     // 1. compute cartesian path
@@ -235,7 +253,6 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 2. compute and execute freespace plan
     // // //
-    bool start_state_fixed = AVOID_COLLISIONS_;
     if (!start_state_fixed){ // Avoid collisions really means fix the start state and do a freespace plan to it
       moveit::planning_interface::MoveGroupInterface::Plan my_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
