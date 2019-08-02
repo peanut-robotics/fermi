@@ -232,14 +232,6 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     ROS_INFO_STREAM("Frame which moveit requests plans in (it transforms to this frame before sending plan): " << moveit_group_->getPoseReferenceFrame());
     ROS_INFO_STREAM("Frame which poses are represented in " << ROBOT_MODEL_FRAME_);
 
-    // Third create a IterativeParabolicTimeParameterization object
-    // trajectory_processing::IterativeParabolicTimeParameterization iptp;
-    // bool success = iptp.computeTimeStamps(rt);
-    // ROS_INFO("Computed time stamp %s",success?"SUCCEDED":"FAILED");
-
-
-    // // Get RobotTrajectory_msg from RobotTrajectory
-    // rt.getRobotTrajectoryMsg(trajectory_);
     // Finally plan and execute the trajectory
     plan.trajectory_ = trajectory_;
     ROS_INFO("Visualizing plan (cartesian path) (%.2f%% acheived)",fraction * 100.0);
@@ -253,6 +245,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 2. compute and execute freespace plan
     // // //
+    moveit::planning_interface::MoveItErrorCode freespace_error_code;
     if (!start_state_fixed){ // Avoid collisions really means fix the start state and do a freespace plan to it
       moveit::planning_interface::MoveGroupInterface::Plan my_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
@@ -264,7 +257,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
       
       if (success){
-        moveit_group_->execute(my_plan);
+        freespace_error_code = moveit_group_->execute(my_plan);
       }
       else {
         ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
@@ -277,9 +270,13 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // 3. execute cartesian path
     // // //
     // update the starting point to be the correct time
-    plan.trajectory_.joint_trajectory.header.stamp = ros::Time::now();
-    moveit_group_->execute(plan);
-
+    
+    if (freespace_error_code==freespace_error_code.SUCCESS || start_state_fixed){
+      plan.trajectory_.joint_trajectory.header.stamp = ros::Time::now();
+      plan.trajectory_.multi_dof_joint_trajectory.header.stamp = ros::Time::now();
+      plan.start_state_.multi_dof_joint_state.header.stamp = ros::Time::now();
+      moveit_group_->execute(plan);
+    }
     kinematic_state_ = moveit_group_->getCurrentState();
 
     Q_EMIT cartesianPathExecuteFinished();
