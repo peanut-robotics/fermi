@@ -37,11 +37,11 @@ AddWayPoint::AddWayPoint(QWidget *parent):rviz::Panel(parent)//, tf_()
       ARROW_INTER_COLOR.b = 0.1;
       ARROW_INTER_COLOR.a = 1.0;
 
-      ARROW_INTER_SCALE_CONTROL.x = 0.17;
-      ARROW_INTER_SCALE_CONTROL.y = 0.03;
-      ARROW_INTER_SCALE_CONTROL.z = 0.03;
+      ARROW_INTER_SCALE_CONTROL.x = 0.1;
+      ARROW_INTER_SCALE_CONTROL.y = 0.1;
+      ARROW_INTER_SCALE_CONTROL.z = 0.1;
 
-      ARROW_INTERACTIVE_SCALE = 0.1;
+      ARROW_INTERACTIVE_SCALE = 0.2;
 
      ROS_INFO("Constructor created;");
 }
@@ -77,6 +77,9 @@ void AddWayPoint::onInitialize()
     menu_handler.insert( "adjust_frame", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
     menu_handler.insert( "adjust_eef", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
     menu_handler.insert( "adjust_hide", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
+
+    menu_handler_inter.insert("set home", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
+    // menu_handler_inter.insert("right arm out", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
 
     connect(path_generate,SIGNAL(getRobotModelFrame_signal(const std::string,const tf::Transform)),this,SLOT(getRobotModelFrame_slot(const std::string,const tf::Transform)));
 
@@ -165,6 +168,79 @@ void AddWayPoint::cacheConfig(std::vector<double> config){
   AddWayPoint::config = config;
 }
 
+void AddWayPoint::processFeedbackInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback )
+{
+  switch ( feedback->event_type )
+  {
+    case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
+    {
+      //get the menu item which is pressed
+      interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
+      std::string marker_name = feedback->marker_name;
+      InteractiveMarker interaction_marker;
+      server->get(feedback->marker_name.c_str(), interaction_marker);
+
+      // form a transform stamped from the pose of the interaction marker
+      // geometry_msgs::TransformStamped parent_trans;
+      // parent_trans.transform.translation.x = feedback->pose.position.x;
+      // parent_trans.transform.translation.y = feedback->pose.position.y;
+      // parent_trans.transform.translation.z = feedback->pose.position.z;
+      // parent_trans.transform.rotation.x = feedback->pose.orientation.x;
+      // parent_trans.transform.rotation.y = feedback->pose.orientation.y;
+      // parent_trans.transform.rotation.z = feedback->pose.orientation.z;
+      // parent_trans.transform.rotation.w = feedback->pose.orientation.w;
+      // parent_trans.header = interaction_marker.header;
+      // ROS_INFO_STREAM("transform: " << parent_trans);
+      
+      if(menu_item == 1)
+      {
+        // Cache home position
+        parent_home_ = feedback->pose;
+      }
+    break;
+    }
+    case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
+    {
+
+
+      // (1) Find all markers with controls length greater than 2 (These are the selected ones)
+      // InteractiveMarker 
+      std::vector<InteractiveMarker> selected;
+      InteractiveMarker cur_marker;
+      for(int i=1; i<=waypoints_pos.size(); i++)
+      {
+        server->get(std::to_string(i), cur_marker);
+        if (cur_marker.controls.size() > 2){
+          selected.push_back(cur_marker);
+        }
+      }
+      // (2) Find the delta of the current pose from the home pose
+      
+      geometry_msgs::Point delta;
+      delta.x = feedback->pose.position.x - parent_home_.position.x ;
+      delta.y = feedback->pose.position.y - parent_home_.position.y;
+      delta.z = feedback->pose.position.z - parent_home_.position.z;
+
+      // (3) apply this delta to all the selected ones
+      for (InteractiveMarker cur_marker : selected){
+        tf::Transform point_pos;
+        cur_marker.pose.position.x+=delta.x;
+        cur_marker.pose.position.y+=delta.y;
+        cur_marker.pose.position.z+=delta.z;
+        tf::poseMsgToTF(cur_marker.pose, point_pos);
+
+        // std::string marker_name = cur_marker.name;
+        pointPoseUpdated(point_pos, cur_marker.name.c_str());
+        Q_EMIT pointPoseUpdatedRViz(point_pos, cur_marker.name.c_str());
+      }
+
+      // (4) set the home position to the current pose
+      parent_home_ = feedback->pose;
+      break;
+    }
+  }
+}
+
 void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback )
 {
   /*! This function is one of the most essential ones since it handles the events of the InteractiveMarkers from the User in the RViz Enviroment.
@@ -175,17 +251,6 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
   */
   switch ( feedback->event_type )
   {
-    case visualization_msgs::InteractiveMarkerFeedback::BUTTON_CLICK:
-    {
-
-    tf::Transform point_pos;
-    tf::poseMsgToTF(feedback->pose,point_pos);
-    // ROS_INFO_STREAM("on click feedback pose is"<<feedback->pose.position.x<<", "<<feedback->pose.position.y<<", "<<feedback->pose.position.z<<";");
-
-    makeArrow(point_pos,count);
-    break;
-    }
-
     case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
     {
 
@@ -293,7 +358,7 @@ Marker AddWayPoint::makeWayPoint( InteractiveMarker &msg )
   return marker;
 }
 
-InteractiveMarkerControl& AddWayPoint::makeArrowControlDefault( InteractiveMarker &msg )
+void AddWayPoint::makeArrowControlDefault( InteractiveMarker &msg )
 {
 
   InteractiveMarkerControl control_menu;
@@ -305,20 +370,9 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDefault( InteractiveMarke
   control_menu.markers.push_back( makeWayPoint(msg) );
   msg.controls.push_back( control_menu );
 
-
-  InteractiveMarkerControl control_move3d;
-  control_move3d.always_visible = true;
-
-  control_move3d.interaction_mode = InteractiveMarkerControl::MENU;
-  control_move3d.name = "move";
-  control_move3d.markers.push_back( makeWayPoint(msg) );
-  msg.controls.push_back( control_move3d );
-
-  return msg.controls.back();
-
 }
 
-InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarker &msg, bool is_fixed_frame )
+void AddWayPoint::makeArrowControlDetails( InteractiveMarker &msg, bool is_fixed_frame )
 {
 
   InteractiveMarkerControl control_menu;
@@ -391,8 +445,6 @@ InteractiveMarkerControl& AddWayPoint::makeArrowControlDetails( InteractiveMarke
   arrow_viz_control.markers.push_back( makeWayPoint(msg) );
   msg.controls.push_back( arrow_viz_control );
   //*****************************************************************
-  return control_menu;
-
 }
 
 void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
@@ -541,7 +593,7 @@ Marker AddWayPoint::makeInterArrow( InteractiveMarker &msg )
   //define a marker
   Marker marker;
 
-  marker.type = Marker::ARROW;
+  marker.type = Marker::CUBE;
   marker.scale = ARROW_INTER_SCALE_CONTROL;
 
 
@@ -612,7 +664,11 @@ InteractiveMarkerControl& AddWayPoint::makeInteractiveMarkerControl( Interactive
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
   msg.controls.push_back( control_inter_arrow );
 //*****************************************************************
-  control_inter_arrow.markers.push_back( makeInterArrow(msg) );
+  InteractiveMarkerControl arrow_marker;
+  arrow_marker.always_visible = true;
+
+  // arrow_marker.markers.push_back( makeInterArrow(msg) );
+  msg.controls.push_back(arrow_marker);
 
   return msg.controls.back();
 }
@@ -622,24 +678,25 @@ void AddWayPoint::makeInteractiveMarker()
    /*! Create the User Interactive Marker and update the RViz enviroment.
 
    */
-        InteractiveMarker inter_arrow_marker_;
-        inter_arrow_marker_.header.frame_id = target_frame_;
-        inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
+    InteractiveMarker inter_arrow_marker_;
+    inter_arrow_marker_.header.frame_id = target_frame_;
+    inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
 
-        ROS_INFO_STREAM("Marker Frame is:" << target_frame_);
+    ROS_INFO_STREAM("Marker Frame is:" << target_frame_);
 
-        geometry_msgs::Pose pose;
-        tf::poseTFToMsg(box_pos,inter_arrow_marker_.pose);
+    geometry_msgs::Pose pose;
+    tf::poseTFToMsg(box_pos,inter_arrow_marker_.pose);
 
-        inter_arrow_marker_.description = "Interaction Marker";
+    inter_arrow_marker_.description = "Interaction Marker";
 
-        //button like interactive marker. Detect when we have left click with the mouse and add new arrow then
-        inter_arrow_marker_.name = "add_point_button";
+    //button like interactive marker. Detect when we have left click with the mouse and add new arrow then
+    inter_arrow_marker_.name = "add_point_button";
 
-        makeInteractiveMarkerControl(inter_arrow_marker_);
-        server->insert( inter_arrow_marker_);
-        //add interaction feedback to the markers
-        server->setCallback( inter_arrow_marker_.name, boost::bind( &AddWayPoint::processFeedback, this, _1 ));
+    makeInteractiveMarkerControl(inter_arrow_marker_);
+    server->insert( inter_arrow_marker_);
+    menu_handler_inter.apply(*server, inter_arrow_marker_.name);
+    //add interaction feedback to the markers
+    server->setCallback( inter_arrow_marker_.name, boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
 }
 void AddWayPoint::parseWayPoints()
 {
@@ -775,8 +832,7 @@ void AddWayPoint::transformPointsViz(std::string frame)
     waypoints_pos_copy.push_back(waypoints_pos[i]);
     waypoints_pos_copy[i] = transform_old_new*waypoints_pos_copy[i];
   }
-  waypoints_pos.clear();
-  server->clear();
+  clearAllPointsRViz();
   for (int i=0; i<waypoints_pos_copy.size(); i++)
     makeArrow(waypoints_pos_copy[i], i);
   

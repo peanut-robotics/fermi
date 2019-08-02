@@ -78,6 +78,7 @@ public:
 
 	//! Fucntion for all the interactive marker interactions
 	virtual void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
+	virtual void processFeedbackInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
 
     //! Make a new Interactive Marker Way-Point
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
@@ -90,9 +91,9 @@ private:
 	//! Function to create the InteractionArrow Marker
 	Marker makeInterArrow( InteractiveMarker &msg );
 	//! Create controls for each different marker. Here we have control for the defaulot starting control ArrowMarkers(the cartesian way points)
-	InteractiveMarkerControl& makeArrowControlDefault(InteractiveMarker &msg );
+	void makeArrowControlDefault(InteractiveMarker &msg );
     //! 6DOF control for the Ingteractive Markers
-	InteractiveMarkerControl& makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
+	void makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
 
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
 	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
@@ -102,6 +103,7 @@ private:
     //! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
+	interactive_markers::MenuHandler menu_handler_inter;
 
     //! Vector for storing all the User Entered Way-Points.
 	std::vector<tf::Transform> waypoints_pos;
@@ -178,6 +180,7 @@ private:
 
 	geometry_msgs::Vector3 WAY_POINT_SCALE_CONTROL;
 	geometry_msgs::Vector3 ARROW_INTER_SCALE_CONTROL;
+	geometry_msgs::Pose parent_home_;
 
 	float INTERACTIVE_MARKER_SCALE;
 	float ARROW_INTERACTIVE_SCALE;
