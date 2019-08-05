@@ -77,9 +77,12 @@ void AddWayPoint::onInitialize()
     menu_handler.insert( "adjust_frame", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
     menu_handler.insert( "adjust_eef", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
     menu_handler.insert( "adjust_hide", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
+    menu_handler.insert( "duplicate_in_place", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
+    // menu_handler.insert( "duplicate_at_end", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
 
     menu_handler_inter.insert("set home", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
-    // menu_handler_inter.insert("right arm out", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
+    menu_handler_inter.insert("duplicate selected at end in order", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
+    menu_handler_inter.insert("duplicate selected at end and reverse", boost::bind( &AddWayPoint::processFeedbackInter, this, _1 ));
 
     connect(path_generate,SIGNAL(getRobotModelFrame_signal(const std::string,const tf::Transform)),this,SLOT(getRobotModelFrame_slot(const std::string,const tf::Transform)));
 
@@ -87,6 +90,7 @@ void AddWayPoint::onInitialize()
 
     connect(widget_,SIGNAL(addPoint(tf::Transform)), this,SLOT( addPointFromUI( tf::Transform)));
     connect(widget_,SIGNAL(pointDelUI_signal(std::string)),this,SLOT(pointDeleted( std::string)));
+    connect(widget_,SIGNAL(duplicateWaypoint_signal(std::string)),this,SLOT(duplicateWaypoint( std::string)));
     connect(this,SIGNAL(addPointRViz(const tf::Transform&,const int)),widget_,SLOT(insertRow(const tf::Transform&,const int)));
     connect(this,SIGNAL(pointPoseUpdatedRViz(const tf::Transform&,const char*)),widget_,SLOT(pointPosUpdated_slot(const tf::Transform&,const char*)));
     connect(widget_,SIGNAL(pointPosUpdated_signal(const tf::Transform&,const char*)),this,SLOT(pointPoseUpdated(const tf::Transform&,const char*)));
@@ -180,22 +184,70 @@ void AddWayPoint::processFeedbackInter( const visualization_msgs::InteractiveMar
       InteractiveMarker interaction_marker;
       server->get(feedback->marker_name.c_str(), interaction_marker);
 
-      // form a transform stamped from the pose of the interaction marker
-      // geometry_msgs::TransformStamped parent_trans;
-      // parent_trans.transform.translation.x = feedback->pose.position.x;
-      // parent_trans.transform.translation.y = feedback->pose.position.y;
-      // parent_trans.transform.translation.z = feedback->pose.position.z;
-      // parent_trans.transform.rotation.x = feedback->pose.orientation.x;
-      // parent_trans.transform.rotation.y = feedback->pose.orientation.y;
-      // parent_trans.transform.rotation.z = feedback->pose.orientation.z;
-      // parent_trans.transform.rotation.w = feedback->pose.orientation.w;
-      // parent_trans.header = interaction_marker.header;
-      // ROS_INFO_STREAM("transform: " << parent_trans);
       
       if(menu_item == 1)
       {
         // Cache home position
         parent_home_ = feedback->pose;
+      }
+      else if(menu_item == 2)
+      { // Duplicate all selected in place
+        // (1) find all selected markers
+        std::vector<tf::Transform> selected;
+        InteractiveMarker cur_marker;
+        int last_marker_index = 1;
+        for(int i=1; i<=waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          if (cur_marker.controls.size() > 2){
+            geometry_msgs::Pose cur_pos = cur_marker.pose;
+            tf::Transform point_pos;
+            cur_pos.position.z+=0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+            tf::poseMsgToTF(cur_pos, point_pos);
+            selected.push_back(point_pos);
+            last_marker_index = stoi(cur_marker.name);
+          }
+        }
+
+        std::vector<std::string> duplicated_names;
+        // (2) Duplicate in place
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+        advance(insertion_point, last_marker_index);
+        insert(insertion_point, selected);
+        // (4) set selected to the duplicated points
+        for (int i=last_marker_index+1; i<=last_marker_index+selected.size(); i++){          
+           changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+        }
+      }
+      else if(menu_item == 3)
+      { // duplicate and flip
+        // (1) find all selected markers
+        std::vector<tf::Transform> selected;
+        InteractiveMarker cur_marker;
+        int last_marker_index = 1;
+        for(int i=1; i<=waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          if (cur_marker.controls.size() > 2){
+            geometry_msgs::Pose cur_pos = cur_marker.pose;
+            tf::Transform point_pos;
+            cur_pos.position.z+=0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+            tf::poseMsgToTF(cur_pos, point_pos);
+            selected.push_back(point_pos);
+            last_marker_index = stoi(cur_marker.name);
+          }
+        }
+
+        std::reverse(selected.begin(),selected.end()); // This is the only different line
+
+        // (2) Duplicate in place
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+        advance(insertion_point, last_marker_index);
+        insert(insertion_point, selected);
+        // (4) set selected to the duplicated points
+        for (int i=last_marker_index+1; i<=last_marker_index+selected.size(); i++){          
+           changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+        }
       }
     break;
     }
@@ -292,6 +344,19 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
         std::string control_mode = "adjust_hide";
         ROS_INFO_STREAM("Turning off fine adjustment");
         changeMarkerControlAndPose( feedback->marker_name.c_str(), control_mode);
+      }
+      else if (menu_item == 5)
+      {
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+        int marker_index = stoi(feedback->marker_name);
+        advance(insertion_point, marker_index-1);
+
+        tf::Transform point_pos;
+        geometry_msgs::Pose cur_pos = feedback->pose;
+        cur_pos.position.z+=0.01; // move it up a centimeter in z because points cant be identical
+        tf::poseMsgToTF(cur_pos, point_pos);
+        std::vector<tf::Transform> pos_vec = {point_pos};
+        insert(insertion_point, pos_vec);
       }
       else
       {
@@ -583,6 +648,25 @@ void AddWayPoint::pointDeleted(std::string marker_name)
            }
            count--;
            server->applyChanges();
+}
+void AddWayPoint::insert(std::vector<tf::Transform>::iterator insert_it, std::vector<tf::Transform> pose_vector)
+{
+  waypoints_pos.insert(insert_it, pose_vector.begin(), pose_vector.end());
+
+  std::vector<tf::Transform> waypoints_pos_copy(waypoints_pos);
+
+  clearAllPointsRViz();
+
+  std::vector<tf::Transform>::iterator point_pos = waypoints_pos_copy.begin();
+  int i = 0;
+  for(point_pos = waypoints_pos_copy.begin(); point_pos < waypoints_pos_copy.end(); point_pos++)
+  {
+    makeArrow(*point_pos, i);
+    i++;
+  }
+  
+  waypoints_pos = waypoints_pos_copy;
+  server->applyChanges();
 }
 
 Marker AddWayPoint::makeInterArrow( InteractiveMarker &msg )

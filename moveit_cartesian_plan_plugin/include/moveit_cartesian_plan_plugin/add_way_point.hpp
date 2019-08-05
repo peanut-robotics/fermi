@@ -94,6 +94,7 @@ private:
 	void makeArrowControlDefault(InteractiveMarker &msg );
     //! 6DOF control for the Ingteractive Markers
 	void makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
+	void insert(std::vector<tf::Transform>::iterator insert_it, std::vector<tf::Transform> pose_vector);
 
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
 	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
@@ -129,7 +130,7 @@ public Q_SLOTS:
 	//! Slot for handling the event of way-point deletion.
 	virtual void pointDeleted(std::string marker_name);
 	void cacheConfig(std::vector<double> config);
-
+	
 	//! Slot for handling the add way-point event from the RQT UI.
 	void addPointFromUI( const tf::Transform point_pos);
 	//! Slot for handling when the user updates the position of the Interactive Markers.
