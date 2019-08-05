@@ -288,6 +288,8 @@ void AddWayPoint::processFeedbackInter( const visualization_msgs::InteractiveMar
 
       // (4) set the home position to the current pose
       parent_home_ = feedback->pose;
+      tf::poseMsgToTF(feedback->pose, box_pos);
+
       break;
     }
   }
@@ -349,7 +351,7 @@ void AddWayPoint::processFeedback( const visualization_msgs::InteractiveMarkerFe
       {
         std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
         int marker_index = stoi(feedback->marker_name);
-        advance(insertion_point, marker_index-1);
+        advance(insertion_point, marker_index);
 
         tf::Transform point_pos;
         geometry_msgs::Pose cur_pos = feedback->pose;
@@ -978,7 +980,7 @@ void AddWayPoint::getRobotModelFrame_slot(const std::string robot_model_frame,co
 
   target_frame_.assign("elevator_link");
   ROS_INFO_STREAM("The robot model frame is: " << target_frame_);
-  box_pos = end_effector;
+  // box_pos = end_effector;
 
   clearAllPointsRViz();
 
