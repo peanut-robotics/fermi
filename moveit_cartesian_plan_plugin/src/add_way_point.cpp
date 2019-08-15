@@ -112,7 +112,7 @@ void AddWayPoint::onInitialize()
 
 
 
-    connect(path_generate,SIGNAL(wayPointOutOfIK(int,int)),this,SLOT(wayPointOutOfIK_slot(int,int)));
+    connect(path_generate,SIGNAL(wayPointOutOfIK(int,int, std::vector<geometry_msgs::Pose>)),this,SLOT(wayPointOutOfIK_slot(int,int, std::vector<geometry_msgs::Pose>)));
     connect(this,SIGNAL(onUpdatePosCheckIkValidity(const geometry_msgs::Pose&, const int)),path_generate,SLOT(checkWayPointValidity(const geometry_msgs::Pose&, const int)));
 
     connect(path_generate,SIGNAL(cartesianPathExecuteStarted()),widget_,SLOT(cartesianPathStartedHandler()));
@@ -427,7 +427,6 @@ Marker AddWayPoint::makeWayPoint( InteractiveMarker &msg )
 
 void AddWayPoint::makeArrowControlDefault( InteractiveMarker &msg )
 {
-
   InteractiveMarkerControl control_menu;
   control_menu.always_visible = true;
 
@@ -936,7 +935,7 @@ void AddWayPoint::clearAllPointsRViz()
   makeInteractiveMarker();
   server->applyChanges();
 }
-void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out)
+void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses)
 {
   InteractiveMarker int_marker;
   visualization_msgs::Marker point_marker;
@@ -957,6 +956,8 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out)
     control_size = control_size-1;
   }
 
+  int_marker.controls.at(control_size).markers.erase(int_marker.controls.at(control_size).markers.begin()+1, int_marker.controls.at(control_size).markers.end());
+  
   if(out == 1)
   {
     //make the marker outside the IK solution with yellow color
@@ -966,7 +967,42 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out)
   {
     int_marker.controls.at(control_size).markers.at(0).color = WAY_POINT_COLOR;
   }
-  server->insert( int_marker);
+  ROS_INFO_STREAM("length of markers: " << std::to_string(int_marker.controls.at(control_size).markers.size()) );
+  if (control_size > 2){ 
+    // Only do additional step if its selected
+    int oob_marker_count = 0;
+    for (geometry_msgs::Pose out_of_bounds_pose : out_of_bounds_poses){
+      oob_marker_count++;
+      Marker oob_marker;
+      oob_marker.type = Marker::CUBE;
+      oob_marker.header.frame_id = target_frame_;
+      // oob_marker.ns = "oob_marker";
+      // oob_marker.id = oob_marker_count;
+      // oob_marker.action = Marker::ADD;
+      oob_marker.pose = out_of_bounds_pose;
+      oob_marker.scale.x = 0.02;
+      oob_marker.scale.y = 0.02;
+      oob_marker.scale.z = 0.02;
+      oob_marker.color = WAY_POINT_COLOR_OUTSIDE_IK;
+      oob_marker.lifetime = ros::Duration(1);
+      oob_marker.frame_locked = true;
+
+      // Header header                        # header for time/frame information
+      // string ns                            # Namespace to place this object in... used in conjunction with id to create a unique name for the object
+      // int32 id                           # object ID useful in conjunction with the namespace for manipulating and deleting the object later
+      // int32 type                         # Type of object
+      // int32 action                         # 0 add/modify an object, 1 (deprecated), 2 deletes an object, 3 deletes all objects
+      // geometry_msgs/Pose pose                 # Pose of the object
+      // geometry_msgs/Vector3 scale             # Scale of the object 1,1,1 means default (usually 1 meter square)
+      // std_msgs/ColorRGBA color             # Color [0.0-1.0]
+      // duration lifetime                    # How long the object should last before being automatically deleted.  0 means forever
+      // bool frame_locked                    # If this marker should be frame-locked, i.e. retransformed into its frame every timestep
+
+      int_marker.controls.at(control_size).markers.push_back(oob_marker);
+    }
+  }
+  int_marker.controls.at(control_size);
+  server->insert(int_marker);
   server->applyChanges();
 
 }

@@ -308,43 +308,45 @@ void GenerateCartesianPath::checkWayPointValidity(const geometry_msgs::Pose& way
       /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
           In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
       */
-      Eigen::Affine3d trans, waypoint_trans, res_trans;
+      geometry_msgs::TransformStamped transformStamped;
+      try{
+        transformStamped = tfBuffer.lookupTransform("base_link", ROBOT_MODEL_FRAME_ , ros::Time(0));
+      }
+      catch (tf2::TransformException &ex) {
+        ROS_ERROR("%s",ex.what());
+        return;
+      }
+      const geometry_msgs::Transform constTransform = transformStamped.transform;
+      tf::Transform transform_old_new;
+      tf::transformMsgToTF(constTransform, transform_old_new);
 
-      tf2::fromMsg (waypoint, waypoint_trans);
-      Eigen::Affine3d const& const_waypoint_trans = waypoint_trans;
-      /**Get the transform corresponding to the frame \e id. This will be known if \e id is a link name, an attached
-     body id or a collision object.
-      Return identity when no transform is available. Use knowsFrameTransform() to test if this function will be
-     successful or not. This function also
-      updates the link transforms of \e state. */
-      trans = kinematic_state_->getFrameTransform(ROBOT_MODEL_FRAME_);
+      tf::Transform waypoint_tf;
+      tf::poseMsgToTF (waypoint, waypoint_tf);
+      waypoint_tf = transform_old_new*waypoint_tf;
+      
+      Eigen::Affine3d res_trans;
+      tf::transformTFToEigen(waypoint_tf, res_trans);
 
-      // Eigen::IOFormat HeavyFmt(StreamPrecision, 0, ", ", ";\n", "[", "]", "[", "]");
-      // std::cout << trans.format(HeavyFmt) << sep;
-      // std::cout << trans << std::end;
-      geometry_msgs::TransformStamped trans_el_b = tf2::eigenToTransform(trans);
+      // (1) get relevant poses in an ordered vector (2 for edgees, 3 for middle)
+      // (2) loop through vector and interpolate
+      // (3) loop through interpolated and call IK
+      // (4) add marker with time limit at failed points
 
-      trans_el_b.header.frame_id = "mobile_base_link";
-      trans_el_b.header.stamp = ros::Time::now();
-      trans_el_b.child_frame_id = ROBOT_MODEL_FRAME_;
+      bool found_ik = jaco3_kinematics::ik_exists(res_trans, 500);
 
-      //  * \param t_in The frame to transform, as a timestamped Eigen Affine3d transform.
-      //  * \param t_out The transformed frame, as a timestamped Eigen Affine3d transform.
-      //  * \param transform The timestamped transform to apply, as a TransformStamped message.
-      tf2::doTransform(const_waypoint_trans, res_trans, trans_el_b);
-      Eigen::Affine3d const& const_res_trans = res_trans;
-
-      geometry_msgs::Pose transformed_waypoint_pose = tf2::toMsg(const_res_trans);
-
-      bool found_ik = kinematic_state_->setFromIK(joint_model_group_, transformed_waypoint_pose, 3, 0.01);
+      std::vector<geometry_msgs::Pose> out_of_bounds_interpolated;
+      geometry_msgs::Pose oob;
+      oob = waypoint;
+      oob.position.z-=.1;
+      out_of_bounds_interpolated.push_back(oob);
 
       if(found_ik)
       {
-        Q_EMIT wayPointOutOfIK(point_number,0);
+        Q_EMIT wayPointOutOfIK(point_number, 0, out_of_bounds_interpolated);
       }
       else
       {
-        Q_EMIT wayPointOutOfIK(point_number,1);
+        Q_EMIT wayPointOutOfIK(point_number,1, out_of_bounds_interpolated);
       }
 }
 

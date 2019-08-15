@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
   moveit_ros_move_group
   moveit_ros_planning_interface
+  peanut_kinematics
 )
 
 find_package(Eigen3 REQUIRED)
@@ -111,7 +112,7 @@ endif()
 
 set(CMAKE_CURRENT_BINARY_DIR "${_cmake_current_binary_dir}")
 
-include_directories(${moveit_cartesian_plan_plugin_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS})
+include_directories(${moveit_cartesian_plan_plugin_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS} ${peanut_kinematics_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${moveit_cartesian_plan_plugin_SRCS} ${moveit_cartesian_plan_plugin_MOCS} ${moveit_cartesian_plan_plugin_UIS_H}) # ${moveit_cartesian_plan_plugin_UIS_H}
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}

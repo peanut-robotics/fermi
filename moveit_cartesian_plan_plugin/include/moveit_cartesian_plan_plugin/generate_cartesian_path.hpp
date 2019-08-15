@@ -16,6 +16,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 
+#include <peanut_kinematics/jaco3_ik.h>
 
 #ifndef GENERATE_CARTESIAN_PATH_H_
 #define GENERATE_CARTESIAN_PATH_H_
@@ -70,7 +71,7 @@ public Q_SLOTS:
 	void moveToHome();
 Q_SIGNALS:
 	//! Let the RViz that a Way-Point is outside the IK solution.
-	void wayPointOutOfIK(int point_number, int out_of_range);
+	void wayPointOutOfIK(int point_number, int out_of_range, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
 	//! Send the pose of the currently loaded Robot Frame to the AddWayPoint and PathPlanningWidget classes.
 	void getRobotModelFrame_signal(const std::string robot_model_frame,const tf::Transform end_effector);
 	//! Let the RQT Widget know that a Cartesian Path Execution has started.

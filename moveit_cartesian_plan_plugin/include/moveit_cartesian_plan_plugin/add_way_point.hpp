@@ -149,7 +149,7 @@ public Q_SLOTS:
 	void clearAllPointsRViz();
 	void transformPointsViz(std::string frame);
 	//! Slot for handling the even when a way-point is out of the IK solution of the loaded robot.
-	void wayPointOutOfIK_slot(int point_number,int out);
+	void wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
 	//! Get the name of the Transformation frame of the Robot.
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
 
