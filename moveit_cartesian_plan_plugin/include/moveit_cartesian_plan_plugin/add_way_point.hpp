@@ -165,7 +165,7 @@ Q_SIGNALS:
 	//! Signal for sending all the Way-Points.
 	void wayPoints_signal(std::vector<geometry_msgs::Pose> waypoints);
 	//! Signal to check if the way-point is in valid IK solution.
-	void onUpdatePosCheckIkValidity(const geometry_msgs::Pose& waypoint,const int point_number);
+	void onUpdatePosCheckIkValidity(const std::vector<tf::Transform> waypoints_pos, const int point_number);
 
 
 protected:

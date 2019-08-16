@@ -113,7 +113,7 @@ void AddWayPoint::onInitialize()
 
 
     connect(path_generate,SIGNAL(wayPointOutOfIK(int,int, std::vector<geometry_msgs::Pose>)),this,SLOT(wayPointOutOfIK_slot(int,int, std::vector<geometry_msgs::Pose>)));
-    connect(this,SIGNAL(onUpdatePosCheckIkValidity(const geometry_msgs::Pose&, const int)),path_generate,SLOT(checkWayPointValidity(const geometry_msgs::Pose&, const int)));
+    connect(this,SIGNAL(onUpdatePosCheckIkValidity(const std::vector<tf::Transform>, const int)),path_generate,SLOT(checkWayPointValidity(const std::vector<tf::Transform>, const int)));
 
     connect(path_generate,SIGNAL(cartesianPathExecuteStarted()),widget_,SLOT(cartesianPathStartedHandler()));
     connect(path_generate,SIGNAL(cartesianPathExecuteFinished()),widget_,SLOT(cartesianPathFinishedHandler()));
@@ -401,7 +401,7 @@ void AddWayPoint::pointPoseUpdated(const tf::Transform& point_pos, const char* m
       waypoints_pos[index-1] = point_pos;
 
       s << index;
-      Q_EMIT onUpdatePosCheckIkValidity(pose,index);
+      Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos,index);
     }
 
     server->setPose(s.str(),pose);
@@ -571,7 +571,7 @@ void AddWayPoint::makeArrow(const tf::Transform& point_pos,int count_arrow)//
         server->setCallback( int_marker.name, boost::bind( &AddWayPoint::processFeedback, this, _1 ));
         menu_handler.apply(*server,int_marker.name);
         //server->applyChanges();
-        Q_EMIT onUpdatePosCheckIkValidity(int_marker.pose,count_arrow);
+        Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, count_arrow);
 }
 
 void AddWayPoint::clearAllInteractiveBoxes()
@@ -619,7 +619,7 @@ void AddWayPoint::changeMarkerControlAndPose(std::string marker_name, std::strin
     server->insert( int_marker);
     menu_handler.apply(*server,int_marker.name);
     server->setCallback( int_marker.name, boost::bind( &AddWayPoint::processFeedback, this, _1 ));
-    Q_EMIT onUpdatePosCheckIkValidity(int_marker.pose,atoi(marker_name.c_str()));
+    Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, atoi(marker_name.c_str()));
 
 }
 
@@ -975,7 +975,7 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geo
       oob_marker_count++;
       Marker oob_marker;
       oob_marker.type = Marker::CUBE;
-      oob_marker.header.frame_id = target_frame_;
+      oob_marker.header.frame_id = "base_link";
       // oob_marker.ns = "oob_marker";
       // oob_marker.id = oob_marker_count;
       // oob_marker.action = Marker::ADD;

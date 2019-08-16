@@ -48,14 +48,15 @@ public:
 	void init();
 	//get the current planning group name
 	void getPlanGroupName(const std_msgs::StringConstPtr& msg);
+	void interpolate(Eigen::Affine3d start_pos, Eigen::Affine3d end_pos, float step_size, std::vector<Eigen::Affine3d>& interpolated);
 public Q_SLOTS:
 	//! Get the Way-Points from the RViz enviroment and use them to generate Cartesian Path.
   void moveToPose(std::vector<geometry_msgs::Pose> waypoints);
 
 	void moveToConfig(std::vector<double> config, bool plan_only);
 
-  //! Checks if the Way-Point is in the valid IK solution for the Robot.
-	void checkWayPointValidity(const geometry_msgs::Pose& waypoints,const int marker_name);
+  	//! Checks if the Way-Point is in the valid IK solution for the Robot.
+	void checkWayPointValidity(const std::vector<tf::Transform> waypoints, const int point_number);
 	//! Slot for letting the Cartesian Path planning class that the RViz has finished with its initialization.
 	void initRvizDone();
 	//! Function for setting time consuming Cartesian Path Execution function to a separate thread.
@@ -102,7 +103,7 @@ protected:
     //! Parameter for setting the planning time of the MoveIt.
     double PLAN_TIME_;
     //! Parameter for setting the Cartesian Path step size.
-    double CART_STEP_SIZE_;
+    double CART_STEP_SIZE_ = 0.1;
     //! Parameter for setting the Jump Threshold of the Cartesian Path.
     double CART_JUMP_THRESH_;
     //! Allow MoveIt to replan.
