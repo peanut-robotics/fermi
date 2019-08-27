@@ -826,6 +826,7 @@ void AddWayPoint::saveWayPointsToFile()
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
     */
+   ROS_INFO("begin save waypoints to file");
       QString fileName = QFileDialog::getSaveFileName(this,
          tr("Save Way Points"), ".yaml",
          tr("Way Points (*.yaml);;All Files (*)"));
@@ -840,7 +841,7 @@ void AddWayPoint::saveWayPointsToFile()
                  file.close();
              return;
       }
-
+   ROS_INFO("begin yaml creation waypoints to file");
     YAML::Emitter out;
     out << YAML::BeginMap;
     out << YAML::Key << "frame_id";
@@ -849,6 +850,8 @@ void AddWayPoint::saveWayPointsToFile()
   //todo save the config here.
     out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
     
+    ROS_INFO("begin for loop for yaml creation waypoints to file");
+
     for(int i=0;i<waypoints_pos.size();i++)
   {
       out << YAML::BeginMap;
@@ -886,9 +889,11 @@ void AddWayPoint::saveWayPointsToFile()
     out << YAML::EndSeq;// and configuration list
     out << YAML::EndMap;
 
+      std::cout << "\n\n ***************begin printout********** \n\n" <<out.c_str() << "\n\n ***************end printout********** \n\n"<<std::endl;
       std::ofstream myfile;
       myfile.open (fileName.toStdString().c_str());
       myfile << out.c_str();
+      ROS_INFO("just before file close");
       myfile.close();
      }
 }
