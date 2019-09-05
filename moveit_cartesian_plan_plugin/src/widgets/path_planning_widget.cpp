@@ -604,7 +604,6 @@ void PathPlanningWidget::loadPointsFromFile()
         ROS_INFO("the config was edited");
         Q_EMIT configEdited_signal(startConfig);
       }
-
       frame_id = "base_link";
       std::string name;
       int i = 0;
@@ -622,6 +621,12 @@ void PathPlanningWidget::loadPointsFromFile()
         ui_.progressBar->setValue(percent_complete);
         Q_EMIT addPoint(pose_tf);
       }
+      ROS_INFO("Setting step size and frame id");
+      ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+      ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
+      ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
+      ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
+
     }
     catch (...)
     {
@@ -630,8 +635,9 @@ void PathPlanningWidget::loadPointsFromFile()
     // TODO call same pathway as button
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+
     PathPlanningWidget::transformPointsToFrame();
+    ROS_INFO("completed load process for clean path");
   }
 }
 void PathPlanningWidget::savePointsToFile()
