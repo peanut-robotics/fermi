@@ -42,7 +42,7 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
 
   ARROW_INTERACTIVE_SCALE = 0.2;
 
-  ROS_INFO("Constructor created;");
+  ROS_INFO("Constructor created");
 }
 
 AddWayPoint::~AddWayPoint()
@@ -401,7 +401,7 @@ void AddWayPoint::pointPoseUpdated(const tf::Transform &point_pos, const char *m
     waypoints_pos[index - 1] = point_pos;
 
     s << index;
-    Q_EMIT onUpdatePosCheckIkValidity(pose, index);
+    Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, index);
   }
 
   server->setPose(s.str(), pose);
@@ -1014,7 +1014,7 @@ void AddWayPoint::getRobotModelFrame_slot(const std::string robot_model_frame, c
       This function also initializes the count of the Way-Points and adds the User Interactive Marker to the scene and the RQT Widget.
   */
 
-  target_frame_.assign("elevator_link");
+  target_frame_.assign("base_link");
   ROS_INFO_STREAM("The robot model frame is: " << target_frame_);
   // box_pos = end_effector;
 

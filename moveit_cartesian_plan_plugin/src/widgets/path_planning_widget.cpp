@@ -590,9 +590,10 @@ void PathPlanningWidget::loadPointsFromFile()
       //define double for percent of completion
       double percent_complete;
       int end_of_points = clean_path.cached_paths[0].robot_poses.size();
-
+      ROS_INFO("at beginning of if statement line 593");
       if (!clean_path.cached_paths[0].cached_path.points.empty()){
-        std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points.end()->positions;
+        ROS_INFO("the cached path is not empty");
+        std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
         ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
         ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
         ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
@@ -600,19 +601,23 @@ void PathPlanningWidget::loadPointsFromFile()
         ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
         ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
         ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+        ROS_INFO("the config was edited");
         Q_EMIT configEdited_signal(startConfig);
       }
 
       frame_id = "base_link";
       std::string name;
-      tf::Transform pose_tf;
       int i = 0;
+      tf::Transform pose_tf;
+      ROS_INFO("running through for loop");
       for (geometry_msgs::Pose pose : clean_path.cached_paths[0].robot_poses)
       {
+        ROS_WARN_STREAM("pose in list before transform" << pose);
+        ROS_INFO_STREAM(std::to_string(i)<<"  ");
         i++;
         name = std::to_string(i);
-        tf::Transform pose_tf;
-        tf::poseTFToMsg (pose_tf, pose);
+        tf::poseMsgToTF(pose, pose_tf);
+        ROS_INFO_STREAM("pose in list after transform" << pose);
         percent_complete = (i + 1) * 100 / end_of_points;
         ui_.progressBar->setValue(percent_complete);
         Q_EMIT addPoint(pose_tf);
