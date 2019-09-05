@@ -41,6 +41,9 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <map>
 #include <tf2_ros/transform_listener.h>
+#include <peanut_cotyledon/GetCleanPath.h>
+#include <peanut_cotyledon/CleanPath.h>
+#include <peanut_cotyledon/GetCleanPathRequest.h>
 
 // macros
 #ifndef DEG2RAD
@@ -77,6 +80,7 @@ namespace moveit_cartesian_plan_plugin
 				return "RobotPathPlanner";
 			}
 			ros::NodeHandle nh_;
+			ros::ServiceClient get_clean_path_proxy_;
   			ros::Publisher robot_goal_pub;
 
 		protected:
@@ -173,7 +177,7 @@ namespace moveit_cartesian_plan_plugin
 		    //! On this signal we will call the function for which will exectute the MoveIt command to bring the robot in its initial state.
 		    void moveToHomeFromUI_signal();
 
-				void sendSendSelectedPlanGroup(int index);
+			void sendSendSelectedPlanGroup(int index);
 
 		};
 	}

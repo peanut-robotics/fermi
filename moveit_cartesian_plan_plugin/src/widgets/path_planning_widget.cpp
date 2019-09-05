@@ -12,8 +12,8 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
                                                          param_ns_(ns)
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
+  get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   /*! Constructor which calls the init() function.
-
       */
   init();
 }
@@ -535,86 +535,88 @@ void PathPlanningWidget::loadPointsFromFile()
             After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
         */
 
-  QString fileName = QFileDialog::getOpenFileName(this,
-                                                  tr("Open Way Points File"), "",
-                                                  tr("Way Points (*.yaml);;All Files (*)"));
-
-  if (fileName.isEmpty())
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+  try
+  {
+    peanut_cotyledon::GetCleanPath srv;
+    srv.request.floor_name = floor_name;
+    srv.request.area_name = area_name;
+    srv.request.object_id = object_id;
+    srv.request.task_name = task_name;
+    // ROS_INFO_STREAM("sending request to get clean path" << srv);
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+      ui_.tabWidget->setEnabled(true);
+      ui_.progressBar->hide();
+      return;
+    }
+  }
+  catch (...)
+  {
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    ui_.tabWidget->setEnabled(true);
+    ui_.progressBar->hide();
+    return;
+  }
+  ROS_INFO_STREAM("the clean_path is loaded");
+  
+  if (clean_path.cached_paths[0].robot_poses.empty())
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
+    ROS_INFO_STREAM("the cached path associated with the clean path has an empty robot poses message");
     return;
   }
   else
   {
     ui_.tabWidget->setEnabled(false);
     ui_.progressBar->show();
-    QFile file(fileName);
 
-    if (!file.open(QIODevice::ReadOnly))
-    {
-      QMessageBox::information(this, tr("Unable to open file"),
-                               file.errorString());
-      file.close();
-      ui_.tabWidget->setEnabled(true);
-      ui_.progressBar->hide();
-      return;
-    }
     //clear all the scene before loading all the new points from the file!!
     clearAllPoints_slot();
 
-    ROS_INFO_STREAM("Opening the file: " << fileName.toStdString());
-    std::string fin(fileName.toStdString());
     std::string frame_id;
     try
     {
-      YAML::Node doc;
-      doc = YAML::LoadFile(fin);
       //define double for percent of completion
       double percent_complete;
-      int end_of_points = doc["points"].size();
+      int end_of_points = clean_path.cached_paths[0].robot_poses.size();
 
-      std::vector<double> startConfig = doc["start_config"].as<std::vector<double>>();
+      if (!clean_path.cached_paths[0].cached_path.points.empty()){
+        std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points.end()->positions;
+        ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+        ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+        ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+        ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+        ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+        ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+        ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+        Q_EMIT configEdited_signal(startConfig);
+      }
 
-      ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
-      ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
-      ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
-      ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
-      ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
-      ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
-      ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
-      std::cout << end_of_points << "end of doc" << std::endl;
-      frame_id = doc["frame_id"].as<std::string>();
-      for (size_t i = 0; i < end_of_points; i++)
+      frame_id = "base_link";
+      std::string name;
+      tf::Transform pose_tf;
+      int i = 0;
+      for (geometry_msgs::Pose pose : clean_path.cached_paths[0].robot_poses)
       {
-        std::string name;
-        geometry_msgs::Pose pose;
-        tf::Transform pose_tf;
-
-        double x, y, z;
-        double qx, qy, qz, qw;
-
+        i++;
         name = std::to_string(i);
-        x = doc["points"][i]["position"]["x"].as<double>();
-        y = doc["points"][i]["position"]["y"].as<double>();
-        z = doc["points"][i]["position"]["z"].as<double>();
-        qx = doc["points"][i]["orientation"]["x"].as<double>();
-        qy = doc["points"][i]["orientation"]["y"].as<double>();
-        qz = doc["points"][i]["orientation"]["z"].as<double>();
-        qw = doc["points"][i]["orientation"]["w"].as<double>();
-
-        pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw), tf::Vector3(x, y, z));
-
+        tf::Transform pose_tf;
+        tf::poseTFToMsg (pose_tf, pose);
         percent_complete = (i + 1) * 100 / end_of_points;
         ui_.progressBar->setValue(percent_complete);
         Q_EMIT addPoint(pose_tf);
-        Q_EMIT configEdited_signal(startConfig);
       }
-    }
-    catch (char *excp)
-    {
-      ROS_INFO("bla de bla, first error");
-      ROS_INFO_STREAM("Caught " << excp);
     }
     catch (...)
     {
