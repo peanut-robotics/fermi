@@ -114,7 +114,7 @@ void GenerateCartesianPath::init()
   joint_model_group_ = kmodel_->getJointModelGroup(group_names[selected_plan_group]);
 }
 
-void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_)
+void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_, bool fix_start_state_)
 {
   /*! Set the necessary parameters for the MoveIt and the Cartesian Path Planning.
       These parameters correspond to the ones that the user has entered or the default ones before the execution of the Cartesian Path Planner.
@@ -132,6 +132,7 @@ void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_siz
   CART_JUMP_THRESH_ = cart_jump_thresh_;
   AVOID_COLLISIONS_ = avoid_collisions_;
   ROBOT_MODEL_FRAME_ = robot_model_frame_;
+  FIX_START_STATE_ = fix_start_state_;
 }
 
 void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_only) 
@@ -167,10 +168,9 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
     moveit_group_->setPoseReferenceFrame("base_link");
-    // moveit_group_->setStartStateToCurrentState();
     robot_state::RobotStatePtr start_state = moveit_group_->getCurrentState(10.0);
     ROS_INFO_STREAM("the start state of the robot is " << start_state);
-    moveit_group_->setStartState(*start_state);
+    moveit_group_->setStartStateToCurrentState();
 
     ROS_INFO_STREAM("The frame planning occurs in is base_link the frame we are currently in is " << ROBOT_MODEL_FRAME_ << " transforming");
     geometry_msgs::TransformStamped transformStamped;
@@ -188,6 +188,15 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     tf::Transform transform_old_new;
     tf::transformMsgToTF(constTransform, transform_old_new);
 
+    moveit_msgs::Constraints path_constraints;
+    moveit_msgs::OrientationConstraint orientation_constraint;
+    orientation_constraint.absolute_x_axis_tolerance = 0.0;
+    orientation_constraint.weight = 0.0;
+
+    moveit_msgs::PositionConstraint position_constraint;
+    position_constraint.target_point_offset.x = 0.0;
+    position_constraint.weight = 0.0;
+    
     for (int i=0; i<waypoints.size(); i++)
     {
       tf::Transform waypoint_tf;
@@ -196,10 +205,11 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       waypoint_tf = transform_old_new*waypoint_tf;
       tf::poseTFToMsg (waypoint_tf, waypoint_pose);
       waypoints_pose_copy.push_back(waypoint_pose);
+      path_constraints.position_constraints.push_back(position_constraint);
+      path_constraints.orientation_constraints.push_back(orientation_constraint);
     }
 
-    bool start_state_fixed = AVOID_COLLISIONS_;
-    if (start_state_fixed){ // If the start state is fixed then append the current pose to the list of poses for cartesian planning
+    if (FIX_START_STATE_){ // If the start state is fixed then append the current pose to the list of poses for cartesian planning
       geometry_msgs::TransformStamped eef_pos;
       try{
         eef_pos = tfBuffer.lookupTransform("base_link", "end_effector_link" , ros::Time(0));
@@ -216,6 +226,9 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
 
       std::vector<geometry_msgs::Pose>::iterator it = waypoints_pose_copy.begin();
       waypoints_pose_copy.insert(it, waypoint_pose);
+      moveit_group_->setStartState(*start_state);
+      path_constraints.position_constraints.push_back(position_constraint);
+      path_constraints.orientation_constraints.push_back(orientation_constraint);
     }
 
     // // //
@@ -224,10 +237,8 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
     moveit_msgs::RobotTrajectory trajectory_;
-    double fraction = moveit_group_->computeCartesianPath(waypoints_pose_copy,CART_STEP_SIZE_,CART_JUMP_THRESH_,trajectory_,AVOID_COLLISIONS_);
+    double fraction = moveit_group_->computeCartesianPath(waypoints_pose_copy,CART_STEP_SIZE_,CART_JUMP_THRESH_,trajectory_, path_constraints, AVOID_COLLISIONS_);
     robot_trajectory::RobotTrajectory rt(kmodel_, group_names[selected_plan_group]);
-
-    // rt.setRobotTrajectoryMsg(*kinematic_state_, trajectory_);
 
     ROS_INFO_STREAM("Frame which moveit requests plans in (it transforms to this frame before sending plan): " << moveit_group_->getPoseReferenceFrame());
     ROS_INFO_STREAM("Frame which poses are represented in " << ROBOT_MODEL_FRAME_);
@@ -237,7 +248,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     ROS_INFO("Visualizing plan (cartesian path) (%.2f%% acheived)",fraction * 100.0);
     bool success = fraction>0.50;
     Q_EMIT cartesianPathCompleted(fraction);
-    if (!success){
+    if (!success || trajectory_.joint_trajectory.points.empty()){
       ROS_ERROR("cartesian planning was not successful, returning");
       Q_EMIT cartesianPathExecuteFinished();
       return;
@@ -246,7 +257,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // 2. compute and execute freespace plan
     // // //
     moveit::planning_interface::MoveItErrorCode freespace_error_code;
-    if (!start_state_fixed){ // Avoid collisions really means fix the start state and do a freespace plan to it
+    if (!FIX_START_STATE_){ // Avoid collisions really means fix the start state and do a freespace plan to it
       moveit::planning_interface::MoveGroupInterface::Plan my_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
       moveit_group_->allowReplanning (MOVEIT_REPLAN_);
@@ -271,7 +282,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // update the starting point to be the correct time
     
-    if (freespace_error_code==freespace_error_code.SUCCESS || start_state_fixed){
+    if (freespace_error_code==freespace_error_code.SUCCESS || FIX_START_STATE_){
       plan.trajectory_.joint_trajectory.header.stamp = ros::Time::now();
       plan.trajectory_.multi_dof_joint_trajectory.header.stamp = ros::Time::now();
       plan.start_state_.multi_dof_joint_state.header.stamp = ros::Time::now();

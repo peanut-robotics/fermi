@@ -111,7 +111,7 @@ void PathPlanningWidget::sendCartTrajectoryParamsFromUI()
   /*! This function takes care of sending the User Entered parameters from the RQT to the Cartesian Path Planner.
         */
   double plan_time_, cart_step_size_, cart_jump_thresh_;
-  bool moveit_replan_, avoid_collisions_;
+  bool moveit_replan_, avoid_collisions_, fix_start_state_;
 
   plan_time_ = ui_.lnEdit_PlanTime->text().toDouble();
   cart_step_size_ = ui_.lnEdit_StepSize->text().toDouble();
@@ -119,9 +119,10 @@ void PathPlanningWidget::sendCartTrajectoryParamsFromUI()
 
   moveit_replan_ = ui_.chk_AllowReplanning->isChecked();
   avoid_collisions_ = ui_.chk_AvoidColl->isChecked();
+  fix_start_state_ = ui_.chk_FixStartState->isChecked();
   std::string robot_model_frame = ui_.robot_model_frame->text().toStdString();
 
-  Q_EMIT cartesianPathParamsFromUI_signal(plan_time_, cart_step_size_, cart_jump_thresh_, moveit_replan_, avoid_collisions_, robot_model_frame);
+  Q_EMIT cartesianPathParamsFromUI_signal(plan_time_, cart_step_size_, cart_jump_thresh_, moveit_replan_, avoid_collisions_, robot_model_frame, fix_start_state_);
 }
 void PathPlanningWidget::pointRange()
 {

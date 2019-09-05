@@ -172,7 +172,7 @@ namespace moveit_cartesian_plan_plugin
 			//! signal that the clear all boxes button has been pressed.
 			void clearAllInteractiveBoxes_signal();
 		    //! Signal that the Cartesian Plan execution button has been pressed.
-		    void cartesianPathParamsFromUI_signal(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_);
+		    void cartesianPathParamsFromUI_signal(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_, bool fix_start_state);
 
 		    //! On this signal we will call the function for which will exectute the MoveIt command to bring the robot in its initial state.
 		    void moveToHomeFromUI_signal();

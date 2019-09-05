@@ -504,6 +504,19 @@
 										<string>Avoid Collisions</string>
 									</property>
 								</widget>
+								<widget class="QCheckBox" name="chk_FixStartState">
+									<property name="geometry">
+										<rect>
+											<x>156</x>
+											<y>120</y>
+											<width>131</width>
+											<height>22</height>
+										</rect>
+									</property>
+									<property name="text">
+										<string>Fix Start State</string>
+									</property>
+								</widget>
 								<widget class="QLabel" name="label_frame_name">
 									<property name="geometry">
 										<rect>
