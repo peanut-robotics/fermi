@@ -165,7 +165,7 @@ namespace moveit_cartesian_plan_plugin
 			void configEdited_signal(std::vector<double> config);
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    //! Save to file button has been pressed.
-		    void saveToFileBtn_press();
+		    void saveToFileBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
 			void transformPointsViz(std::string frame);

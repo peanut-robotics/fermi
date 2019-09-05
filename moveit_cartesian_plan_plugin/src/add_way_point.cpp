@@ -41,6 +41,7 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   ARROW_INTER_SCALE_CONTROL.z = 0.1;
 
   ARROW_INTERACTIVE_SCALE = 0.2;
+  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
 
   ROS_INFO("Constructor created");
 }
@@ -104,7 +105,7 @@ void AddWayPoint::onInitialize()
   connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
-  connect(widget_, SIGNAL(saveToFileBtn_press()), this, SLOT(saveWayPointsToFile()));
+  connect(widget_, SIGNAL(saveToFileBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsToFile(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
   connect(widget_, SIGNAL(transformPointsViz(std::string)), this, SLOT(transformPointsViz(std::string)));
   connect(widget_, SIGNAL(clearAllInteractiveBoxes_signal()), this, SLOT(clearAllInteractiveBoxes()));
@@ -811,84 +812,97 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
   ROS_INFO_STREAM("Playing subset of waypoints from start index (inclusive, zero indexed)" << std::to_string(min_index) << " to ending index (exclusive)" << std::to_string(max_index));
   Q_EMIT wayPoints_signal(waypoints);
 }
-void AddWayPoint::saveWayPointsToFile()
+void AddWayPoint::saveWayPointsToFile(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
 {
+  try{
   /*! Function for saving all the Way-Points into yaml file.
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
     */
-  ROS_INFO("begin save waypoints to file");
-  QString fileName = QFileDialog::getSaveFileName(this,
-                                                  tr("Save Way Points"), ".yaml",
-                                                  tr("Way Points (*.yaml);;All Files (*)"));
+    ROS_INFO("begin save waypoints to file");
+    ROS_INFO_STREAM("The frame the poses are being saved in is" << target_frame_);
 
-  if (fileName.isEmpty())
-    return;
-  else
-  {
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly))
+    geometry_msgs::TransformStamped transformStamped;
+    try
     {
-      QMessageBox::information(this, tr("Unable to open file"),
-                               file.errorString());
-      file.close();
+      transformStamped = tfBuffer.lookupTransform("base_link", target_frame_, ros::Time(0));
+    }
+    catch (tf2::TransformException &ex)
+    {
+      ROS_ERROR("%s", ex.what());
+      ROS_ERROR("Unable to save because not able to transform");
       return;
     }
-    ROS_INFO("begin yaml creation waypoints to file");
-    YAML::Emitter out;
-    out << YAML::BeginMap;
-    out << YAML::Key << "frame_id";
-    out << YAML::Value << target_frame_;
+    std::vector<geometry_msgs::Pose> waypoints_pose_robot_frame, waypoints_pose_object_frame;
 
-    //todo save the config here.
-    out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
+    const geometry_msgs::Transform constTransform = transformStamped.transform;
+    ROS_INFO_STREAM("transform: " << transformStamped);
+    tf::Transform transform_old_new;
+    tf::transformMsgToTF(constTransform, transform_old_new);
+    tf::Transform waypoint_tf;
+    geometry_msgs::Pose waypoint_pose;
 
-    ROS_INFO("begin for loop for yaml creation waypoints to file");
-
-    for (int i = 0; i < waypoints_pos.size(); i++)
+    ROS_INFO_STREAM("At beginning of for loop");
+    for (auto const waypoint_pos_i : waypoints_pos)
     {
-      out << YAML::BeginMap;
+      ROS_INFO("At loop ");
+      tf::poseTFToMsg (waypoint_pos_i, waypoint_pose);
+      waypoints_pose_robot_frame.push_back(waypoint_pose);
 
-      out << YAML::Key << "position";
-      out << YAML::Value;
-      out << YAML::BeginMap;
-      out << YAML::Key << "x" << YAML::Value << waypoints_pos[i].getOrigin().x();
-      out << YAML::Key << "y" << YAML::Value << waypoints_pos[i].getOrigin().y();
-      out << YAML::Key << "z" << YAML::Value << waypoints_pos[i].getOrigin().z();
-      out << YAML::EndMap;
-
-      out << YAML::Key << "orientation";
-      out << YAML::Value;
-
-      tf::Quaternion q;
-      tf::Matrix3x3 m(waypoints_pos[i].getRotation());
-      m.getRotation(q);
-      out << YAML::BeginMap;
-      out << YAML::Key << "x" << YAML::Value << q.x();
-      out << YAML::Key << "y" << YAML::Value << q.y();
-      out << YAML::Key << "z" << YAML::Value << q.z();
-      out << YAML::Key << "w" << YAML::Value << q.w();
-      out << YAML::EndMap;
-
-      out << YAML::EndMap;
+      waypoint_tf = transform_old_new * waypoint_pos_i;
+      tf::poseTFToMsg (waypoint_tf, waypoint_pose);
+      waypoints_pose_object_frame.push_back(waypoint_pose); 
     }
 
-    out << YAML::EndSeq; // End list of points
+    ROS_INFO_STREAM("just before setting things");
+    if (clean_path.cached_paths.empty()){
+      std::vector<peanut_cotyledon::CachedPath> one_cached_path_vec;
+      peanut_cotyledon::CachedPath one_cached_path;
+      one_cached_path_vec.push_back(one_cached_path);
+      clean_path.cached_paths = one_cached_path_vec;
+    }
+    clean_path.cached_paths.at(0).robot_poses = waypoints_pose_robot_frame;
+    clean_path.object_poses = waypoints_pose_object_frame;
+    trajectory_msgs::JointTrajectory empty_joint_traj;
+    clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
 
-    out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
-    out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
-    out << YAML::EndSeq; // and configuration list
-    out << YAML::EndMap;
-
-    std::cout << "\n\n ***************begin printout********** \n\n"
-              << out.c_str() << "\n\n ***************end printout********** \n\n"
-              << std::endl;
-    std::ofstream myfile;
-    myfile.open(fileName.toStdString().c_str());
-    myfile << out.c_str();
-    ROS_INFO("just before file close");
-    myfile.close();
+    try
+    {
+      peanut_cotyledon::SetCleanPath srv;
+      srv.request.floor_name = floor_name;
+      srv.request.area_name = area_name;
+      srv.request.object_id = object_id;
+      srv.request.task_name = task_name;
+      srv.request.clean_path = clean_path;
+    // ROS_INFO_STREAM("sending request to get clean path" << srv);
+    if(set_clean_path_proxy_.call(srv))
+    {
+      if(srv.response.success == true){
+        ROS_INFO("Successfully saved");
+      }
+      else {
+        ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+        return;
+      }
+    }
+    else
+    {
+      ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+      return;
+    }
   }
+  catch (...)
+  {
+    ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+    return;
+  }
+  }
+  catch (...)
+  {
+    ROS_ERROR("some unkown error happened during saving, the file did not properly save");
+    return;
+  }
+  ROS_INFO("Saving finishd successfully");
 }
 
 void AddWayPoint::transformPointsViz(std::string frame)

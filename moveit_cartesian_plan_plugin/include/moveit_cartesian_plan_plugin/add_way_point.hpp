@@ -25,7 +25,9 @@
 #include <tf/transform_listener.h>
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
-
+#include <peanut_cotyledon/CleanPath.h>
+#include <peanut_cotyledon/SetCleanPath.h>
+#include <trajectory_msgs/JointTrajectory.h>
 
 #include <rviz/properties/bool_property.h>
 #include <rviz/properties/string_property.h>
@@ -84,6 +86,8 @@ public:
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
+	ros::ServiceClient set_clean_path_proxy_;
+	ros::NodeHandle nh_;
 
 private:
 	//! Function for creating a way-point marker
@@ -140,7 +144,7 @@ public Q_SLOTS:
 	//! Slot for parsing the Way-Points before sending them to the MoveIt class.
 	void parseWayPoints();
 	//! Save all the Way-Points to a yaml file.
-	void saveWayPointsToFile();
+	void saveWayPointsToFile(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();

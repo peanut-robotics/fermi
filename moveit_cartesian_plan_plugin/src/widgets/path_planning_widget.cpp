@@ -569,11 +569,11 @@ void PathPlanningWidget::loadPointsFromFile()
   }
   ROS_INFO_STREAM("the clean_path is loaded");
   
-  if (clean_path.cached_paths[0].robot_poses.empty())
+  if (clean_path.cached_paths.empty() || clean_path.cached_paths.at(0).robot_poses.empty())
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ROS_INFO_STREAM("the cached path associated with the clean path has an empty robot poses message");
+    ROS_ERROR("the cached path associated with the clean path has an empty robot poses message");
     return;
   }
   else
@@ -644,7 +644,37 @@ void PathPlanningWidget::savePointsToFile()
 {
   /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
-  Q_EMIT saveToFileBtn_press();
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+
+  try
+  {
+    peanut_cotyledon::GetCleanPath srv;
+    srv.request.floor_name = floor_name;
+    srv.request.area_name = area_name;
+    srv.request.object_id = object_id;
+    srv.request.task_name = task_name;
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    }
+  }
+  catch (...)
+  {
+    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  }
+  clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
+  clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
+  clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
+  
+  Q_EMIT saveToFileBtn_press(floor_name, area_name, object_id, task_name, clean_path);
 }
 void PathPlanningWidget::transformPointsToFrame()
 {
