@@ -586,13 +586,15 @@ void PathPlanningWidget::loadPointsFromFile()
     clearAllPoints_slot();
 
     std::string frame_id;
+    double elevator_height = 1.0;
+    std::string nav_label = "";
     try
     {
       //define double for percent of completion
       double percent_complete;
-      int end_of_points = clean_path.cached_paths[0].robot_poses.size();
+      int end_of_points = clean_path.cached_paths.at(0).robot_poses.size();
       ROS_INFO("at beginning of if statement line 593");
-      if (!clean_path.cached_paths[0].cached_path.points.empty()){
+      if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
         ROS_INFO("the cached path is not empty");
         std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
         ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
@@ -604,6 +606,13 @@ void PathPlanningWidget::loadPointsFromFile()
         ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
         ROS_INFO("the config was edited");
         Q_EMIT configEdited_signal(startConfig);
+      }
+      try {
+        elevator_height = clean_path.cached_paths.at(0).elevator_height;
+        nav_label = clean_path.cached_paths.at(0).nav_label;
+      }
+      catch (...){
+        ROS_INFO("The loaded clean path cached_path and nav label are set to their defaults");
       }
       frame_id = "base_link";
       std::string name;
@@ -623,11 +632,12 @@ void PathPlanningWidget::loadPointsFromFile()
         Q_EMIT addPoint(pose_tf);
       }
       ROS_INFO("Setting step size and frame id");
+      ui_.el_lbl->setText(QString::number(elevator_height));
+      ui_.nav_lbl->setText(QString::fromStdString(nav_label));
       ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
       ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
       ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
       ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
-
     }
     catch (...)
     {
@@ -645,12 +655,12 @@ void PathPlanningWidget::savePointsToFile()
 {
   /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
+  try{
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
-
   try
   {
     peanut_cotyledon::GetCleanPath srv;
@@ -665,17 +675,30 @@ void PathPlanningWidget::savePointsToFile()
     else
     {
       ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+      return;
     }
   }
   catch (...)
   {
     ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
   }
+  if (clean_path.cached_paths.empty()){
+    peanut_cotyledon::CachedPath empty_cached_path;
+    std::vector<peanut_cotyledon::CachedPath> empty_cached_path_list;
+    empty_cached_path_list.push_back(empty_cached_path);
+    clean_path.cached_paths = empty_cached_path_list;
+  }
+  clean_path.cached_paths.at(0).elevator_height = ui_.el_lbl->text().toDouble();
+  clean_path.cached_paths.at(0).nav_label = ui_.nav_lbl->text().toStdString();
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
   
   Q_EMIT saveToFileBtn_press(floor_name, area_name, object_id, task_name, clean_path);
+  }
+  catch (...){
+    ROS_ERROR("unkown error during save in path planning widget.cpp");
+  }
 }
 void PathPlanningWidget::transformPointsToFrame()
 {

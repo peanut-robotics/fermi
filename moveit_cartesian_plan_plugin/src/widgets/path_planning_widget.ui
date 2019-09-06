@@ -373,6 +373,75 @@
 								<string>Execute Cartesian Path</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="mv_el">
+							<property name="geometry">
+								<rect>
+									<x>10</x>
+									<y>360</y>
+									<width>60</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Mv Elev</string>
+							</property>
+						</widget>
+						<widget class="QPushButton" name="mv_nav">
+							<property name="geometry">
+								<rect>
+									<x>10</x>
+									<y>400</y>
+									<width>60</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Mv Nav</string>
+							</property>
+						</widget>
+						<widget class="QPushButton" name="add_lbl_here">
+							<property name="geometry">
+								<rect>
+									<x>10</x>
+									<y>440</y>
+									<width>120</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Add Label Here</string>
+							</property>
+						</widget>
+						<widget class="QLineEdit" name="el_lbl">
+							<property name="styleSheet">
+								<string notr="true">border-style: outset;
+											border-width: 2px;
+											border-color :rgb(48, 48, 48)</string>
+							</property>
+							<property name="geometry">
+								<rect>
+									<x>75</x>
+									<y>360</y>
+									<width>110</width>
+									<height>27</height>
+								</rect>
+							</property>
+						</widget>
+						<widget class="QLineEdit" name="nav_lbl">
+							<property name="styleSheet">
+								<string notr="true">border-style: outset;
+											border-width: 2px;
+											border-color :rgb(48, 48, 48)</string>
+							</property>
+							<property name="geometry">
+								<rect>
+									<x>75</x>
+									<y>400</y>
+									<width>110</width>
+									<height>27</height>
+								</rect>
+							</property>
+						</widget>
 						<widget class="QLabel" name="label_4">
 							<property name="geometry">
 								<rect>
@@ -415,7 +484,7 @@
 									<x>0</x>
 									<y>100</y>
 									<width>311</width>
-									<height>200</height>
+									<height>210</height>
 									</rect>
 								</property>
 								<property name="font">
@@ -521,7 +590,7 @@
 									<property name="geometry">
 										<rect>
 											<x>10</x>
-											<y>130</y>
+											<y>150</y>
 											<width>101</width>
 											<height>31</height>
 										</rect>
@@ -534,7 +603,7 @@
 									<property name="geometry">
 										<rect>
 											<x>160</x>
-											<y>130</y>
+											<y>150</y>
 											<width>113</width>
 											<height>27</height>
 										</rect>
@@ -549,7 +618,7 @@
 									<property name="geometry">
 										<rect>
 											<x>160</x>
-											<y>160</y>
+											<y>180</y>
 											<width>120</width>
 											<height>27</height>
 										</rect>
