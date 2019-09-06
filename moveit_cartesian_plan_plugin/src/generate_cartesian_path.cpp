@@ -343,84 +343,90 @@ void GenerateCartesianPath::checkWayPointValidity(const std::vector<tf::Transfor
   /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
       In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
   */
-  geometry_msgs::TransformStamped transformStamped;
   try{
-    transformStamped = tfBuffer.lookupTransform("base_link", ROBOT_MODEL_FRAME_ , ros::Time(0));
-  }
-  catch (tf2::TransformException &ex) {
-    ROS_ERROR("%s",ex.what());
-    return;
-  }
-  const geometry_msgs::Transform constTransform = transformStamped.transform;
-  tf::Transform transform_old_new;
-  tf::transformMsgToTF(constTransform, transform_old_new);
+    geometry_msgs::TransformStamped transformStamped;
+    try{
+      transformStamped = tfBuffer.lookupTransform("base_link", ROBOT_MODEL_FRAME_ , ros::Time(0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_ERROR("%s",ex.what());
+      return;
+    }
+    const geometry_msgs::Transform constTransform = transformStamped.transform;
+    tf::Transform transform_old_new;
+    tf::transformMsgToTF(constTransform, transform_old_new);
 
-  tf::Transform waypoint_tf;
-  Eigen::Affine3d waypoint1;
-  Eigen::Affine3d waypoint2;
-  std::vector<Eigen::Affine3d> interpolated;
-  const int p_idx = point_number - 1;
+    tf::Transform waypoint_tf;
+    Eigen::Affine3d waypoint1;
+    Eigen::Affine3d waypoint2;
+    std::vector<Eigen::Affine3d> interpolated;
+    const int p_idx = point_number - 1;
+    ROS_INFO_STREAM("p_idx is " << p_idx << " in check waypoint validity");
 
-  // First point
-  if (p_idx == 0){
-    waypoint_tf = waypoints[p_idx];
-    waypoint_tf = transform_old_new*waypoint_tf;
-    tf::transformTFToEigen(waypoint_tf, waypoint1);
-
-    waypoint_tf = waypoints[p_idx+1];
-    waypoint_tf = transform_old_new*waypoint_tf;
-    tf::transformTFToEigen(waypoint_tf, waypoint2);
-    interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
-  }
-
-  // Middle point
-  if ((p_idx >= 1) && (p_idx < waypoints.size() - 1)){
-    for (int i = p_idx-1; i <= p_idx; i++){
-      waypoint_tf = waypoints[i];
+    // First point
+    if (p_idx == 0){
+      waypoint_tf = waypoints.at(p_idx);
       waypoint_tf = transform_old_new*waypoint_tf;
       tf::transformTFToEigen(waypoint_tf, waypoint1);
 
-      waypoint_tf = waypoints[i+1];
+      waypoint_tf = waypoints.at(p_idx+1);
       waypoint_tf = transform_old_new*waypoint_tf;
       tf::transformTFToEigen(waypoint_tf, waypoint2);
       interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
     }
-  }
 
-  // Last point
-  if (p_idx == waypoints.size()-1){
-    waypoint_tf = waypoints[p_idx-1];
+    // Middle point
+    if ((p_idx >= 1) && (p_idx < waypoints.size() - 1)){
+      for (int i = p_idx-1; i <= p_idx; i++){
+        waypoint_tf = waypoints.at(i);
+        waypoint_tf = transform_old_new*waypoint_tf;
+        tf::transformTFToEigen(waypoint_tf, waypoint1);
+
+        waypoint_tf = waypoints.at(i+1);
+        waypoint_tf = transform_old_new*waypoint_tf;
+        tf::transformTFToEigen(waypoint_tf, waypoint2);
+        interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
+      }
+    }
+
+    // Last point
+    if (p_idx == waypoints.size()-1){
+      waypoint_tf = waypoints.at(p_idx-1);
+      waypoint_tf = transform_old_new*waypoint_tf;
+      tf::transformTFToEigen(waypoint_tf, waypoint1);
+
+      waypoint_tf = waypoints.at(p_idx);
+      waypoint_tf = transform_old_new*waypoint_tf;
+      tf::transformTFToEigen(waypoint_tf, waypoint2);
+      interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
+    }
+
+
+    waypoint_tf = waypoints.at(p_idx);
     waypoint_tf = transform_old_new*waypoint_tf;
     tf::transformTFToEigen(waypoint_tf, waypoint1);
+    interpolated.push_back(waypoint1);
 
-    waypoint_tf = waypoints[p_idx];
-    waypoint_tf = transform_old_new*waypoint_tf;
-    tf::transformTFToEigen(waypoint_tf, waypoint2);
-    interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
-  }
+    ROS_INFO_STREAM("Length of interpolated points: " << std::to_string(interpolated.size()));
 
-
-  waypoint_tf = waypoints[p_idx];
-  waypoint_tf = transform_old_new*waypoint_tf;
-  tf::transformTFToEigen(waypoint_tf, waypoint1);
-  interpolated.push_back(waypoint1);
-
-  ROS_INFO_STREAM("Length of interpolated points: " << std::to_string(interpolated.size()));
-
-  bool found_ik;
-  int any_invalid = 0;
-  geometry_msgs::Pose pointOutOfBounds;
-  std::vector<geometry_msgs::Pose> out_of_bounds_interpolated;
-  for (const auto& point : interpolated){
-    found_ik = jaco3_kinematics::ik_exists(point, 125);
-    if (!found_ik){
-      any_invalid = 1;
-      tf::poseEigenToTF(point, waypoint_tf);
-      tf::poseTFToMsg(waypoint_tf, pointOutOfBounds);
-      out_of_bounds_interpolated.push_back(pointOutOfBounds);
+    bool found_ik;
+    int any_invalid = 0;
+    geometry_msgs::Pose pointOutOfBounds;
+    std::vector<geometry_msgs::Pose> out_of_bounds_interpolated;
+    for (const auto& point : interpolated){
+      found_ik = jaco3_kinematics::ik_exists(point, 125);
+      if (!found_ik){
+        any_invalid = 1;
+        tf::poseEigenToTF(point, waypoint_tf);
+        tf::poseTFToMsg(waypoint_tf, pointOutOfBounds);
+        out_of_bounds_interpolated.push_back(pointOutOfBounds);
+      }
     }
+    Q_EMIT wayPointOutOfIK(point_number, any_invalid, out_of_bounds_interpolated);
   }
-  Q_EMIT wayPointOutOfIK(point_number, any_invalid, out_of_bounds_interpolated);
+  catch(...){
+    ROS_ERROR("An unknown error occured in check waypoint validity");
+  }
 }
 
 void GenerateCartesianPath::initRvizDone()
