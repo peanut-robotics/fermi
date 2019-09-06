@@ -164,6 +164,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
 
     */
     Q_EMIT cartesianPathExecuteStarted();
+    moveit::planning_interface::MoveItErrorCode freespace_error_code;
 
     moveit_group_->setPlanningTime(PLAN_TIME_);
     moveit_group_->allowReplanning (MOVEIT_REPLAN_);
@@ -171,6 +172,31 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     robot_state::RobotStatePtr start_state = moveit_group_->getCurrentState(10.0);
     ROS_INFO_STREAM("the start state of the robot is " << start_state);
     moveit_group_->setStartStateToCurrentState();
+
+    if (waypoints.size() == 1 && !FIX_START_STATE_){ // if the start state is not fixed and waypoints size is 1, freespace plan and end
+      moveit_group_->setStartState(*start_state);
+      moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+      moveit_group_->setPlanningTime(PLAN_TIME_);
+      moveit_group_->allowReplanning (MOVEIT_REPLAN_);
+      moveit_group_->setPoseTarget(waypoints.at(0), "end_effector_link");
+      bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+      ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
+      
+      if (success){
+        freespace_error_code = moveit_group_->execute(my_plan);
+        Q_EMIT cartesianPathCompleted(69);
+        ROS_INFO_STREAM("computed freespace plan to start position with single point");
+        Q_EMIT cartesianPathExecuteFinished();
+        return;
+      }
+      else {
+        ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
+        Q_EMIT cartesianPathCompleted(-100);
+        Q_EMIT cartesianPathExecuteFinished();
+        return;
+      }
+    }
+
 
     ROS_INFO_STREAM("The frame planning occurs in is base_link the frame we are currently in is " << ROBOT_MODEL_FRAME_ << " transforming");
     geometry_msgs::TransformStamped transformStamped;
@@ -256,8 +282,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 2. compute and execute freespace plan
     // // //
-    moveit::planning_interface::MoveItErrorCode freespace_error_code;
-    if (!FIX_START_STATE_){ // Avoid collisions really means fix the start state and do a freespace plan to it
+    if (!FIX_START_STATE_){
       moveit::planning_interface::MoveGroupInterface::Plan my_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
       moveit_group_->allowReplanning (MOVEIT_REPLAN_);
