@@ -386,46 +386,47 @@ void GenerateCartesianPath::checkWayPointValidity(const std::vector<tf::Transfor
     Eigen::Affine3d waypoint2;
     std::vector<Eigen::Affine3d> interpolated;
     const int p_idx = point_number - 1;
-    ROS_INFO_STREAM("p_idx is " << p_idx << " in check waypoint validity");
 
-    // First point
-    if (p_idx == 0){
-      waypoint_tf = waypoints.at(p_idx);
-      waypoint_tf = transform_old_new*waypoint_tf;
-      tf::transformTFToEigen(waypoint_tf, waypoint1);
-
-      waypoint_tf = waypoints.at(p_idx+1);
-      waypoint_tf = transform_old_new*waypoint_tf;
-      tf::transformTFToEigen(waypoint_tf, waypoint2);
-      interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
-    }
-
-    // Middle point
-    if ((p_idx >= 1) && (p_idx < waypoints.size() - 1)){
-      for (int i = p_idx-1; i <= p_idx; i++){
-        waypoint_tf = waypoints.at(i);
+    // More than 1 point exists
+    if (waypoints.size() > 1){
+      // First point
+      if (p_idx == 0){
+        waypoint_tf = waypoints.at(p_idx);
         waypoint_tf = transform_old_new*waypoint_tf;
         tf::transformTFToEigen(waypoint_tf, waypoint1);
 
-        waypoint_tf = waypoints.at(i+1);
+        waypoint_tf = waypoints.at(p_idx+1);
+        waypoint_tf = transform_old_new*waypoint_tf;
+        tf::transformTFToEigen(waypoint_tf, waypoint2);
+        interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
+      }
+
+      // Middle point
+      if ((p_idx >= 1) && (p_idx < waypoints.size() - 1)){
+        for (int i = p_idx-1; i <= p_idx; i++){
+          waypoint_tf = waypoints.at(i);
+          waypoint_tf = transform_old_new*waypoint_tf;
+          tf::transformTFToEigen(waypoint_tf, waypoint1);
+
+          waypoint_tf = waypoints.at(i+1);
+          waypoint_tf = transform_old_new*waypoint_tf;
+          tf::transformTFToEigen(waypoint_tf, waypoint2);
+          interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
+        }
+      }
+
+      // Last point
+      if (p_idx == waypoints.size()-1){
+        waypoint_tf = waypoints.at(p_idx-1);
+        waypoint_tf = transform_old_new*waypoint_tf;
+        tf::transformTFToEigen(waypoint_tf, waypoint1);
+
+        waypoint_tf = waypoints.at(p_idx);
         waypoint_tf = transform_old_new*waypoint_tf;
         tf::transformTFToEigen(waypoint_tf, waypoint2);
         interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
       }
     }
-
-    // Last point
-    if (p_idx == waypoints.size()-1){
-      waypoint_tf = waypoints.at(p_idx-1);
-      waypoint_tf = transform_old_new*waypoint_tf;
-      tf::transformTFToEigen(waypoint_tf, waypoint1);
-
-      waypoint_tf = waypoints.at(p_idx);
-      waypoint_tf = transform_old_new*waypoint_tf;
-      tf::transformTFToEigen(waypoint_tf, waypoint2);
-      interpolate(waypoint1, waypoint2, CART_STEP_SIZE_, interpolated);
-    }
-
 
     waypoint_tf = waypoints.at(p_idx);
     waypoint_tf = transform_old_new*waypoint_tf;
@@ -448,6 +449,9 @@ void GenerateCartesianPath::checkWayPointValidity(const std::vector<tf::Transfor
       }
     }
     Q_EMIT wayPointOutOfIK(point_number, any_invalid, out_of_bounds_interpolated);
+  }
+  catch(const std::exception &exc){
+    ROS_ERROR_STREAM("Error is "<< exc.what());
   }
   catch(...){
     ROS_ERROR("An unknown error occured in check waypoint validity");
