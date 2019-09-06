@@ -72,16 +72,18 @@ void AddWayPoint::onInitialize()
   //! Inform the user that the RViz is initializing
   ROS_INFO("initializing..");
 
-  menu_handler.insert("Delete", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("delete", boost::bind(&AddWayPoint::processFeedback, this, _1));
   menu_handler.insert("adjust_frame", boost::bind(&AddWayPoint::processFeedback, this, _1));
   menu_handler.insert("adjust_eef", boost::bind(&AddWayPoint::processFeedback, this, _1));
   menu_handler.insert("adjust_hide", boost::bind(&AddWayPoint::processFeedback, this, _1));
   menu_handler.insert("duplicate_in_place", boost::bind(&AddWayPoint::processFeedback, this, _1));
+
   // menu_handler.insert( "duplicate_at_end", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
 
-  menu_handler_inter.insert("set home", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Set home", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -249,6 +251,18 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
         changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
       }
     }
+    else if (menu_item == 4)
+    {
+      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
+      // int marker_index = stoi(feedback->marker_name);
+      // advance(insertion_point, marker_index);
+
+      tf::Transform point_pos;
+      geometry_msgs::Pose cur_pos = feedback->pose;
+      tf::poseMsgToTF(cur_pos, point_pos);
+      std::vector<tf::Transform> pos_vec = {point_pos};
+      insert(insertion_point, pos_vec);
+    } 
     break;
   }
   case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
