@@ -20,6 +20,8 @@ find_package(catkin REQUIRED COMPONENTS
   peanut_kinematics
   peanut_elevator_oil
   peanut_localization_oil
+  peanut_navplanning_oil
+  actionlib
 )
 
 find_package(Eigen3 REQUIRED)

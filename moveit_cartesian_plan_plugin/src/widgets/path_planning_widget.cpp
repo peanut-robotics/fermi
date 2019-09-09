@@ -15,6 +15,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   move_elevator_ = nh_.serviceClient<peanut_elevator_oil::MoveToHeight>("/oil/elevator/move_to_height", 20);
   add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
+  move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   /*! Constructor which calls the init() function.
       */
   init();
@@ -93,6 +94,7 @@ void PathPlanningWidget::init()
 
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
   connect(ui_.add_lbl_here, SIGNAL(clicked()), this, SLOT(addLabel()));
+  connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(goToLabel()));
 
 }
 
@@ -824,6 +826,29 @@ void PathPlanningWidget::addLabelHelper()
   }
 }
 
+void PathPlanningWidget::goToLabel(){
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
+}
+
+void PathPlanningWidget::goToLabelHelper(){
+  std::string label = ui_.nav_lbl->text().toStdString();
+  
+  peanut_navplanning_oil::MoveBaseGoal goal;
+  goal.header.stamp = ros::Time::now();
+  goal.header.frame_id = "map";
+  goal.goal_id.id = label;
+
+  ROS_INFO_STREAM("Sending goal to move to label: "<<label);
+  move_base_->sendGoal(goal);
+  bool success = move_base_->waitForResult(ros::Duration(60.0));
+
+  if (success){
+    ROS_INFO_STREAM("Navigation successfull to label: "<<label);
+  }
+  else{
+    ROS_ERROR_STREAM("Navigation failed to label: "<<label);
+  }
+}
 
 } // namespace widgets
 } // namespace moveit_cartesian_plan_plugin

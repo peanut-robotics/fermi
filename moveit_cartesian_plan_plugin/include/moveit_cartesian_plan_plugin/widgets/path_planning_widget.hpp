@@ -10,6 +10,7 @@
 #include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <string.h>
+#include <actionlib/client/simple_action_client.h>
 
 #include <ui_path_planning_widget.h>
 
@@ -46,6 +47,7 @@
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_elevator_oil/MoveToHeight.h>
 #include <peanut_localization_oil/AddLabelHere.h>
+#include <peanut_navplanning_oil/MoveBaseAction.h>
 
 // macros
 #ifndef DEG2RAD
@@ -88,7 +90,8 @@ namespace moveit_cartesian_plan_plugin
 			// Elevator and navigation services
 			ros::ServiceClient move_elevator_;
 			ros::ServiceClient add_label_;
-
+			boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>> move_base_;
+			
 		protected:
 			//! Widget Initialization.
 			void init();
@@ -157,12 +160,14 @@ namespace moveit_cartesian_plan_plugin
 			void parsePlanConfigBtn_slot();
 			void parsePlanExecuteConfigBtn_slot();
 
-			// Slots for elevator 
+			// Slots for elevator and navigation
 			void moveElevator();
 			void moveElevatorHelper();
 			void addLabel();
 			void addLabelHelper();
-			
+			void goToLabel();
+			void goToLabelHelper();
+
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
