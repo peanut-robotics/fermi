@@ -108,6 +108,7 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
   connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
+  connect(widget_, SIGNAL(saveToolBtn_press()), this, SLOT(saveToolPath()));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
   connect(widget_, SIGNAL(transformPointsViz(std::string)), this, SLOT(transformPointsViz(std::string)));
   connect(widget_, SIGNAL(clearAllInteractiveBoxes_signal()), this, SLOT(clearAllInteractiveBoxes()));
@@ -831,20 +832,19 @@ void AddWayPoint::saveToolPath(){
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
     */
-     ROS_INFO("Saving tool path");
+    ROS_INFO("Saving tool path");
+    QString fileName = QFileDialog::getSaveFileName(this,
+        tr("Save Way Points"), ".yaml",
+        tr("Way Points (*.yaml);;All Files (*)"));
 
-      QString fileName = QFileDialog::getSaveFileName(this,
-         tr("Save Way Points"), ".yaml",
-         tr("Way Points (*.yaml);;All Files (*)"));
-
-      if (fileName.isEmpty())
+    if (fileName.isEmpty())
       return;
-      else {
-         QFile file(fileName);
-         if (!file.open(QIODevice::WriteOnly)) {
-             QMessageBox::information(this, tr("Unable to open file"),
-                 file.errorString());
-                 file.close();
+    else {
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly)) {
+            QMessageBox::information(this, tr("Unable to open file"),
+                file.errorString());
+                file.close();
       return;
     }
 
@@ -853,7 +853,7 @@ void AddWayPoint::saveToolPath(){
     out << YAML::Key << "frame_id";
     out << YAML::Value << target_frame_;
 
-  //todo save the config here.
+    //todo save the config here.
     out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
 
     for(int i=0;i<waypoints_pos.size();i++)
@@ -883,21 +883,19 @@ void AddWayPoint::saveToolPath(){
 
       out << YAML::EndMap;
 
-    out << YAML::EndSeq; // End list of points
+      out << YAML::EndSeq; // End list of points
 
-    out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
-    out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
-    out << YAML::EndSeq;// and configuration list
-    out << YAML::EndMap;
+      out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
+      out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
+      out << YAML::EndSeq;// and configuration list
+      out << YAML::EndMap;
 
       std::ofstream myfile;
       myfile.open (fileName.toStdString().c_str());
       myfile << out.c_str();
       myfile.close();
+    }
   }
-}
-
-
 }
 
 void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)

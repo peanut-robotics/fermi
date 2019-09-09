@@ -530,7 +530,102 @@ void PathPlanningWidget::parsePlanExecuteConfigBtn_slot()
 }
 
 void PathPlanningWidget::loadPointsTool(){
-  ROS_INFO("Begin load points for tool path");
+    /*! Slot that takes care of opening a previously saved Way-Points yaml file.
+              Opens Qt Dialog for selecting the file, opens the file and parses the data.
+              After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
+          */
+
+  QString fileName = QFileDialog::getOpenFileName(this,
+                                                  tr("Open Way Points File"), "",
+                                                  tr("Way Points (*.yaml);;All Files (*)"));
+
+  if (fileName.isEmpty())
+  {
+    ui_.tabWidget->setEnabled(true);
+    ui_.progressBar->hide();
+    return;
+  }
+  else
+  {
+    ui_.tabWidget->setEnabled(false);
+    ui_.progressBar->show();
+    QFile file(fileName);
+
+    if (!file.open(QIODevice::ReadOnly))
+    {
+      QMessageBox::information(this, tr("Unable to open file"),
+                              file.errorString());
+      file.close();
+      ui_.tabWidget->setEnabled(true);
+      ui_.progressBar->hide();
+      return;
+    }
+    //clear all the scene before loading all the new points from the file!!
+    clearAllPoints_slot();
+
+    ROS_INFO_STREAM("Opening the file: " << fileName.toStdString());
+    std::string fin(fileName.toStdString());
+    std::string frame_id;
+    try
+    {
+      YAML::Node doc;
+      doc = YAML::LoadFile(fin);
+      //define double for percent of completion
+      double percent_complete;
+      int end_of_points = doc["points"].size();
+
+      std::vector<double> startConfig = doc["start_config"].as<std::vector<double>>();
+
+      ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+      ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+      ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+      ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+      ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+      ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+      ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+      std::cout << end_of_points << "end of doc" << std::endl;
+      frame_id = doc["frame_id"].as<std::string>();
+      for (size_t i = 0; i < end_of_points; i++)
+      {
+        std::string name;
+        geometry_msgs::Pose pose;
+        tf::Transform pose_tf;
+
+        double x, y, z;
+        double qx, qy, qz, qw;
+
+        name = std::to_string(i);
+        x = doc["points"][i]["position"]["x"].as<double>();
+        y = doc["points"][i]["position"]["y"].as<double>();
+        z = doc["points"][i]["position"]["z"].as<double>();
+        qx = doc["points"][i]["orientation"]["x"].as<double>();
+        qy = doc["points"][i]["orientation"]["y"].as<double>();
+        qz = doc["points"][i]["orientation"]["z"].as<double>();
+        qw = doc["points"][i]["orientation"]["w"].as<double>();
+
+        pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw), tf::Vector3(x, y, z));
+
+        percent_complete = (i + 1) * 100 / end_of_points;
+        ui_.progressBar->setValue(percent_complete);
+        Q_EMIT addPoint(pose_tf);
+        Q_EMIT configEdited_signal(startConfig);
+      }
+    }
+    catch (char *excp)
+    {
+      ROS_INFO("bla de bla, first error");
+      ROS_INFO_STREAM("Caught " << excp);
+    }
+    catch (...)
+    {
+      ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
+    }
+    // TODO call same pathway as button
+    ui_.tabWidget->setEnabled(true);
+    ui_.progressBar->hide();
+    ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+    PathPlanningWidget::transformPointsToFrame();
+  }
 }
 
 void PathPlanningWidget::loadPointsObject()
@@ -671,6 +766,7 @@ void PathPlanningWidget::loadPoints(){
 }
 void PathPlanningWidget::savePointsTool(){
   ROS_INFO("Begin saving tool path to file");
+  Q_EMIT saveToolBtn_press();
 }
 void PathPlanningWidget::savePointsObject()
 {
