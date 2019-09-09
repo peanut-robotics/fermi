@@ -762,6 +762,7 @@ void PathPlanningWidget::loadPointsObject()
       ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
       ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
       ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
+      ui_.tool_name_lbl->setText(QString::fromStdString(clean_path.tool_name));
     }
     catch (...)
     {
@@ -835,7 +836,8 @@ void PathPlanningWidget::savePointsObject()
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
-  
+  clean_path.tool_name = ui_.tool_name_lbl->text().toStdString();
+
   Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path);
   }
   catch (...){
