@@ -92,7 +92,7 @@ void PathPlanningWidget::init()
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
 
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
-  connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(addLabel()));
+  connect(ui_.add_lbl_here, SIGNAL(clicked()), this, SLOT(addLabel()));
 
 }
 
