@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_planning_interface
   peanut_kinematics
   peanut_elevator_oil
+  peanut_localization_oil
 )
 
 find_package(Eigen3 REQUIRED)

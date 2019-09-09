@@ -14,7 +14,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   move_elevator_ = nh_.serviceClient<peanut_elevator_oil::MoveToHeight>("/oil/elevator/move_to_height", 20);
-
+  add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   /*! Constructor which calls the init() function.
       */
   init();
@@ -92,6 +92,7 @@ void PathPlanningWidget::init()
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
 
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
+  connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(addLabel()));
 
 }
 
@@ -802,6 +803,27 @@ void PathPlanningWidget::moveElevatorHelper()
     ROS_ERROR("Failed to move elevator");
   }
 }
+
+void PathPlanningWidget::addLabel()
+{
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addLabelHelper);
+}
+
+void PathPlanningWidget::addLabelHelper()
+{ 
+  std::string label = ui_.nav_lbl->text().toStdString();
+  peanut_localization_oil::AddLabelHere srv;
+  srv.request.name = label;
+
+  if (add_label_.call(srv)){
+    ROS_INFO_STREAM("Adding label here for current location: "<<label);
+  
+  }
+  else{
+    ROS_ERROR("Failed to call add_label_here");
+  }
+}
+
 
 } // namespace widgets
 } // namespace moveit_cartesian_plan_plugin

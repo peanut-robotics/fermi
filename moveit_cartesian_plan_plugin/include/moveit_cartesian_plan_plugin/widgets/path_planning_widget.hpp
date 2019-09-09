@@ -45,6 +45,7 @@
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_elevator_oil/MoveToHeight.h>
+#include <peanut_localization_oil/AddLabelHere.h>
 
 // macros
 #ifndef DEG2RAD
@@ -83,9 +84,11 @@ namespace moveit_cartesian_plan_plugin
 			ros::NodeHandle nh_;
 			ros::ServiceClient get_clean_path_proxy_;
   			ros::Publisher robot_goal_pub;
-
+			
 			// Elevator and navigation services
 			ros::ServiceClient move_elevator_;
+			ros::ServiceClient add_label_;
+
 		protected:
 			//! Widget Initialization.
 			void init();
@@ -157,6 +160,9 @@ namespace moveit_cartesian_plan_plugin
 			// Slots for elevator 
 			void moveElevator();
 			void moveElevatorHelper();
+			void addLabel();
+			void addLabelHelper();
+			
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
