@@ -143,8 +143,9 @@ public Q_SLOTS:
 	void parseWayPointsGoto(int min_index, int max_index);
 	//! Slot for parsing the Way-Points before sending them to the MoveIt class.
 	void parseWayPoints();
+	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
-	void saveWayPointsToFile(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
+	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();

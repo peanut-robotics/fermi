@@ -120,9 +120,13 @@ namespace moveit_cartesian_plan_plugin
 			void visualizeGoalConfig();
 
 			//! Send a signal that a save the Way-Points to a file button has been pressed.
-			void savePointsToFile();
+			void savePointsTool();
+			void savePointsObject();
+			void loadPointsTool();
+			void savePoints();
+			void loadPoints();
 			//! Send a signal that a load the Way-Points from a file button has been pressed.
-			void loadPointsFromFile();
+			void loadPointsObject();
 			//! slot connected to clear all the boxes for interaction around points
 			void clearAllInteractiveBoxes_slot();
 			//! Slot connected to a clear all points button click.
@@ -165,7 +169,7 @@ namespace moveit_cartesian_plan_plugin
 			void configEdited_signal(std::vector<double> config);
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    //! Save to file button has been pressed.
-		    void saveToFileBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
+		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
 			void transformPointsViz(std::string frame);

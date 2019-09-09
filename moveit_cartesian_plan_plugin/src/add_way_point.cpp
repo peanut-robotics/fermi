@@ -107,7 +107,7 @@ void AddWayPoint::onInitialize()
   connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
-  connect(widget_, SIGNAL(saveToFileBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsToFile(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
+  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
   connect(widget_, SIGNAL(transformPointsViz(std::string)), this, SLOT(transformPointsViz(std::string)));
   connect(widget_, SIGNAL(clearAllInteractiveBoxes_signal()), this, SLOT(clearAllInteractiveBoxes()));
@@ -826,7 +826,81 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
   ROS_INFO_STREAM("Playing subset of waypoints from start index (inclusive, zero indexed)" << std::to_string(min_index) << " to ending index (exclusive)" << std::to_string(max_index));
   Q_EMIT wayPoints_signal(waypoints);
 }
-void AddWayPoint::saveWayPointsToFile(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
+void AddWayPoint::saveToolPath(){
+  /*! Function for saving all the Way-Points into yaml file.
+        This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
+        Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
+    */
+     ROS_INFO("Saving tool path");
+
+      QString fileName = QFileDialog::getSaveFileName(this,
+         tr("Save Way Points"), ".yaml",
+         tr("Way Points (*.yaml);;All Files (*)"));
+
+      if (fileName.isEmpty())
+      return;
+      else {
+         QFile file(fileName);
+         if (!file.open(QIODevice::WriteOnly)) {
+             QMessageBox::information(this, tr("Unable to open file"),
+                 file.errorString());
+                 file.close();
+      return;
+    }
+
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    out << YAML::Key << "frame_id";
+    out << YAML::Value << target_frame_;
+
+  //todo save the config here.
+    out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
+
+    for(int i=0;i<waypoints_pos.size();i++)
+    {
+      out << YAML::BeginMap;
+
+      out << YAML::Key << "position";
+      out << YAML::Value;
+      out << YAML::BeginMap;
+      out << YAML::Key << "x" << YAML::Value << waypoints_pos[i].getOrigin().x();
+      out << YAML::Key << "y" << YAML::Value << waypoints_pos[i].getOrigin().y();
+      out << YAML::Key << "z" << YAML::Value << waypoints_pos[i].getOrigin().z();
+      out << YAML::EndMap;
+
+      out << YAML::Key << "orientation";
+      out << YAML::Value;
+
+      tf::Quaternion q;
+      tf::Matrix3x3 m(waypoints_pos[i].getRotation());
+      m.getRotation(q);
+      out << YAML::BeginMap;
+      out << YAML::Key << "x" << YAML::Value << q.x();
+      out << YAML::Key << "y" << YAML::Value << q.y();
+      out << YAML::Key << "z" << YAML::Value << q.z();
+      out << YAML::Key << "w" << YAML::Value << q.w();
+      out << YAML::EndMap;
+
+      out << YAML::EndMap;
+
+    out << YAML::EndSeq; // End list of points
+
+    out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
+    out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
+    out << YAML::EndSeq;// and configuration list
+    out << YAML::EndMap;
+
+      std::ofstream myfile;
+      myfile.open (fileName.toStdString().c_str());
+      myfile << out.c_str();
+      myfile.close();
+  }
+}
+
+
+}
+
+void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
 {
   try{
   /*! Function for saving all the Way-Points into yaml file.

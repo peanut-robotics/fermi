@@ -79,8 +79,8 @@ void PathPlanningWidget::init()
   connect(ui_.LineEdit_j6, SIGNAL(editingFinished()), this, SLOT(visualizeGoalConfig()));
   connect(ui_.LineEdit_j7, SIGNAL(editingFinished()), this, SLOT(visualizeGoalConfig()));
 
-  connect(ui_.btn_LoadPath, SIGNAL(clicked()), this, SLOT(loadPointsFromFile()));
-  connect(ui_.btn_SavePath, SIGNAL(clicked()), this, SLOT(savePointsToFile()));
+  connect(ui_.btn_LoadPath, SIGNAL(clicked()), this, SLOT(loadPoints()));
+  connect(ui_.btn_SavePath, SIGNAL(clicked()), this, SLOT(savePoints()));
   connect(ui_.btn_ClearAllPoints, SIGNAL(clicked()), this, SLOT(clearAllPoints_slot()));
   connect(ui_.btn_ClearAllBoxes, SIGNAL(clicked()), this, SLOT(clearAllInteractiveBoxes_slot()));
 
@@ -529,7 +529,11 @@ void PathPlanningWidget::parsePlanExecuteConfigBtn_slot()
   Q_EMIT parseConfigBtn_signal(config, plan_only);
 }
 
-void PathPlanningWidget::loadPointsFromFile()
+void PathPlanningWidget::loadPointsTool(){
+  ROS_INFO("Begin load points for tool path");
+}
+
+void PathPlanningWidget::loadPointsObject()
 {
   /*! Slot that takes care of opening a previously saved Way-Points yaml file.
             Opens Qt Dialog for selecting the file, opens the file and parses the data.
@@ -651,7 +655,24 @@ void PathPlanningWidget::loadPointsFromFile()
     ROS_INFO("completed load process for clean path");
   }
 }
-void PathPlanningWidget::savePointsToFile()
+void PathPlanningWidget::savePoints(){
+  if (ui_.chk_istoolpath->isChecked()){
+    PathPlanningWidget::savePointsTool();
+  }else{
+    PathPlanningWidget::savePointsObject();
+  }
+}
+void PathPlanningWidget::loadPoints(){
+  if (ui_.chk_istoolpath->isChecked()){
+    PathPlanningWidget::loadPointsTool();
+  }else{
+    PathPlanningWidget::loadPointsObject();
+  }
+}
+void PathPlanningWidget::savePointsTool(){
+  ROS_INFO("Begin saving tool path to file");
+}
+void PathPlanningWidget::savePointsObject()
 {
   /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
@@ -694,7 +715,7 @@ void PathPlanningWidget::savePointsToFile()
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
   
-  Q_EMIT saveToFileBtn_press(floor_name, area_name, object_id, task_name, clean_path);
+  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path);
   }
   catch (...){
     ROS_ERROR("unkown error during save in path planning widget.cpp");
