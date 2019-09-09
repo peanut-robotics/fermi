@@ -150,6 +150,10 @@ namespace moveit_cartesian_plan_plugin
 			void moveToHomeFromUI();
 			void parsePlanConfigBtn_slot();
 			void parsePlanExecuteConfigBtn_slot();
+
+			// Slots for elevator 
+			void moveElevator();
+			void moveElevatorHelper();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );

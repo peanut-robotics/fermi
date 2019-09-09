@@ -13,6 +13,8 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
+  move_elevator_ = nh_.serviceClient<peanut_elevator_oil::MoveToHeight>("/oil/elevator/move_to_height", 20);
+
   /*! Constructor which calls the init() function.
       */
   init();
@@ -88,6 +90,9 @@ void PathPlanningWidget::init()
   connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
 
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
+
+  connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
+
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -776,6 +781,26 @@ void PathPlanningWidget::cartPathCompleted_slot(double fraction)
 void PathPlanningWidget::moveToHomeFromUI()
 {
   Q_EMIT moveToHomeFromUI_signal();
+}
+
+void PathPlanningWidget::moveElevator()
+{
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::moveElevatorHelper);
+}
+
+void PathPlanningWidget::moveElevatorHelper()
+{ 
+  double height = ui_.el_lbl->text().toDouble();
+  peanut_elevator_oil::MoveToHeight srv;
+  srv.request.height = height;
+
+  if (move_elevator_.call(srv)){
+    ROS_INFO_STREAM("Moving elevator to height "<<std::to_string(height)<<" "<<std::to_string(srv.response.success));
+  
+  }
+  else{
+    ROS_ERROR("Failed to move elevator");
+  }
 }
 
 } // namespace widgets
