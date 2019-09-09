@@ -114,6 +114,8 @@ namespace moveit_cartesian_plan_plugin
 			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
 			//! Slot for when the play until button is pressed
 			void playUntilPointBtn();
+			void goToPrev();
+			void goToNext();
 			//! Slot for parsing the Way-Points and notifying the MoveIt.
 			void parseWayPointBtn_slot();
 			

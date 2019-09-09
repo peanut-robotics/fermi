@@ -68,6 +68,9 @@ void PathPlanningWidget::init()
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(playUntilPointBtn()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
 
+  connect(ui_.prev_btn, SIGNAL(clicked()), this, SLOT(goToPrev()));
+  connect(ui_.next_btn, SIGNAL(clicked()), this, SLOT(goToNext()));
+
   connect(ui_.btn_plan_config, SIGNAL(clicked()), this, SLOT(parsePlanConfigBtn_slot()));
   connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(parsePlanExecuteConfigBtn_slot()));
   connect(ui_.btn_planexecute_config, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
@@ -406,6 +409,28 @@ void PathPlanningWidget::parseWayPointBtn_slot()
   /*! Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
       */
   Q_EMIT parseWayPointBtn_signal();
+}
+void PathPlanningWidget::goToPrev(){
+  int start_idx = ui_.start_idx->text().toInt();
+  int stop_idx = ui_.stop_idx->text().toInt();
+
+  start_idx-=1;
+  stop_idx-=1;
+
+  ui_.start_idx->setText(QString::number(start_idx));
+  ui_.stop_idx->setText(QString::number(stop_idx));
+  playUntilPointBtn();
+}
+void PathPlanningWidget::goToNext(){
+  int start_idx = ui_.start_idx->text().toInt();
+  int stop_idx = ui_.stop_idx->text().toInt();
+
+  start_idx+=1;
+  stop_idx+=1;
+
+  ui_.start_idx->setText(QString::number(start_idx));
+  ui_.stop_idx->setText(QString::number(stop_idx));
+  playUntilPointBtn();
 }
 void PathPlanningWidget::playUntilPointBtn()
 {

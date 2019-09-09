@@ -698,6 +698,32 @@
 								<string>Play Start to Stop</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="prev_btn">
+							<property name="geometry">
+								<rect>
+									<x>200</x>
+									<y>460</y>
+									<width>100</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Prev</string>
+							</property>
+						</widget>
+						<widget class="QPushButton" name="next_btn">
+							<property name="geometry">
+								<rect>
+									<x>300</x>
+									<y>460</y>
+									<width>100</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Next</string>
+							</property>
+						</widget>
 						<widget class="QLineEdit" name="start_idx">
 							<property name="styleSheet">
 								<string notr="true">border-style: outset;
