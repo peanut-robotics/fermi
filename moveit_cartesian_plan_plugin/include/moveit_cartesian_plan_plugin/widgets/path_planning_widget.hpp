@@ -44,6 +44,7 @@
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
+#include <peanut_elevator_oil/MoveToHeight.h>
 
 // macros
 #ifndef DEG2RAD
@@ -83,6 +84,8 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_clean_path_proxy_;
   			ros::Publisher robot_goal_pub;
 
+			// Elevator and navigation services
+			ros::ServiceClient move_elevator_;
 		protected:
 			//! Widget Initialization.
 			void init();
