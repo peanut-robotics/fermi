@@ -13,7 +13,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
-  move_elevator_ = nh_.serviceClient<peanut_elevator_oil::MoveToHeight>("/oil/elevator/move_to_height", 20);
+  move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   /*! Constructor which calls the init() function.
@@ -794,11 +794,14 @@ void PathPlanningWidget::moveElevator()
 void PathPlanningWidget::moveElevatorHelper()
 { 
   double height = ui_.el_lbl->text().toDouble();
-  peanut_elevator_oil::MoveToHeight srv;
-  srv.request.height = height;
+  peanut_elevator_oil::MoveToHeightGoal goal;
+  goal.height = height;
 
-  if (move_elevator_.call(srv)){
-    ROS_INFO_STREAM("Moving elevator to height "<<std::to_string(height)<<" "<<std::to_string(srv.response.success));
+  move_elevator_->sendGoal(goal);
+  bool success = move_elevator_->waitForResult(ros::Duration(60.0));
+
+  if (success){
+    ROS_INFO_STREAM("Elevator moved to height "<<std::to_string(height));
   
   }
   else{
