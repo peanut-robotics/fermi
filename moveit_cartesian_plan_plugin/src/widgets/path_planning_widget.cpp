@@ -16,6 +16,9 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
+  get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
+  set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
+
   /*! Constructor which calls the init() function.
       */
   init();
@@ -684,10 +687,11 @@ void PathPlanningWidget::loadPointsObject()
     if(get_clean_path_proxy_.call(srv))
     {
       clean_path = srv.response.clean_path;
+      ROS_INFO("The clean path is loaded");
     }
     else
     {
-      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+      ROS_ERROR_STREAM("Get clean path proxy returned false: Clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << " task_name " << task_name << " not able to load");
       ui_.tabWidget->setEnabled(true);
       ui_.progressBar->hide();
       return;
@@ -695,18 +699,18 @@ void PathPlanningWidget::loadPointsObject()
   }
   catch (...)
   {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    ROS_ERROR_STREAM("Clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << " task_name " << task_name << " not able to load");
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
     return;
   }
-  ROS_INFO_STREAM("the clean_path is loaded");
+  ROS_INFO_STREAM("The clean_path is loaded");
   
   if (clean_path.cached_paths.empty() || clean_path.cached_paths.at(0).robot_poses.empty())
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ROS_ERROR("the cached path associated with the clean path has an empty robot poses message");
+    ROS_ERROR("The cached path associated with the clean path has an empty robot poses message, this is currently not allowed.");
     return;
   }
   else
@@ -812,6 +816,7 @@ void PathPlanningWidget::savePointsObject()
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
+  bool successfully_got_cleanpath = false;
   try
   {
     peanut_cotyledon::GetCleanPath srv;
@@ -822,17 +827,62 @@ void PathPlanningWidget::savePointsObject()
     if(get_clean_path_proxy_.call(srv))
     {
       clean_path = srv.response.clean_path;
+      successfully_got_cleanpath = true;
+      ROS_INFO_STREAM("successfully got clean path for task " << task_name);
     }
     else
     {
-      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
-      return;
+      ROS_INFO_STREAM("The clean_path proxy returned false: clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
     }
   }
   catch (...)
   {
-    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    // We were not able to load an existing clean path
+    ROS_INFO_STREAM("Caught an error: Clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << " task_name " << task_name << " not able to load");
   }
+  if (!successfully_got_cleanpath){
+    peanut_cotyledon::GetTasks srv;
+    srv.request.floor_name = floor_name; 
+    srv.request.area_name = area_name;
+    srv.request.object_id = object_id;
+    // Check to see if the task list already exists
+    if (get_tasks_proxy_.call(srv))
+    {
+      ROS_INFO("Got the tasks for the area and floor");
+      bool task_exists = false;
+      for (auto task : srv.response.tasks){
+        if (task.name == task_name){
+          task_exists = true;
+          break;
+        }
+      }
+      if(!task_exists) {
+        // The task list does not have a task with our name in it
+        peanut_cotyledon::SetTasks set_tasks_srv;
+        set_tasks_srv.request.floor_name = floor_name;
+        set_tasks_srv.request.area_name = area_name;
+        set_tasks_srv.request.object_id = object_id;
+
+        peanut_cotyledon::Task task;
+        task.name = task_name;
+        task.task_type = task.CLEAN_PATH;
+        std::vector<peanut_cotyledon::Task> tasks;
+        tasks.push_back(task);
+        set_tasks_srv.request.tasks = tasks;
+
+        if(set_tasks_proxy_.call(set_tasks_srv)){
+          ROS_INFO_STREAM("Was able to set task " << task_name << " correctly");
+        }
+      }
+      else {
+        ROS_INFO_STREAM("The task " << task_name << " already exists");
+      }
+    }
+    else{
+      ROS_WARN("set tasks failed while trying to save");
+    }
+  }
+
   if (clean_path.cached_paths.empty()){
     peanut_cotyledon::CachedPath empty_cached_path;
     std::vector<peanut_cotyledon::CachedPath> empty_cached_path_list;

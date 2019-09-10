@@ -44,6 +44,8 @@
 #include <tf2_ros/transform_listener.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
+#include <peanut_cotyledon/GetTasks.h>
+#include <peanut_cotyledon/SetTasks.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_localization_oil/AddLabelHere.h>
@@ -85,6 +87,8 @@ namespace moveit_cartesian_plan_plugin
 			}
 			ros::NodeHandle nh_;
 			ros::ServiceClient get_clean_path_proxy_;
+			ros::ServiceClient get_tasks_proxy_;
+			ros::ServiceClient set_tasks_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
