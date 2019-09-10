@@ -45,7 +45,7 @@
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
-#include <peanut_elevator_oil/MoveToHeight.h>
+#include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_localization_oil/AddLabelHere.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 
@@ -88,8 +88,8 @@ namespace moveit_cartesian_plan_plugin
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
-			ros::ServiceClient move_elevator_;
 			ros::ServiceClient add_label_;
+			boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>> move_elevator_;
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>> move_base_;
 			
 		protected:
