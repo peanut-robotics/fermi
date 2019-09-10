@@ -121,7 +121,7 @@
 										<widget class="QLineEdit" name="area_name_line_edit"/>
 									</item>
 									<item row="14" column="0">
-										<widget class="QLabel" name="task_name_label">
+										<widget class="QLabel" name="object_id_label">
 											<property name="text">
 												<string>Object ID</string>
 											</property>
@@ -364,7 +364,6 @@
 						<zorder>btn_SavePath</zorder>
 						<zorder>newPointLayout</zorder>
 						<zorder>btn_ClearAllPoints</zorder>
-						<zorder>horizontalSpacer</zorder>
 					</widget>
 					<widget class="QWidget" name="tab_2">
 						<attribute name="title">
@@ -739,6 +738,19 @@
 								<string>Prev</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="stop_all_btn">
+							<property name="geometry">
+								<rect>
+									<x>200</x>
+									<y>490</y>
+									<width>200</width>
+									<height>100</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Stop All The Things</string>
+							</property>
+						</widget>
 						<widget class="QPushButton" name="next_btn">
 							<property name="geometry">
 								<rect>
@@ -794,12 +806,12 @@
 							<property name="styleSheet">
 								<string notr="true">background-color: rgb(226, 226, 226)</string>
 							</property>
-							<layout class="QFormLayout" name="FormLayoutObjectPose_2">
+							<layout class="QFormLayout" name="FormLayoutObjectPose_3">
 								<property name="fieldGrowthPolicy">
 									<enum>QFormLayout::AllNonFixedFieldsGrow</enum>
 								</property>
 								<item row="0" column="0">
-									<widget class="QGroupBox" name="groupBox">
+									<widget class="QGroupBox" name="groupBox2">
 										<property name="font">
 											<font>
 												<pointsize>12</pointsize>
