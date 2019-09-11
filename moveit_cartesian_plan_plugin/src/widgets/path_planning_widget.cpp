@@ -16,6 +16,10 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
+  
+  // Kortex services
+  clear_faults_ = nh_.serviceClient<kortex_driver::ClearFaults>("/resources/manipulation/control/ClearFaults", 20);
+
   /*! Constructor which calls the init() function.
       */
   init();
@@ -99,6 +103,7 @@ void PathPlanningWidget::init()
   connect(ui_.add_lbl_here, SIGNAL(clicked()), this, SLOT(addLabel()));
   connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(goToLabel()));
 
+  connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -994,6 +999,17 @@ void PathPlanningWidget::goToLabelHelper(){
   }
   else{
     ROS_ERROR_STREAM("Navigation failed to label: "<<label);
+  }
+}
+
+void PathPlanningWidget::clearFaults(){
+  kortex_driver::ClearFaults srv;
+  
+  if (clear_faults_.call(srv)){
+    ROS_INFO_STREAM("Clearing faults");
+  }
+  else{
+    ROS_ERROR("Could not call clear faults service");
   }
 }
 

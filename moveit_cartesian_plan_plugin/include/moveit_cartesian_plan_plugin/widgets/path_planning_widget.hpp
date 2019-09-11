@@ -48,6 +48,7 @@
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_localization_oil/AddLabelHere.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
+#include <kortex_driver/ClearFaults.h>
 
 // macros
 #ifndef DEG2RAD
@@ -89,6 +90,7 @@ namespace moveit_cartesian_plan_plugin
 			
 			// Elevator and navigation services
 			ros::ServiceClient add_label_;
+			ros::ServiceClient clear_faults_;
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>> move_elevator_;
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>> move_base_;
 			
@@ -174,6 +176,9 @@ namespace moveit_cartesian_plan_plugin
 			void goToLabel();
 			void goToLabelHelper();
 
+			// Slots for faults
+			void clearFaults();
+			
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );

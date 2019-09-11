@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   peanut_localization_oil
   peanut_navplanning_oil
   actionlib
+  kortex_driver
 )
 
 find_package(Eigen3 REQUIRED)

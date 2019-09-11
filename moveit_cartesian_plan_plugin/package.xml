@@ -57,6 +57,7 @@
   <build_depend>peanut_localization_oil</build_depend>
   <build_depend>peanut_navplanning_oil</build_depend>
   <build_depend>actionlib</build_depend>
+  <build_depend>kortex_driver</build_depend>
 
   <run_depend>interactive_markers</run_depend>
   <run_depend>pluginlib</run_depend>
@@ -75,7 +76,8 @@
   <run_depend>peanut_localization_oil</run_depend>
   <run_depend>peanut_navplanning_oil</run_depend>
   <run_depend>actionlib</run_depend>
-
+  <run_depend>kortex_driver</run_depend>
+  
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- You can specify that this package is a metapackage here: -->

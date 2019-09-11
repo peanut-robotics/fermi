@@ -751,6 +751,19 @@
 								<string>Stop All The Things</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="clear_faults_btn">
+							<property name="geometry">
+								<rect>
+									<x>410</x>
+									<y>490</y>
+									<width>180</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Clear Faults</string>
+							</property>
+						</widget>
 						<widget class="QPushButton" name="next_btn">
 							<property name="geometry">
 								<rect>
