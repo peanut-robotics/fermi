@@ -839,14 +839,14 @@ void AddWayPoint::saveToolPath(){
 
     if (fileName.isEmpty())
       return;
-    else {
-        QFile file(fileName);
-        if (!file.open(QIODevice::WriteOnly)) {
-            QMessageBox::information(this, tr("Unable to open file"),
-                file.errorString());
-                file.close();
-      return;
-    }
+    else{
+          QFile file(fileName);
+          if (!file.open(QIODevice::WriteOnly)) {
+              QMessageBox::information(this, tr("Unable to open file"),
+                  file.errorString());
+                  file.close();
+          return;
+        }
 
     YAML::Emitter out;
     out << YAML::BeginMap;
@@ -883,18 +883,18 @@ void AddWayPoint::saveToolPath(){
 
       out << YAML::EndMap;
 
-      out << YAML::EndSeq; // End list of points
-
-      out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
-      out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
-      out << YAML::EndSeq;// and configuration list
-      out << YAML::EndMap;
-
-      std::ofstream myfile;
-      myfile.open (fileName.toStdString().c_str());
-      myfile << out.c_str();
-      myfile.close();
     }
+    out << YAML::EndSeq; // End list of points
+    out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
+    out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
+    out << YAML::EndSeq;// and configuration list
+    out << YAML::EndMap;
+
+    std::ofstream myfile;
+    myfile.open (fileName.toStdString().c_str());
+    myfile << out.c_str();
+    myfile.close();
+
   }
 }
 
