@@ -19,7 +19,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   
   // Kortex services
   clear_faults_ = nh_.serviceClient<kortex_driver::ClearFaults>("/resources/manipulation/control/ClearFaults", 20);
-
+  switch_controllers_ = nh_.serviceClient<controller_manager_msgs::SwitchController>("/resources/manipulation/control/controller_manager/switch_controller", 20);
   /*! Constructor which calls the init() function.
       */
   init();
@@ -104,6 +104,7 @@ void PathPlanningWidget::init()
   connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(goToLabel()));
 
   connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
+  connect(ui_.stop_all_btn, SIGNAL(clicked()), this, SLOT(stopAll()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1010,6 +1011,25 @@ void PathPlanningWidget::clearFaults(){
   }
   else{
     ROS_ERROR("Could not call clear faults service");
+  }
+}
+
+void PathPlanningWidget::stopAll(){
+  controller_manager_msgs::SwitchController srv;
+  srv.request.start_controllers = {""};
+  srv.request.stop_controllers = {"velocity_trajectory_controller"};
+  srv.request.strictness = 0;
+
+  if (switch_controllers_.call(srv)){
+    if (srv.response.ok){
+      ROS_INFO_STREAM("Controller stopped");
+    }
+    else{
+      ROS_ERROR("Could not stop controller");
+    }
+  }
+  else{
+    ROS_ERROR("Could not call switch controller service");
   }
 }
 

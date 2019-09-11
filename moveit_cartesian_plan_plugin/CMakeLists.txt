@@ -23,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
   peanut_navplanning_oil
   actionlib
   kortex_driver
+  controller_manager_msgs
 )
 
 find_package(Eigen3 REQUIRED)
