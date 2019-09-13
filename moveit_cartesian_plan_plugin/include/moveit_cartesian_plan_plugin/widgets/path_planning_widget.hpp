@@ -43,13 +43,18 @@
 #include <map>
 #include <tf2_ros/transform_listener.h>
 #include <peanut_cotyledon/GetCleanPath.h>
+#include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
+#include <peanut_cotyledon/Object.h>
+#include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_localization_oil/AddLabelHere.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 #include <kortex_driver/ClearFaults.h>
 #include <controller_manager_msgs/SwitchController.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/TransformStamped.h>
 
 // macros
 #ifndef DEG2RAD
@@ -87,6 +92,8 @@ namespace moveit_cartesian_plan_plugin
 			}
 			ros::NodeHandle nh_;
 			ros::ServiceClient get_clean_path_proxy_;
+			ros::ServiceClient set_clean_path_proxy_;
+			ros::ServiceClient get_objects_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
@@ -96,6 +103,9 @@ namespace moveit_cartesian_plan_plugin
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>> move_elevator_;
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>> move_base_;
 			
+			// Transformations
+			tf2_ros::Buffer tfBuffer_;
+			tf2_ros::StaticTransformBroadcaster static_broadcaster_;
 		protected:
 			//! Widget Initialization.
 			void init();

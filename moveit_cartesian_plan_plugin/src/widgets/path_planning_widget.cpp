@@ -13,6 +13,8 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
+  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
+  get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
@@ -725,7 +727,6 @@ void PathPlanningWidget::loadPointsObject()
 
     std::string frame_id;
     double elevator_height = 1.0;
-    std::string nav_label = "";
     try
     {
       //define double for percent of completion
@@ -747,7 +748,6 @@ void PathPlanningWidget::loadPointsObject()
       }
       try {
         elevator_height = clean_path.cached_paths.at(0).elevator_height;
-        nav_label = clean_path.cached_paths.at(0).nav_label;
       }
       catch (...){
         ROS_INFO("The loaded clean path cached_path and nav label are set to their defaults");
@@ -771,7 +771,6 @@ void PathPlanningWidget::loadPointsObject()
       }
       ROS_INFO("Setting step size and frame id");
       ui_.el_lbl->setText(QString::number(elevator_height));
-      ui_.nav_lbl->setText(QString::fromStdString(nav_label));
       ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
       ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
       ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
@@ -846,7 +845,6 @@ void PathPlanningWidget::savePointsObject()
     clean_path.cached_paths = empty_cached_path_list;
   }
   clean_path.cached_paths.at(0).elevator_height = ui_.el_lbl->text().toDouble();
-  clean_path.cached_paths.at(0).nav_label = ui_.nav_lbl->text().toStdString();
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
@@ -966,41 +964,125 @@ void PathPlanningWidget::addLabel()
 
 void PathPlanningWidget::addLabelHelper()
 { 
-  std::string label = ui_.nav_lbl->text().toStdString();
-  peanut_localization_oil::AddLabelHere srv;
-  srv.request.name = label;
+  // Get data
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
 
-  if (add_label_.call(srv)){
-    ROS_INFO_STREAM("Adding label here for current location: "<<label);
-  
+  // Transforms 
+  tf2_ros::TransformListener tfListener(tfBuffer_);
+  geometry_msgs::TransformStamped object_world;
+  geometry_msgs::TransformStamped robot_object;
+
+  // Get objects
+  bool found_tf = false;
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        object_world.transform = obj.origin;
+        object_world.child_frame_id = "object";
+        object_world.header.frame_id = "map";
+        object_world.header.stamp = ros::Time::now();
+        found_tf = true;
+        ROS_INFO("Found object");
+        break;
+      }
+    }
   }
   else{
-    ROS_ERROR("Failed to call add_label_here");
+    ROS_ERROR("Could not call get objects service");
+    return;
   }
+
+  if(!found_tf){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Publish object tf and get robot_object
+  static_broadcaster_.sendTransform(object_world);
+  while(true){
+    try{
+      robot_object = tfBuffer_.lookupTransform("object", "mobile_base_link", ros::Time(0));
+      break;
+    }
+    catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
+      ROS_WARN("%s",ex.what());
+      ros::Duration(1.0).sleep();
+    }
+  }
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath path_srv;
+  path_srv.request.floor_name = floor_name;
+  path_srv.request.area_name = area_name;
+  path_srv.request.object_id = object_id;
+  path_srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(path_srv))
+  {
+    clean_path = path_srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
+  }
+
+  // Convert Transform to pose and update cached path
+  geometry_msgs::Pose robot_object_pose;
+  robot_object_pose.position.x = robot_object.transform.translation.x;
+  robot_object_pose.position.y = robot_object.transform.translation.y;
+  robot_object_pose.position.z = robot_object.transform.translation.z;
+  robot_object_pose.orientation = robot_object.transform.rotation;
+  clean_path.cached_paths.at(0).nav_pose = robot_object_pose;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath set_path_srv;
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(set_path_srv.response.success){
+      ROS_INFO("Update nav_pose for path");
+    }
+    else{
+      ROS_ERROR_STREAM("Could not update nav label. Error: "<<set_path_srv.response.message);
+      return;
+    }
+  }  
+  
 }
 
 void PathPlanningWidget::goToLabel(){
-  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
+  //QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
 }
 
 void PathPlanningWidget::goToLabelHelper(){
-  std::string label = ui_.nav_lbl->text().toStdString();
+  // std::string label = ui_.nav_lbl->text().toStdString();
   
-  peanut_navplanning_oil::MoveBaseGoal goal;
-  goal.header.stamp = ros::Time::now();
-  goal.header.frame_id = "map";
-  goal.goal_id.id = label;
+  // peanut_navplanning_oil::MoveBaseGoal goal;
+  // goal.header.stamp = ros::Time::now();
+  // goal.header.frame_id = "map";
+  // goal.goal_id.id = label;
 
-  ROS_INFO_STREAM("Sending goal to move to label: "<<label);
-  move_base_->sendGoal(goal);
-  bool success = move_base_->waitForResult(ros::Duration(60.0));
+  // ROS_INFO_STREAM("Sending goal to move to label: "<<label);
+  // move_base_->sendGoal(goal);
+  // bool success = move_base_->waitForResult(ros::Duration(60.0));
 
-  if (success){
-    ROS_INFO_STREAM("Navigation successfull to label: "<<label);
-  }
-  else{
-    ROS_ERROR_STREAM("Navigation failed to label: "<<label);
-  }
+  // if (success){
+  //   ROS_INFO_STREAM("Navigation successfull to label: "<<label);
+  // }
+  // else{
+  //   ROS_ERROR_STREAM("Navigation failed to label: "<<label);
+  // }
 }
 
 void PathPlanningWidget::clearFaults(){
