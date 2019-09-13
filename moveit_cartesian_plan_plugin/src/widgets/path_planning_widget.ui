@@ -395,30 +395,30 @@
 								<string>Mv Elev</string>
 							</property>
 						</widget>
-						<widget class="QPushButton" name="mv_nav">
+						<widget class="QPushButton" name="move_to_pose">
 							<property name="geometry">
 								<rect>
 									<x>10</x>
 									<y>400</y>
-									<width>60</width>
+									<width>181</width>
 									<height>27</height>
 								</rect>
 							</property>
 							<property name="text">
-								<string>Mv Nav</string>
+								<string>Move Robot to Task Pose</string>
 							</property>
 						</widget>
-						<widget class="QPushButton" name="add_lbl_here">
+						<widget class="QPushButton" name="save_pose">
 							<property name="geometry">
 								<rect>
 									<x>10</x>
 									<y>440</y>
-									<width>120</width>
+									<width>181</width>
 									<height>27</height>
 								</rect>
 							</property>
 							<property name="text">
-								<string>Add Label Here</string>
+								<string>Save Robot Pose</string>
 							</property>
 						</widget>
 						<widget class="QLineEdit" name="el_lbl">
@@ -431,21 +431,6 @@
 								<rect>
 									<x>75</x>
 									<y>360</y>
-									<width>110</width>
-									<height>27</height>
-								</rect>
-							</property>
-						</widget>
-						<widget class="QLineEdit" name="nav_lbl">
-							<property name="styleSheet">
-								<string notr="true">border-style: outset;
-											border-width: 2px;
-											border-color :rgb(48, 48, 48)</string>
-							</property>
-							<property name="geometry">
-								<rect>
-									<x>75</x>
-									<y>400</y>
 									<width>110</width>
 									<height>27</height>
 								</rect>

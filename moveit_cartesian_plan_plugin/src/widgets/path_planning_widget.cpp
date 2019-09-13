@@ -102,8 +102,8 @@ void PathPlanningWidget::init()
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
 
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
-  connect(ui_.add_lbl_here, SIGNAL(clicked()), this, SLOT(addLabel()));
-  connect(ui_.mv_nav, SIGNAL(clicked()), this, SLOT(goToLabel()));
+  connect(ui_.save_pose, SIGNAL(clicked()), this, SLOT(addNavPose()));
+  connect(ui_.move_to_pose, SIGNAL(clicked()), this, SLOT(goToNavPose()));
 
   connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
   connect(ui_.stop_all_btn, SIGNAL(clicked()), this, SLOT(stopAll()));
@@ -957,12 +957,12 @@ void PathPlanningWidget::moveElevatorHelper()
   }
 }
 
-void PathPlanningWidget::addLabel()
+void PathPlanningWidget::addNavPose()
 {
-  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addLabelHelper);
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addNavPoseHelper);
 }
 
-void PathPlanningWidget::addLabelHelper()
+void PathPlanningWidget::addNavPoseHelper()
 { 
   // Get data
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
@@ -1067,11 +1067,11 @@ void PathPlanningWidget::addLabelHelper()
   
 }
 
-void PathPlanningWidget::goToLabel(){
-  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
+void PathPlanningWidget::goToNavPose(){
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToNavPoseHelper);
 }
 
-void PathPlanningWidget::goToLabelHelper(){
+void PathPlanningWidget::goToNavPoseHelper(){
   
   // Get data
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();

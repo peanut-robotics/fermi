@@ -183,10 +183,10 @@ namespace moveit_cartesian_plan_plugin
 			// Slots for elevator and navigation
 			void moveElevator();
 			void moveElevatorHelper();
-			void addLabel();
-			void addLabelHelper();
-			void goToLabel();
-			void goToLabelHelper();
+			void addNavPose();
+			void addNavPoseHelper();
+			void goToNavPose();
+			void goToNavPoseHelper();
 
 			// Slots for faults
 			void clearFaults();
