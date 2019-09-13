@@ -16,7 +16,6 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
-  add_label_ = nh_.serviceClient<peanut_localization_oil::AddLabelHere>("/oil/navigation/labels/add_label_here", 20);
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   
   // Kortex services
@@ -988,7 +987,6 @@ void PathPlanningWidget::addNavPoseHelper()
         object_world.header.frame_id = "map";
         object_world.header.stamp = ros::Time::now();
         found_tf = true;
-        ROS_INFO("Found object");
         break;
       }
     }
@@ -1057,7 +1055,7 @@ void PathPlanningWidget::addNavPoseHelper()
   
   if(set_clean_path_proxy_.call(set_path_srv)){
     if(set_path_srv.response.success){
-      ROS_INFO("Update nav_pose for path");
+      ROS_INFO("Updated nav_pose for path");
     }
     else{
       ROS_ERROR_STREAM("Could not update nav label. Error: "<<set_path_srv.response.message);

@@ -49,7 +49,6 @@
 #include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_elevator_oil/MoveToHeightAction.h>
-#include <peanut_localization_oil/AddLabelHere.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 #include <kortex_driver/ClearFaults.h>
 #include <controller_manager_msgs/SwitchController.h>
@@ -97,7 +96,6 @@ namespace moveit_cartesian_plan_plugin
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
-			ros::ServiceClient add_label_;
 			ros::ServiceClient clear_faults_;
 			ros::ServiceClient switch_controllers_;
 			boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>> move_elevator_;
