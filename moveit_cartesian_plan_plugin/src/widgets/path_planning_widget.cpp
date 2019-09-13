@@ -1110,7 +1110,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   robot_object.transform.translation.y = robot_object_pose.position.y;
   robot_object.transform.translation.z = robot_object_pose.position.z;
   robot_object.transform.rotation = robot_object_pose.orientation;
-  robot_object.child_frame_id = "mobile_base_link";
+  robot_object.child_frame_id = "mobile_base_link_desired";
   robot_object.header.frame_id = "object";
   robot_object.header.stamp = ros::Time::now();
 
@@ -1152,7 +1152,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   int count = 0;
   while(true){
     try{
-      robot_world = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0));
+      robot_world = tfBuffer_.lookupTransform("map", "mobile_base_link_desired", ros::Time(0));
       break;
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
