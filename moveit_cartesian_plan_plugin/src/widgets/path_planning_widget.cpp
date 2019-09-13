@@ -1005,6 +1005,7 @@ void PathPlanningWidget::addLabelHelper()
 
   // Publish object tf and get robot_object
   static_broadcaster_.sendTransform(object_world);
+  int count = 0;
   while(true){
     try{
       robot_object = tfBuffer_.lookupTransform("object", "mobile_base_link", ros::Time(0));
@@ -1012,9 +1013,14 @@ void PathPlanningWidget::addLabelHelper()
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
       ROS_WARN("%s",ex.what());
+      count += 1;
+      if(count > 5){
+        return;
+      }
       ros::Duration(1.0).sleep();
     }
   }
+
   // Get clean path
   peanut_cotyledon::CleanPath clean_path;
   peanut_cotyledon::GetCleanPath path_srv;
@@ -1062,27 +1068,122 @@ void PathPlanningWidget::addLabelHelper()
 }
 
 void PathPlanningWidget::goToLabel(){
-  //QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::goToLabelHelper);
 }
 
 void PathPlanningWidget::goToLabelHelper(){
-  // std::string label = ui_.nav_lbl->text().toStdString();
   
-  // peanut_navplanning_oil::MoveBaseGoal goal;
-  // goal.header.stamp = ros::Time::now();
-  // goal.header.frame_id = "map";
-  // goal.goal_id.id = label;
+  // Get data
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
 
-  // ROS_INFO_STREAM("Sending goal to move to label: "<<label);
-  // move_base_->sendGoal(goal);
-  // bool success = move_base_->waitForResult(ros::Duration(60.0));
+  // Transforms 
+  tf2_ros::TransformListener tfListener(tfBuffer_);
+  geometry_msgs::TransformStamped object_world;
+  geometry_msgs::TransformStamped robot_object;
+  geometry_msgs::TransformStamped robot_world;
 
-  // if (success){
-  //   ROS_INFO_STREAM("Navigation successfull to label: "<<label);
-  // }
-  // else{
-  //   ROS_ERROR_STREAM("Navigation failed to label: "<<label);
-  // }
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath path_srv;
+  path_srv.request.floor_name = floor_name;
+  path_srv.request.area_name = area_name;
+  path_srv.request.object_id = object_id;
+  path_srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(path_srv))
+  {
+    clean_path = path_srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
+  }
+  
+  // Get object pose and convert to stampedTf
+  geometry_msgs::Pose robot_object_pose;
+  robot_object_pose = clean_path.cached_paths.at(0).nav_pose;
+  robot_object.transform.translation.x = robot_object_pose.position.x;
+  robot_object.transform.translation.y = robot_object_pose.position.y;
+  robot_object.transform.translation.z = robot_object_pose.position.z;
+  robot_object.transform.rotation = robot_object_pose.orientation;
+  robot_object.child_frame_id = "mobile_base_link";
+  robot_object.header.frame_id = "object";
+  robot_object.header.stamp = ros::Time::now();
+
+  // Publish robot_object pose
+  static_broadcaster_.sendTransform(robot_object);
+  
+  // Get object pose 
+  bool found_tf = false;
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        object_world.transform = obj.origin;
+        object_world.child_frame_id = "object";
+        object_world.header.frame_id = "map";
+        object_world.header.stamp = ros::Time::now();
+        found_tf = true;
+        ROS_INFO("Found object");
+        break;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return;
+  }
+
+  if(!found_tf){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Publish object pose
+  static_broadcaster_.sendTransform(object_world);
+
+  // Get desired robot wrt world
+  int count = 0;
+  while(true){
+    try{
+      robot_world = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0));
+      break;
+    }
+    catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
+      ROS_WARN("%s",ex.what());
+      count +=1;
+      if(count > 5){
+        return;
+      }
+      ros::Duration(1.0).sleep();
+    }
+  }
+
+  // Send goal
+  peanut_navplanning_oil::MoveBaseGoal goal;
+  goal.goal_pose.header.stamp = ros::Time::now();
+  goal.goal_pose.header.frame_id = "map";
+  goal.goal_pose.pose.position.x = robot_world.transform.translation.x;
+  goal.goal_pose.pose.position.y = robot_world.transform.translation.y;
+  goal.goal_pose.pose.position.z = robot_world.transform.translation.z;
+  goal.goal_pose.pose.orientation = robot_world.transform.rotation;
+
+  ROS_INFO_STREAM("Sending goal to move base");
+  move_base_->sendGoal(goal);
+  bool success = move_base_->waitForResult(ros::Duration(60.0));
+
+  if (success){
+    ROS_INFO_STREAM("Navigation successfull");
+  }
+  else{
+    ROS_ERROR_STREAM("Navigation failed ");
+  }
 }
 
 void PathPlanningWidget::clearFaults(){
