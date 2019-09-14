@@ -976,14 +976,16 @@ void PathPlanningWidget::addNavPoseHelper()
   
   // Get objects
   bool found_tf = false;
+  std::string obj_name;
   peanut_cotyledon::GetObjects srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
   if (get_objects_proxy_.call(srv)){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
+        obj_name = obj.name;
         object_world.transform = obj.origin;
-        object_world.child_frame_id = obj.name;
+        object_world.child_frame_id = obj_name;
         object_world.header.frame_id = "map";
         object_world.header.stamp = ros::Time::now();
         found_tf = true;
@@ -1008,7 +1010,7 @@ void PathPlanningWidget::addNavPoseHelper()
   int count = 0;
   while(true){
     try{
-      robot_object = tfBuffer_.lookupTransform(obj.name, "mobile_base_link", ros::Time(0));
+      robot_object = tfBuffer_.lookupTransform(obj_name, "mobile_base_link", ros::Time(0));
       break;
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
@@ -1104,6 +1106,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   }
   
   // Get object pose 
+  std::string obj_name;
   bool found_tf = false;
   peanut_cotyledon::GetObjects srv;
   srv.request.floor_name = floor_name;
@@ -1111,8 +1114,9 @@ void PathPlanningWidget::goToNavPoseHelper(){
   if (get_objects_proxy_.call(srv)){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
+        obj_name = obj.name;
         object_world.transform = obj.origin;
-        object_world.child_frame_id = obj.name;
+        object_world.child_frame_id = obj_name;
         object_world.header.frame_id = "map";
         object_world.header.stamp = ros::Time::now();
         found_tf = true;
@@ -1144,7 +1148,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   robot_object.transform.translation.z = robot_object_pose.position.z;
   robot_object.transform.rotation = robot_object_pose.orientation;
   robot_object.child_frame_id = "mobile_base_link_desired";
-  robot_object.header.frame_id = obj.name;
+  robot_object.header.frame_id = obj_name;
   robot_object.header.stamp = ros::Time::now();
 
   // Publish robot_object pose
