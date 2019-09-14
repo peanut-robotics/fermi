@@ -1005,7 +1005,7 @@ void PathPlanningWidget::addNavPoseHelper()
 
   // Publish object tf and get robot_object
   static_broadcaster_.sendTransform(object_world);
-  ros::Duration(1.0).sleep();
+  ros::Duration(2.5).sleep();
 
   int count = 0;
   while(true){
@@ -1138,7 +1138,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
 
   // Publish object pose
   static_broadcaster_.sendTransform(object_world);
-  ros::Duration(1.0).sleep();
+  ros::Duration(2.5).sleep();
 
   // Get object pose and convert to stampedTf
   geometry_msgs::Pose robot_object_pose;
@@ -1153,7 +1153,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
 
   // Publish robot_object pose
   static_broadcaster_.sendTransform(robot_object);
-  ros::Duration(1.0).sleep();
+  ros::Duration(2.5).sleep();
 
   // Get desired robot wrt world
   int count = 0;
