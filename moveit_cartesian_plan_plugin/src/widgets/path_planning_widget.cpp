@@ -973,7 +973,7 @@ void PathPlanningWidget::addNavPoseHelper()
   tf2_ros::TransformListener tfListener(tfBuffer_);
   geometry_msgs::TransformStamped object_world;
   geometry_msgs::TransformStamped robot_object;
-
+  
   // Get objects
   bool found_tf = false;
   peanut_cotyledon::GetObjects srv;
@@ -983,7 +983,7 @@ void PathPlanningWidget::addNavPoseHelper()
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
         object_world.transform = obj.origin;
-        object_world.child_frame_id = "object";
+        object_world.child_frame_id = obj.name;
         object_world.header.frame_id = "map";
         object_world.header.stamp = ros::Time::now();
         found_tf = true;
@@ -1003,10 +1003,12 @@ void PathPlanningWidget::addNavPoseHelper()
 
   // Publish object tf and get robot_object
   static_broadcaster_.sendTransform(object_world);
+  ros::Duration(1.0).sleep();
+
   int count = 0;
   while(true){
     try{
-      robot_object = tfBuffer_.lookupTransform("object", "mobile_base_link", ros::Time(0));
+      robot_object = tfBuffer_.lookupTransform(obj.name, "mobile_base_link", ros::Time(0));
       break;
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
@@ -1101,20 +1103,6 @@ void PathPlanningWidget::goToNavPoseHelper(){
     return;
   }
   
-  // Get object pose and convert to stampedTf
-  geometry_msgs::Pose robot_object_pose;
-  robot_object_pose = clean_path.cached_paths.at(0).nav_pose;
-  robot_object.transform.translation.x = robot_object_pose.position.x;
-  robot_object.transform.translation.y = robot_object_pose.position.y;
-  robot_object.transform.translation.z = robot_object_pose.position.z;
-  robot_object.transform.rotation = robot_object_pose.orientation;
-  robot_object.child_frame_id = "mobile_base_link_desired";
-  robot_object.header.frame_id = "object";
-  robot_object.header.stamp = ros::Time::now();
-
-  // Publish robot_object pose
-  static_broadcaster_.sendTransform(robot_object);
-  
   // Get object pose 
   bool found_tf = false;
   peanut_cotyledon::GetObjects srv;
@@ -1124,7 +1112,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
         object_world.transform = obj.origin;
-        object_world.child_frame_id = "object";
+        object_world.child_frame_id = obj.name;
         object_world.header.frame_id = "map";
         object_world.header.stamp = ros::Time::now();
         found_tf = true;
@@ -1143,8 +1131,25 @@ void PathPlanningWidget::goToNavPoseHelper(){
     return;
   }
 
+
   // Publish object pose
   static_broadcaster_.sendTransform(object_world);
+  ros::Duration(1.0).sleep();
+
+  // Get object pose and convert to stampedTf
+  geometry_msgs::Pose robot_object_pose;
+  robot_object_pose = clean_path.cached_paths.at(0).nav_pose;
+  robot_object.transform.translation.x = robot_object_pose.position.x;
+  robot_object.transform.translation.y = robot_object_pose.position.y;
+  robot_object.transform.translation.z = robot_object_pose.position.z;
+  robot_object.transform.rotation = robot_object_pose.orientation;
+  robot_object.child_frame_id = "mobile_base_link_desired";
+  robot_object.header.frame_id = obj.name;
+  robot_object.header.stamp = ros::Time::now();
+
+  // Publish robot_object pose
+  static_broadcaster_.sendTransform(robot_object);
+  ros::Duration(1.0).sleep();
 
   // Get desired robot wrt world
   int count = 0;
