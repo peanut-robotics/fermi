@@ -971,9 +971,15 @@ void PathPlanningWidget::addNavPoseHelper()
 
   // Transforms 
   tf2_ros::TransformListener tfListener(tfBuffer_);
-  geometry_msgs::TransformStamped object_world;
-  geometry_msgs::TransformStamped robot_object;
-  
+  geometry_msgs::Transform robot_world_tf;
+  geometry_msgs::Transform object_world_tf;
+
+  Eigen::Affine3d object_world_eigen;
+  Eigen::Affine3d robot_object_eigen;
+  Eigen::Affine3d robot_world_eigen;
+
+  geometry_msgs::Quaternion quat_msg;
+
   // Get objects
   bool found_tf = false;
   std::string obj_name;
@@ -983,11 +989,8 @@ void PathPlanningWidget::addNavPoseHelper()
   if (get_objects_proxy_.call(srv)){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
-        obj_name = obj.name;
-        object_world.transform = obj.origin;
-        object_world.child_frame_id = obj_name;
-        object_world.header.frame_id = "map";
-        object_world.header.stamp = ros::Time::now();
+        object_world_tf = obj.origin;
+        tf::transformMsgToEigen (object_world_tf, object_world_eigen);
         found_tf = true;
         break;
       }
@@ -1003,14 +1006,12 @@ void PathPlanningWidget::addNavPoseHelper()
     return;
   }
 
-  // Publish object tf and get robot_object
-  static_broadcaster_.sendTransform(object_world);
-  ros::Duration(2.5).sleep();
-
+  // Get current robot location
   int count = 0;
   while(true){
     try{
-      robot_object = tfBuffer_.lookupTransform(obj_name, "mobile_base_link", ros::Time(0));
+      robot_world_tf = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0)).transform;
+      tf::transformMsgToEigen (robot_world_tf, robot_world_eigen);
       break;
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
@@ -1022,6 +1023,9 @@ void PathPlanningWidget::addNavPoseHelper()
       ros::Duration(1.0).sleep();
     }
   }
+
+  // Robot wrt object 
+  robot_object_eigen = object_world_eigen.inverse() * robot_world_eigen;
 
   // Get clean path
   peanut_cotyledon::CleanPath clean_path;
@@ -1042,11 +1046,15 @@ void PathPlanningWidget::addNavPoseHelper()
   }
 
   // Convert Transform to pose and update cached path
+  Eigen::Matrix3d rot = robot_object_eigen.linear();
+  Eigen::Quaterniond quat(rot);
+  tf::quaternionEigenToMsg(quat, quat_msg);
+
   geometry_msgs::Pose robot_object_pose;
-  robot_object_pose.position.x = robot_object.transform.translation.x;
-  robot_object_pose.position.y = robot_object.transform.translation.y;
-  robot_object_pose.position.z = robot_object.transform.translation.z;
-  robot_object_pose.orientation = robot_object.transform.rotation;
+  robot_object_pose.position.x = robot_object_eigen.translation()[0];
+  robot_object_pose.position.y = robot_object_eigen.translation()[1];
+  robot_object_pose.position.z = robot_object_eigen.translation()[2];
+  robot_object_pose.orientation = quat_msg;
   clean_path.cached_paths.at(0).nav_pose = robot_object_pose;
 
   // Set clean path
@@ -1062,7 +1070,7 @@ void PathPlanningWidget::addNavPoseHelper()
       ROS_INFO("Updated nav_pose for path");
     }
     else{
-      ROS_ERROR_STREAM("Could not update nav label. Error: "<<set_path_srv.response.message);
+      ROS_ERROR_STREAM("Could not update nav pose. Error: "<<set_path_srv.response.message);
       return;
     }
   }  
