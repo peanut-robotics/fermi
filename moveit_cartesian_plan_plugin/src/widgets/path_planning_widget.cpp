@@ -1083,10 +1083,14 @@ void PathPlanningWidget::goToNavPoseHelper(){
 
   // Transforms 
   tf2_ros::TransformListener tfListener(tfBuffer_);
-  geometry_msgs::TransformStamped object_world;
-  geometry_msgs::TransformStamped robot_object;
-  geometry_msgs::TransformStamped robot_world;
+  geometry_msgs::Transform object_world_tf;
 
+  Eigen::Affine3d object_world_eigen;
+  Eigen::Affine3d robot_object_eigen;
+  Eigen::Affine3d robot_world_eigen;
+
+  geometry_msgs::Quaternion quat_msg;
+  
   // Get clean path
   peanut_cotyledon::CleanPath clean_path;
   peanut_cotyledon::GetCleanPath path_srv;
@@ -1114,13 +1118,9 @@ void PathPlanningWidget::goToNavPoseHelper(){
   if (get_objects_proxy_.call(srv)){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
-        obj_name = obj.name;
-        object_world.transform = obj.origin;
-        object_world.child_frame_id = obj_name;
-        object_world.header.frame_id = "map";
-        object_world.header.stamp = ros::Time::now();
+        object_world_tf = obj.origin;
+        tf::transformMsgToEigen (object_world_tf, object_world_eigen);
         found_tf = true;
-        ROS_INFO("Found object");
         break;
       }
     }
@@ -1135,51 +1135,26 @@ void PathPlanningWidget::goToNavPoseHelper(){
     return;
   }
 
-
-  // Publish object pose
-  static_broadcaster_.sendTransform(object_world);
-  ros::Duration(2.5).sleep();
-
   // Get object pose and convert to stampedTf
   geometry_msgs::Pose robot_object_pose;
   robot_object_pose = clean_path.cached_paths.at(0).nav_pose;
-  robot_object.transform.translation.x = robot_object_pose.position.x;
-  robot_object.transform.translation.y = robot_object_pose.position.y;
-  robot_object.transform.translation.z = robot_object_pose.position.z;
-  robot_object.transform.rotation = robot_object_pose.orientation;
-  robot_object.child_frame_id = "mobile_base_link_desired";
-  robot_object.header.frame_id = obj_name;
-  robot_object.header.stamp = ros::Time::now();
-
-  // Publish robot_object pose
-  static_broadcaster_.sendTransform(robot_object);
-  ros::Duration(2.5).sleep();
+  tf::poseMsgToEigen (robot_object_pose, robot_object_eigen);
 
   // Get desired robot wrt world
-  int count = 0;
-  while(true){
-    try{
-      robot_world = tfBuffer_.lookupTransform("map", "mobile_base_link_desired", ros::Time(0));
-      break;
-    }
-    catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
-      ROS_WARN("%s",ex.what());
-      count +=1;
-      if(count > 5){
-        return;
-      }
-      ros::Duration(1.0).sleep();
-    }
-  }
+  robot_world_eigen = object_world_eigen * robot_object_eigen;
 
   // Send goal
+  Eigen::Matrix3d rot = robot_world_eigen.linear();
+  Eigen::Quaterniond quat(rot);
+  tf::quaternionEigenToMsg(quat, quat_msg); 
+
   peanut_navplanning_oil::MoveBaseGoal goal;
   goal.goal_pose.header.stamp = ros::Time::now();
   goal.goal_pose.header.frame_id = "map";
-  goal.goal_pose.pose.position.x = robot_world.transform.translation.x;
-  goal.goal_pose.pose.position.y = robot_world.transform.translation.y;
-  goal.goal_pose.pose.position.z = robot_world.transform.translation.z;
-  goal.goal_pose.pose.orientation = robot_world.transform.rotation;
+  goal.goal_pose.pose.position.x = robot_world_eigen.translation()[0];
+  goal.goal_pose.pose.position.y = robot_world_eigen.translation()[1];
+  goal.goal_pose.pose.position.z = robot_world_eigen.translation()[2];
+  goal.goal_pose.pose.orientation = quat_msg;
 
   ROS_INFO_STREAM("Sending goal to move base");
   move_base_->sendGoal(goal);
