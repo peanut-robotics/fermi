@@ -368,6 +368,9 @@ void GenerateCartesianPath::checkWayPointValidity(const std::vector<tf::Transfor
   /*! This function is called every time the user updates the pose of the Way-Point and checks if the Way-Point is within the valid IK solution for the Robot.
       In the case when a point is outside the valid IK solution this function send a signal to the RViz enviroment to update the color of the Way-Point.
   */
+  if (!check_ik){
+   return;
+  }
   try{
     geometry_msgs::TransformStamped transformStamped;
     try{
@@ -527,4 +530,9 @@ void GenerateCartesianPath::getSelectedGroupIndex(int index)
 
   Q_EMIT getRobotModelFrame_signal(ROBOT_MODEL_FRAME_, end_effector);
 
+}
+
+void GenerateCartesianPath::ChangeCheckIk(){
+  check_ik = !check_ik;
+  ROS_INFO_STREAM("Check IK set to: "<< std::to_string(check_ik));
 }

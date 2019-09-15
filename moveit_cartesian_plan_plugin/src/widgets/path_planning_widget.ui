@@ -684,6 +684,19 @@
 								<string>Move to Home</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="btn_checkIK">
+							<property name="geometry">
+								<rect>
+									<x>420</x>
+									<y>320</y>
+									<width>181</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Enable/Disable Check IK</string>
+							</property>
+						</widget>
 						<widget class="QPushButton" name="btn_ClearAllBoxes">
 							<property name="geometry">
 								<rect>

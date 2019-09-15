@@ -70,6 +70,10 @@ public Q_SLOTS:
 
 	//! Move to starting position of the robot. As loaded by default
 	void moveToHome();
+
+	// Set check_ik
+	void ChangeCheckIk();
+	
 Q_SIGNALS:
 	//! Let the RViz that a Way-Point is outside the IK solution.
 	void wayPointOutOfIK(int point_number, int out_of_range, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
@@ -116,6 +120,7 @@ protected:
 	tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener* tfListener;
 
+	bool check_ik = true;
 };
 
 #endif // GENERATE_CARTESIAN_PATH_H_

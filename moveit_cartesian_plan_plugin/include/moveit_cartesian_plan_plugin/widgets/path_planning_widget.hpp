@@ -190,6 +190,9 @@ namespace moveit_cartesian_plan_plugin
 			void clearFaults();
 			void stopAll();
 
+			// Slots for check ik
+			void ChangeCheckIK();
+
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
@@ -220,6 +223,7 @@ namespace moveit_cartesian_plan_plugin
 
 			void sendSendSelectedPlanGroup(int index);
 
+			void ChangeCheckIK_signal();
 		};
 	}
 

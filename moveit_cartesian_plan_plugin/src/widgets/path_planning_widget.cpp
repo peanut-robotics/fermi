@@ -106,6 +106,8 @@ void PathPlanningWidget::init()
 
   connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
   connect(ui_.stop_all_btn, SIGNAL(clicked()), this, SLOT(stopAll()));
+
+  connect(ui_.btn_checkIK, SIGNAL(clicked()), this, SLOT(ChangeCheckIK()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1221,6 +1223,10 @@ void PathPlanningWidget::stopAll(){
   else{
     ROS_ERROR("Could not call switch controller service");
   }
+}
+
+void PathPlanningWidget::ChangeCheckIK(){
+  Q_EMIT ChangeCheckIK_signal();
 }
 
 } // namespace widgets
