@@ -41,6 +41,7 @@
 #include <geometry_msgs/Transform.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <map>
+#include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
@@ -54,6 +55,7 @@
 #include <controller_manager_msgs/SwitchController.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <eigen_conversions/eigen_msg.h>
 
 // macros
 #ifndef DEG2RAD
