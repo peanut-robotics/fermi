@@ -191,7 +191,9 @@ namespace moveit_cartesian_plan_plugin
 			// Slots for faults
 			void clearFaults();
 			void stopAll();
-
+			void startController();
+			void stopController();
+			
 			// Slots for check ik
 			void ChangeCheckIK();
 

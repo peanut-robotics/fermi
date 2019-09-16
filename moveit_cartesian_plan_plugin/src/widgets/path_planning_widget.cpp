@@ -106,6 +106,7 @@ void PathPlanningWidget::init()
 
   connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
   connect(ui_.stop_all_btn, SIGNAL(clicked()), this, SLOT(stopAll()));
+  connect(ui_.start_controller_btn, SIGNAL(clicked()), this, SLOT(startController()));
 
   connect(ui_.btn_checkIK, SIGNAL(clicked()), this, SLOT(ChangeCheckIK()));
 }
@@ -1189,7 +1190,27 @@ void PathPlanningWidget::clearFaults(){
   }
 }
 
-void PathPlanningWidget::stopAll(){
+void PathPlanningWidget::startController(){
+  // Start Controller
+  controller_manager_msgs::SwitchController srv;
+  srv.request.stop_controllers = {""};
+  srv.request.start_controllers = {"velocity_trajectory_controller"};
+  srv.request.strictness = 0;
+
+  if (switch_controllers_.call(srv)){
+    if (srv.response.ok){
+      ROS_INFO_STREAM("Controller started");
+    }
+    else{
+      ROS_ERROR("Could not start controller");
+    }
+  }
+  else{
+    ROS_ERROR("Could not call switch controller service");
+  }
+}
+
+void PathPlanningWidget::stopController(){
   // Stop Controller
   controller_manager_msgs::SwitchController srv;
   srv.request.start_controllers = {""};
@@ -1207,9 +1228,14 @@ void PathPlanningWidget::stopAll(){
   else{
     ROS_ERROR("Could not call switch controller service");
   }
+}
+
+void PathPlanningWidget::stopAll(){
+  // Stop Controller
+  stopController();
 
   // Stop Navigation
-  ROS_INFO("Cancelling navigation goal")
+  ROS_INFO("Cancelling navigation goal");
   move_base_->cancelAllGoals();
 }
 

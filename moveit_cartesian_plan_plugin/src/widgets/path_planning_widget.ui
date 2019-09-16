@@ -762,6 +762,19 @@
 								<string>Clear Faults</string>
 							</property>
 						</widget>
+						<widget class="QPushButton" name="start_controller_btn">
+							<property name="geometry">
+								<rect>
+									<x>410</x>
+									<y>525</y>
+									<width>180</width>
+									<height>27</height>
+								</rect>
+							</property>
+							<property name="text">
+								<string>Start Controller</string>
+							</property>
+						</widget>
 						<widget class="QPushButton" name="next_btn">
 							<property name="geometry">
 								<rect>
