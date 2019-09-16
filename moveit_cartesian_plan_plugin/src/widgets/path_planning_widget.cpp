@@ -1190,6 +1190,7 @@ void PathPlanningWidget::clearFaults(){
 }
 
 void PathPlanningWidget::stopAll(){
+  // Stop Controller
   controller_manager_msgs::SwitchController srv;
   srv.request.start_controllers = {""};
   srv.request.stop_controllers = {"velocity_trajectory_controller"};
@@ -1206,6 +1207,10 @@ void PathPlanningWidget::stopAll(){
   else{
     ROS_ERROR("Could not call switch controller service");
   }
+
+  // Stop Navigation
+  ROS_INFO("Cancelling navigation goal")
+  move_base_->cancelAllGoals();
 }
 
 void PathPlanningWidget::ChangeCheckIK(){
