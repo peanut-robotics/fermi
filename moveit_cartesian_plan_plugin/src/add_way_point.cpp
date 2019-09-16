@@ -927,8 +927,8 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
   */
-  ROS_INFO("begin save waypoints to file");
-  ROS_INFO_STREAM("The frame the poses are being saved in is" << target_frame_);
+  ROS_INFO("Saving clean path");
+  ROS_INFO_STREAM("The frame the poses are being saved in is " << target_frame_);
   
   // Transforms and poses
   geometry_msgs::Transform target_map_tfmsg, object_world_tfmsg;
@@ -971,16 +971,17 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   target_object_tf = object_world_tf.inverse() * target_map_tf;
 
   // Transform points    
+  ROS_INFO_STREAM("Saving "<<waypoints_pos.size()<< " points");
   for (auto const waypoint_pos_i : waypoints_pos)
   { 
     // Poses are in map frame
     waypoint_tf = target_map_tf * waypoint_pos_i;
-    tf::poseTFToMsg (waypoint_pos_i, waypoint_pose);
+    tf::poseTFToMsg (waypoint_tf, waypoint_pose);
     waypoints_map_frame.push_back(waypoint_pose);
 
     // Poses in object frame
     waypoint_tf = target_object_tf * waypoint_pos_i;
-    tf::poseTFToMsg (target_object_tf, waypoint_pose);
+    tf::poseTFToMsg (waypoint_tf, waypoint_pose);
     waypoints_object_frame.push_back(waypoint_pose); 
   }
 
@@ -1098,7 +1099,6 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geo
   {
     int_marker.controls.at(control_size).markers.at(0).color = WAY_POINT_COLOR;
   }
-  ROS_INFO_STREAM("length of markers: " << std::to_string(int_marker.controls.at(control_size).markers.size()) );
   if (control_size > 2){ 
     // Only do additional step if its selected
     int oob_marker_count = 0;

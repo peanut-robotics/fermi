@@ -673,124 +673,124 @@ void PathPlanningWidget::loadPointsTool(){
 
 void PathPlanningWidget::loadPointsObject()
 {
-  /*! Slot that takes care of opening a previously saved Way-Points yaml file.
-            Opens Qt Dialog for selecting the file, opens the file and parses the data.
-            After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
-        */
+  /* Slot that takes care of opening a previously saved Way-Points yaml file.
+    Opens Qt Dialog for selecting the file, opens the file and parses the data.
+    After reading and parsing the data from the file, the information regarding 
+    the pose of the Way-Points is send to the RQT and the RViz so they can update 
+    their enviroments.*/
 
+  const std::string frame_id = "map";
+  double elevator_height, percent_complete ;
+  int num_robot_poses; 
+
+  // Clean path data
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
-  try
+  peanut_cotyledon::Object desired_object;
+
+  // Transforms
+  geometry_msgs::Transform object_world_tfmsg;
+  tf::Transform object_world_tf;
+
+  // Clear all the scene before loading all the new points from the file!!
+  clearAllPoints_slot();
+
+  // Enforce target frame "map"
+  ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+  PathPlanningWidget::transformPointsToFrame();
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
   {
-    peanut_cotyledon::GetCleanPath srv;
-    srv.request.floor_name = floor_name;
-    srv.request.area_name = area_name;
-    srv.request.object_id = object_id;
-    srv.request.task_name = task_name;
-    // ROS_INFO_STREAM("sending request to get clean path" << srv);
-    if(get_clean_path_proxy_.call(srv))
-    {
-      clean_path = srv.response.clean_path;
-    }
-    else
-    {
-      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
-      ui_.tabWidget->setEnabled(true);
-      ui_.progressBar->hide();
-      return;
-    }
+    clean_path = srv.response.clean_path;
   }
-  catch (...)
+  else
   {
     ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
     return;
   }
-  ROS_INFO_STREAM("the clean_path is loaded");
-  
-  if (clean_path.cached_paths.empty() || clean_path.cached_paths.at(0).robot_poses.empty())
+
+  if (clean_path.cached_paths.empty() || clean_path.object_poses.empty()/*clean_path.cached_paths.at(0).robot_poses.empty()*/)
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ROS_ERROR("the cached path associated with the clean path has an empty robot poses message");
+    ROS_ERROR("No object poses or cache paths in clean_path");
     return;
   }
-  else
-  {
-    ui_.tabWidget->setEnabled(false);
-    ui_.progressBar->show();
-
-    //clear all the scene before loading all the new points from the file!!
-    clearAllPoints_slot();
-
-    std::string frame_id;
-    double elevator_height = 1.0;
-    try
-    {
-      //define double for percent of completion
-      double percent_complete;
-      int end_of_points = clean_path.cached_paths.at(0).robot_poses.size();
-      ROS_INFO("at beginning of if statement line 593");
-      if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
-        ROS_INFO("the cached path is not empty");
-        std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
-        ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
-        ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
-        ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
-        ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
-        ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
-        ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
-        ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
-        ROS_INFO("the config was edited");
-        Q_EMIT configEdited_signal(startConfig);
-      }
-      try {
-        elevator_height = clean_path.cached_paths.at(0).elevator_height;
-      }
-      catch (...){
-        ROS_INFO("The loaded clean path cached_path and nav label are set to their defaults");
-      }
-      frame_id = "base_link";
-      std::string name;
-      int i = 0;
-      tf::Transform pose_tf;
-      ROS_INFO("running through for loop");
-      for (geometry_msgs::Pose pose : clean_path.cached_paths[0].robot_poses)
-      {
-        ROS_WARN_STREAM("pose in list before transform" << pose);
-        ROS_INFO_STREAM(std::to_string(i)<<"  ");
-        i++;
-        name = std::to_string(i);
-        tf::poseMsgToTF(pose, pose_tf);
-        ROS_INFO_STREAM("pose in list after transform" << pose);
-        percent_complete = (i + 1) * 100 / end_of_points;
-        ui_.progressBar->setValue(percent_complete);
-        Q_EMIT addPoint(pose_tf);
-      }
-      ROS_INFO("Setting step size and frame id");
-      ui_.el_lbl->setText(QString::number(elevator_height));
-      ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
-      ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
-      ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
-      ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
-      ui_.tool_name_lbl->setText(QString::fromStdString(clean_path.tool_name));
-    }
-    catch (...)
-    {
-      ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
-    }
-    // TODO call same pathway as button
-    ui_.tabWidget->setEnabled(true);
-    ui_.progressBar->hide();
-
-    PathPlanningWidget::transformPointsToFrame();
-    ROS_INFO("completed load process for clean path");
+  
+  ui_.tabWidget->setEnabled(false);
+  ui_.progressBar->show();
+  num_robot_poses = clean_path.object_poses.size();
+  
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
   }
+  object_world_tfmsg = desired_object.origin;
+  tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
+
+  // Load object poses and update ui/server points
+  int i = 0;
+  tf::Transform pose_tf;
+  ROS_INFO_STREAM("Loading clean path with "<<clean_path.object_poses.size()<< " points");
+  for (auto const pose : clean_path.object_poses) // object_poses are in object frame
+  {
+    i++;
+    tf::poseMsgToTF(pose, pose_tf);
+    pose_tf = object_world_tf * pose_tf;
+    percent_complete = (i + 1) * 100 / num_robot_poses;
+    ui_.progressBar->setValue(percent_complete);
+    Q_EMIT addPoint(pose_tf);
+  }
+
+  // Set starting config 
+  if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
+      ROS_INFO("Cache path is present, loading starting config");
+      std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
+      ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+      ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+      ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+      ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+      ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+      ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+      ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+      Q_EMIT configEdited_signal(startConfig);
+  }
+
+  try
+  {
+    ROS_INFO("Setting step size and frame id");
+    ui_.el_lbl->setText(QString::number(elevator_height));
+    ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+    ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
+    ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
+    ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
+    ui_.tool_name_lbl->setText(QString::fromStdString(clean_path.tool_name));
+  }
+  catch (...)
+  {
+    ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
+  }
+
+  // TODO call same pathway as button
+  ui_.tabWidget->setEnabled(true);
+  ui_.progressBar->hide();
+
+  ROS_INFO("Completed load process for clean path");
 }
+
 void PathPlanningWidget::savePoints(){
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
@@ -813,39 +813,35 @@ void PathPlanningWidget::savePointsObject()
 {
   /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
        */
-  try{
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
-  try
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(srv))
   {
-    peanut_cotyledon::GetCleanPath srv;
-    srv.request.floor_name = floor_name;
-    srv.request.area_name = area_name;
-    srv.request.object_id = object_id;
-    srv.request.task_name = task_name;
-    if(get_clean_path_proxy_.call(srv))
-    {
-      clean_path = srv.response.clean_path;
-    }
-    else
-    {
-      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
-      return;
-    }
+    clean_path = srv.response.clean_path;
   }
-  catch (...)
+  else
   {
     ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
   }
+
   if (clean_path.cached_paths.empty()){
     peanut_cotyledon::CachedPath empty_cached_path;
     std::vector<peanut_cotyledon::CachedPath> empty_cached_path_list;
     empty_cached_path_list.push_back(empty_cached_path);
     clean_path.cached_paths = empty_cached_path_list;
   }
+
   clean_path.cached_paths.at(0).elevator_height = ui_.el_lbl->text().toDouble();
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
@@ -853,10 +849,6 @@ void PathPlanningWidget::savePointsObject()
   clean_path.tool_name = ui_.tool_name_lbl->text().toStdString();
 
   Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path);
-  }
-  catch (...){
-    ROS_ERROR("unkown error during save in path planning widget.cpp");
-  }
 }
 void PathPlanningWidget::transformPointsToFrame()
 {
@@ -1241,6 +1233,26 @@ void PathPlanningWidget::stopAll(){
 
 void PathPlanningWidget::ChangeCheckIK(){
   Q_EMIT ChangeCheckIK_signal();
+}
+
+bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+  // Get objects
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        desired_obj = obj;
+        return true;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return false;
+  }
+  return false;  
 }
 
 } // namespace widgets

@@ -49,6 +49,7 @@
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
+#include <peanut_cotyledon/Object.h>
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 #include <kortex_driver/ClearFaults.h>
@@ -187,7 +188,7 @@ namespace moveit_cartesian_plan_plugin
 			void addNavPoseHelper();
 			void goToNavPose();
 			void goToNavPoseHelper();
-
+			
 			// Slots for faults
 			void clearFaults();
 			void stopAll();
@@ -196,6 +197,9 @@ namespace moveit_cartesian_plan_plugin
 			
 			// Slots for check ik
 			void ChangeCheckIK();
+
+			// Helpers
+			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
