@@ -42,6 +42,7 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
 
   ARROW_INTERACTIVE_SCALE = 0.2;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
+  get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
 
   ROS_INFO("Constructor created");
 }
@@ -900,97 +901,124 @@ void AddWayPoint::saveToolPath(){
   }
 }
 
+bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+  // Get objects
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        desired_obj = obj;
+        return true;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return false;
+  }
+  return false;  
+}
+
 void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
 {
-  try{
   /*! Function for saving all the Way-Points into yaml file.
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
-    */
-    ROS_INFO("begin save waypoints to file");
-    ROS_INFO_STREAM("The frame the poses are being saved in is" << target_frame_);
+  */
+  ROS_INFO("begin save waypoints to file");
+  ROS_INFO_STREAM("The frame the poses are being saved in is" << target_frame_);
+  
+  // Transforms and poses
+  geometry_msgs::Transform target_map_tfmsg, object_world_tfmsg;
+  tf::Transform target_map_tf, object_world_tf, target_object_tf;
+  std::vector<geometry_msgs::Pose> waypoints_map_frame, waypoints_object_frame;
+  Eigen::Affine3d object_world_eigen;
 
-    geometry_msgs::TransformStamped transformStamped;
-    try
-    {
-      transformStamped = tfBuffer.lookupTransform("base_link", target_frame_, ros::Time(0));
+  // Used for temp storing transforms
+  tf::Transform waypoint_tf;
+  geometry_msgs::Pose waypoint_pose;
+
+  // Empty cached path and joint trajectory
+  std::vector<peanut_cotyledon::CachedPath> one_cached_path_vec;
+  trajectory_msgs::JointTrajectory empty_joint_traj;
+  peanut_cotyledon::CachedPath one_cached_path;
+  one_cached_path_vec.push_back(one_cached_path);
+  
+  // Objects
+  peanut_cotyledon::Object desired_object;
+  
+  try
+  {
+    target_map_tfmsg = tfBuffer.lookupTransform("map", target_frame_, ros::Time(0)).transform;
+    tf::transformMsgToTF(target_map_tfmsg, target_map_tf);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ROS_ERROR("Unable to save because not able to transform");
+    return;
+  }
+
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+  object_world_tfmsg = desired_object.origin;
+  tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
+  target_object_tf = object_world_tf.inverse() * target_map_tf;
+
+  // Transform points    
+  for (auto const waypoint_pos_i : waypoints_pos)
+  { 
+    // Poses are in map frame
+    waypoint_tf = target_map_tf * waypoint_pos_i;
+    tf::poseTFToMsg (waypoint_pos_i, waypoint_pose);
+    waypoints_map_frame.push_back(waypoint_pose);
+
+    // Poses in object frame
+    waypoint_tf = target_object_tf * waypoint_pos_i;
+    tf::poseTFToMsg (target_object_tf, waypoint_pose);
+    waypoints_object_frame.push_back(waypoint_pose); 
+  }
+
+  /* Save cached path and robot poses in clean path
+  Cached path poses are in map frame
+  Clean path poses are in object frame */
+  if (clean_path.cached_paths.empty()){
+    clean_path.cached_paths = one_cached_path_vec;
+  }
+  clean_path.object_poses = waypoints_object_frame;
+  clean_path.cached_paths.at(0).robot_poses = waypoints_map_frame;
+  clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  srv.request.clean_path = clean_path;
+
+  if(set_clean_path_proxy_.call(srv))
+  {
+    if(srv.response.success){
+      ROS_INFO("Successfully saved");
     }
-    catch (tf2::TransformException &ex)
-    {
-      ROS_ERROR("%s", ex.what());
-      ROS_ERROR("Unable to save because not able to transform");
-      return;
-    }
-    std::vector<geometry_msgs::Pose> waypoints_pose_robot_frame, waypoints_pose_object_frame;
-
-    const geometry_msgs::Transform constTransform = transformStamped.transform;
-    ROS_INFO_STREAM("transform: " << transformStamped);
-    tf::Transform transform_old_new;
-    tf::transformMsgToTF(constTransform, transform_old_new);
-    tf::Transform waypoint_tf;
-    geometry_msgs::Pose waypoint_pose;
-
-    ROS_INFO_STREAM("At beginning of for loop");
-    for (auto const waypoint_pos_i : waypoints_pos)
-    {
-      ROS_INFO("At loop ");
-      tf::poseTFToMsg (waypoint_pos_i, waypoint_pose);
-      waypoints_pose_robot_frame.push_back(waypoint_pose);
-
-      waypoint_tf = transform_old_new * waypoint_pos_i;
-      tf::poseTFToMsg (waypoint_tf, waypoint_pose);
-      waypoints_pose_object_frame.push_back(waypoint_pose); 
-    }
-
-    ROS_INFO_STREAM("just before setting things");
-    if (clean_path.cached_paths.empty()){
-      std::vector<peanut_cotyledon::CachedPath> one_cached_path_vec;
-      peanut_cotyledon::CachedPath one_cached_path;
-      one_cached_path_vec.push_back(one_cached_path);
-      clean_path.cached_paths = one_cached_path_vec;
-    }
-    clean_path.cached_paths.at(0).robot_poses = waypoints_pose_robot_frame;
-    clean_path.object_poses = waypoints_pose_object_frame;
-    trajectory_msgs::JointTrajectory empty_joint_traj;
-    clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
-
-    try
-    {
-      peanut_cotyledon::SetCleanPath srv;
-      srv.request.floor_name = floor_name;
-      srv.request.area_name = area_name;
-      srv.request.object_id = object_id;
-      srv.request.task_name = task_name;
-      srv.request.clean_path = clean_path;
-    // ROS_INFO_STREAM("sending request to get clean path" << srv);
-    if(set_clean_path_proxy_.call(srv))
-    {
-      if(srv.response.success == true){
-        ROS_INFO("Successfully saved");
-      }
-      else {
-        ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
-        return;
-      }
-    }
-    else
-    {
+    else {
       ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
       return;
     }
   }
-  catch (...)
+  else
   {
     ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
     return;
   }
-  }
-  catch (...)
-  {
-    ROS_ERROR("some unkown error happened during saving, the file did not properly save");
-    return;
-  }
-  ROS_INFO("Saving finishd successfully");
+
+  ROS_INFO("Saving clean path finished successfully");
 }
 
 void AddWayPoint::transformPointsViz(std::string frame)

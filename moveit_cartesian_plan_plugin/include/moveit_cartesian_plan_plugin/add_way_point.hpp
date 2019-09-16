@@ -27,6 +27,8 @@
 #include <message_filters/subscriber.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
+#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/Object.h>
 #include <trajectory_msgs/JointTrajectory.h>
 
 #include <rviz/properties/bool_property.h>
@@ -87,6 +89,7 @@ public:
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
 	ros::ServiceClient set_clean_path_proxy_;
+	ros::ServiceClient get_objects_proxy_;
 	ros::NodeHandle nh_;
 
 private:
@@ -146,6 +149,7 @@ public Q_SLOTS:
 	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
 	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
+	bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();
