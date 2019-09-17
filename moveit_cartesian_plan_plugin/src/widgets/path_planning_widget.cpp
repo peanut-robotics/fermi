@@ -800,6 +800,7 @@ void PathPlanningWidget::loadPointsObject()
   }
   
   // Update mesh text field 
+  ui_.mesh_name_lbl->setText(QString::fromStdString(mesh_name));
   ROS_INFO("Completed load process for clean path");
 }
 
@@ -829,6 +830,7 @@ void PathPlanningWidget::savePointsObject()
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
 
   // Get clean path
@@ -860,7 +862,7 @@ void PathPlanningWidget::savePointsObject()
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
   clean_path.tool_name = ui_.tool_name_lbl->text().toStdString();
 
-  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path);
+  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path, mesh_name);
 }
 void PathPlanningWidget::transformPointsToFrame()
 {

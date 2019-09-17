@@ -47,6 +47,7 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   ARROW_INTERACTIVE_SCALE = 0.2;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
+  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
 
   ROS_INFO("Constructor created");
 }
@@ -114,7 +115,7 @@ void AddWayPoint::onInitialize()
   connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
-  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
+  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)));
   connect(widget_, SIGNAL(saveToolBtn_press()), this, SLOT(saveToolPath()));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
   connect(widget_, SIGNAL(modifyMarkerControl_signal(std::string, geometry_msgs::Pose)), this, SLOT(modifyMarkerControl(std::string, geometry_msgs::Pose)));
@@ -946,7 +947,7 @@ bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name,
   return false;  
 }
 
-void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
+void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name)
 {
   /*! Function for saving all the Way-Points into yaml file.
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
@@ -973,7 +974,8 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   
   // Objects
   peanut_cotyledon::Object desired_object;
-  
+
+  // Get tf transforms
   try
   {
     target_map_tfmsg = tfBuffer.lookupTransform("map", target_frame_, ros::Time(0)).transform;
@@ -991,6 +993,22 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
     return;
   }
+
+  // Update object info
+  // Update mesh name
+  if(desired_object.geometry_path.size() == 0){
+    desired_object.geometry_path.push_back(mesh_name);  
+  }
+  else{
+    desired_object.geometry_path.at(0) = mesh_name;
+  }
+
+  // Assuming that the object pose has remained constant
+  // desired_object.origin.translation.x = parent_home_.position.x;
+  // desired_object.origin.translation.y = parent_home_.position.y;
+  // desired_object.origin.translation.z = parent_home_.position.z;
+  // desired_object.origin.rotation = parent_home_.orientation;
+
   object_world_tfmsg = desired_object.origin;
   tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
   target_object_tf = object_world_tf.inverse() * target_map_tf;
@@ -1041,6 +1059,22 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   else
   {
     ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+    return;
+  }
+
+  // Set objects 
+  peanut_cotyledon::SetObjects set_srv;
+  set_srv.request.floor_name = floor_name;
+  set_srv.request.area_name = area_name;
+  set_srv.request.objects.push_back(desired_object);
+
+  if (set_objects_proxy_.call(set_srv)){
+    if (!set_srv.response.success){
+      ROS_ERROR("Could not set object");
+    }
+  }
+  else{
+    ROS_ERROR("Could not call set objects service");
     return;
   }
 
@@ -1105,10 +1139,13 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose
   // Update control button
   control_button.markers[0] = makeMeshResourceMarker(mesh_name, object_pose);
 
+  // Update marker pose 
+  interaction_marker.pose = object_pose;
+
   // Update server
   interaction_marker.controls.at(0) = control_button;
-  server->insert( interaction_marker);
-  server->setCallback( interaction_marker.name, boost::bind( &AddWayPoint::processFeedback, this, _1 ));
+  server->insert(interaction_marker);
+  server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   server->applyChanges();
 }
 
