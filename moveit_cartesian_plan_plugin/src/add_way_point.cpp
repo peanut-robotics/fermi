@@ -85,6 +85,8 @@ void AddWayPoint::onInitialize()
   menu_handler_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Attach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Detach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -179,138 +181,141 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
 {
   switch (feedback->event_type)
   {
-  case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
-  {
-    //get the menu item which is pressed
-    interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
-    std::string marker_name = feedback->marker_name;
-    InteractiveMarker interaction_marker;
-    server->get(feedback->marker_name.c_str(), interaction_marker);
-
-    if (menu_item == 1)
+    case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
     {
-      // Cache home position
+      //get the menu item which is pressed
+      interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
+      std::string marker_name = feedback->marker_name;
+      InteractiveMarker interaction_marker;
+      server->get(feedback->marker_name.c_str(), interaction_marker);
+
+      if (menu_item == 1)
+      {
+        // Cache home position
+        parent_home_ = feedback->pose;
+      }
+      else if (menu_item == 2)
+      { 
+        // Duplicate all selected in place
+        // (1) find all selected markers
+        std::vector<tf::Transform> selected;
+        InteractiveMarker cur_marker;
+        int last_marker_index = 1;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          if (cur_marker.controls.size() > 2)
+          {
+            geometry_msgs::Pose cur_pos = cur_marker.pose;
+            tf::Transform point_pos;
+            cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+            tf::poseMsgToTF(cur_pos, point_pos);
+            selected.push_back(point_pos);
+            last_marker_index = stoi(cur_marker.name);
+          }
+        }
+
+        std::vector<std::string> duplicated_names;
+        // (2) Duplicate in place
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+        advance(insertion_point, last_marker_index);
+        insert(insertion_point, selected);
+        // (4) set selected to the duplicated points
+        for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
+        {
+          changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+        }
+      }
+      else if (menu_item == 3)
+      { // duplicate and flip
+        // (1) find all selected markers
+        std::vector<tf::Transform> selected;
+        InteractiveMarker cur_marker;
+        int last_marker_index = 1;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          if (cur_marker.controls.size() > 2)
+          {
+            geometry_msgs::Pose cur_pos = cur_marker.pose;
+            tf::Transform point_pos;
+            cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+            tf::poseMsgToTF(cur_pos, point_pos);
+            selected.push_back(point_pos);
+            last_marker_index = stoi(cur_marker.name);
+          }
+        }
+
+        std::reverse(selected.begin(), selected.end()); // This is the only different line
+
+        // (2) Duplicate in place
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+        advance(insertion_point, last_marker_index);
+        insert(insertion_point, selected);
+        // (4) set selected to the duplicated points
+        for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
+        {
+          changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+        }
+      }
+      else if (menu_item == 4)
+      {
+        std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
+        // int marker_index = stoi(feedback->marker_name);
+        // advance(insertion_point, marker_index);
+
+        tf::Transform point_pos;
+        geometry_msgs::Pose cur_pos = feedback->pose;
+        tf::poseMsgToTF(cur_pos, point_pos);
+        std::vector<tf::Transform> pos_vec = {point_pos};
+        insert(insertion_point, pos_vec);
+      } 
+      else if (menu_item == 5){
+        ROS_INFO("Attaching points to object");
+        points_attached_to_object = true;
+      }
+      else if (menu_item == 6){
+        ROS_INFO("Detaching points from object");
+        points_attached_to_object = false;
+      }
+      break;
+    }
+    
+    case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
+    { 
+      if (points_attached_to_object){
+        // Get markers 
+        std::vector<InteractiveMarker> markers;
+        InteractiveMarker cur_marker;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          markers.push_back(cur_marker);
+        }
+
+        // Get delta to home marker
+        geometry_msgs::Point delta;
+        delta.x = feedback->pose.position.x - parent_home_.position.x;
+        delta.y = feedback->pose.position.y - parent_home_.position.y;
+        delta.z = feedback->pose.position.z - parent_home_.position.z;
+
+        // Apply delta to all markers    
+        for (InteractiveMarker cur_marker : markers)
+        {
+          tf::Transform point_pos;
+          cur_marker.pose.position.x += delta.x;
+          cur_marker.pose.position.y += delta.y;
+          cur_marker.pose.position.z += delta.z;
+          tf::poseMsgToTF(cur_marker.pose, point_pos);
+          pointPoseUpdated(point_pos, cur_marker.name.c_str());
+          Q_EMIT pointPoseUpdatedRViz(point_pos, cur_marker.name.c_str());
+        }
+      }
+
+      // Update home markers
       parent_home_ = feedback->pose;
+      tf::poseMsgToTF(feedback->pose, box_pos);
     }
-    else if (menu_item == 2)
-    { // Duplicate all selected in place
-      // (1) find all selected markers
-      std::vector<tf::Transform> selected;
-      InteractiveMarker cur_marker;
-      int last_marker_index = 1;
-      for (int i = 1; i <= waypoints_pos.size(); i++)
-      {
-        server->get(std::to_string(i), cur_marker);
-        if (cur_marker.controls.size() > 2)
-        {
-          geometry_msgs::Pose cur_pos = cur_marker.pose;
-          tf::Transform point_pos;
-          cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
-          tf::poseMsgToTF(cur_pos, point_pos);
-          selected.push_back(point_pos);
-          last_marker_index = stoi(cur_marker.name);
-        }
-      }
-
-      std::vector<std::string> duplicated_names;
-      // (2) Duplicate in place
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
-      advance(insertion_point, last_marker_index);
-      insert(insertion_point, selected);
-      // (4) set selected to the duplicated points
-      for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
-      {
-        changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
-      }
-    }
-    else if (menu_item == 3)
-    { // duplicate and flip
-      // (1) find all selected markers
-      std::vector<tf::Transform> selected;
-      InteractiveMarker cur_marker;
-      int last_marker_index = 1;
-      for (int i = 1; i <= waypoints_pos.size(); i++)
-      {
-        server->get(std::to_string(i), cur_marker);
-        if (cur_marker.controls.size() > 2)
-        {
-          geometry_msgs::Pose cur_pos = cur_marker.pose;
-          tf::Transform point_pos;
-          cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
-          tf::poseMsgToTF(cur_pos, point_pos);
-          selected.push_back(point_pos);
-          last_marker_index = stoi(cur_marker.name);
-        }
-      }
-
-      std::reverse(selected.begin(), selected.end()); // This is the only different line
-
-      // (2) Duplicate in place
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
-      advance(insertion_point, last_marker_index);
-      insert(insertion_point, selected);
-      // (4) set selected to the duplicated points
-      for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
-      {
-        changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
-      }
-    }
-    else if (menu_item == 4)
-    {
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
-      // int marker_index = stoi(feedback->marker_name);
-      // advance(insertion_point, marker_index);
-
-      tf::Transform point_pos;
-      geometry_msgs::Pose cur_pos = feedback->pose;
-      tf::poseMsgToTF(cur_pos, point_pos);
-      std::vector<tf::Transform> pos_vec = {point_pos};
-      insert(insertion_point, pos_vec);
-    } 
-    break;
-  }
-  case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
-  {
-
-    // (1) Find all markers with controls length greater than 2 (These are the selected ones)
-    // InteractiveMarker
-    std::vector<InteractiveMarker> selected;
-    InteractiveMarker cur_marker;
-    for (int i = 1; i <= waypoints_pos.size(); i++)
-    {
-      server->get(std::to_string(i), cur_marker);
-      if (cur_marker.controls.size() > 2)
-      {
-        selected.push_back(cur_marker);
-      }
-    }
-    // (2) Find the delta of the current pose from the home pose
-
-    geometry_msgs::Point delta;
-    delta.x = feedback->pose.position.x - parent_home_.position.x;
-    delta.y = feedback->pose.position.y - parent_home_.position.y;
-    delta.z = feedback->pose.position.z - parent_home_.position.z;
-
-    // (3) apply this delta to all the selected ones
-    for (InteractiveMarker cur_marker : selected)
-    {
-      tf::Transform point_pos;
-      cur_marker.pose.position.x += delta.x;
-      cur_marker.pose.position.y += delta.y;
-      cur_marker.pose.position.z += delta.z;
-      tf::poseMsgToTF(cur_marker.pose, point_pos);
-
-      // std::string marker_name = cur_marker.name;
-      pointPoseUpdated(point_pos, cur_marker.name.c_str());
-      Q_EMIT pointPoseUpdatedRViz(point_pos, cur_marker.name.c_str());
-    }
-
-    // (4) set the home position to the current pose
-    parent_home_ = feedback->pose;
-    tf::poseMsgToTF(feedback->pose, box_pos);
-
-    break;
-  }
   }
 }
 
