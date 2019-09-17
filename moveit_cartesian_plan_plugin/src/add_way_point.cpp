@@ -44,8 +44,6 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   MESH_SCALE_CONTROL.y = 1;
   MESH_SCALE_CONTROL.z = 1;
 
-  OBJECT_POSE.orientation.w = 1;
-
   ARROW_INTERACTIVE_SCALE = 0.2;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
@@ -119,7 +117,7 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
   connect(widget_, SIGNAL(saveToolBtn_press()), this, SLOT(saveToolPath()));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
-  connect(widget_, SIGNAL(modifyMarkerControl_signal(std::string)), this, SLOT(modifyMarkerControl(std::string)));
+  connect(widget_, SIGNAL(modifyMarkerControl_signal(std::string, geometry_msgs::Pose)), this, SLOT(modifyMarkerControl(std::string, geometry_msgs::Pose)));
   connect(widget_, SIGNAL(transformPointsViz(std::string)), this, SLOT(transformPointsViz(std::string)));
   connect(widget_, SIGNAL(clearAllInteractiveBoxes_signal()), this, SLOT(clearAllInteractiveBoxes()));
 
@@ -695,13 +693,13 @@ void AddWayPoint::insert(std::vector<tf::Transform>::iterator insert_it, std::ve
   server->applyChanges();
 }
 
-Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name){
+Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs::Pose object_pose){
   // Define the Marker Mesh which the user can add new Way-Points with
   Marker marker;
 
   marker.type = Marker::MESH_RESOURCE;
   marker.scale = MESH_SCALE_CONTROL;
-  marker.pose = OBJECT_POSE;
+  marker.pose = object_pose;
   marker.mesh_resource = "package://peanut_datasets_pkg/meshes/" + mesh_name; 
 
   //make the markers with interesting color
@@ -1095,7 +1093,7 @@ void AddWayPoint::clearAllPointsRViz()
   server->applyChanges();
 }
 
-void AddWayPoint::modifyMarkerControl(std::string mesh_name){
+void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose object_pose){
 
   InteractiveMarker interaction_marker;
   InteractiveMarkerControl control_button;
@@ -1105,7 +1103,7 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name){
   control_button = interaction_marker.controls.at(0);
   
   // Update control button
-  control_button.markers[0] = makeMeshResourceMarker(mesh_name);
+  control_button.markers[0] = makeMeshResourceMarker(mesh_name, object_pose);
 
   // Update server
   interaction_marker.controls.at(0) = control_button;

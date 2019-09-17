@@ -221,7 +221,7 @@ namespace moveit_cartesian_plan_plugin
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
 			// Signal to modify control marker
-			void modifyMarkerControl_signal(std::string mesh_name);
+			void modifyMarkerControl_signal(std::string mesh_name, geometry_msgs::Pose object_pose);
 			void transformPointsViz(std::string frame);
 			//! signal that the clear all boxes button has been pressed.
 			void clearAllInteractiveBoxes_signal();

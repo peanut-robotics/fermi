@@ -788,10 +788,15 @@ void PathPlanningWidget::loadPointsObject()
   ui_.tabWidget->setEnabled(true);
   ui_.progressBar->hide();
 
-  // Get mesh name and update control
+  // Get obj info and update control
   std::string mesh_name = desired_object.geometry_path[0];
-  if (mesh_name != ""){
-    Q_EMIT modifyMarkerControl_signal(mesh_name);
+  if (!mesh_name.empty()){
+    geometry_msgs::Pose object_pose;
+    object_pose.position.x = desired_object.origin.translation.x;
+    object_pose.position.y = desired_object.origin.translation.y;
+    object_pose.position.z = desired_object.origin.translation.z;
+    object_pose.orientation = desired_object.origin.rotation;
+    Q_EMIT modifyMarkerControl_signal(mesh_name, object_pose);
   }
   
   // Update mesh text field 
