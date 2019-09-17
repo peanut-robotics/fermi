@@ -220,6 +220,8 @@ namespace moveit_cartesian_plan_plugin
 		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
+			// Signal to modify control marker
+			void modifyMarkerControl_signal(std::string mesh_name);
 			void transformPointsViz(std::string frame);
 			//! signal that the clear all boxes button has been pressed.
 			void clearAllInteractiveBoxes_signal();

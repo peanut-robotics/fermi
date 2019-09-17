@@ -97,12 +97,13 @@ private:
 	Marker makeWayPoint( InteractiveMarker &msg );
 	//! Function to create the InteractionArrow Marker
 	Marker makeInterArrow( InteractiveMarker &msg );
+	Marker makeMeshResourceMarker(std::string path);
 	//! Create controls for each different marker. Here we have control for the defaulot starting control ArrowMarkers(the cartesian way points)
 	void makeArrowControlDefault(InteractiveMarker &msg );
     //! 6DOF control for the Ingteractive Markers
 	void makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
 	void insert(std::vector<tf::Transform>::iterator insert_it, std::vector<tf::Transform> pose_vector);
-
+	
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
 	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
     //! Function to handle the entries made from the Way-Points interactive markers Menu.
@@ -157,6 +158,8 @@ public Q_SLOTS:
 
 	//! Clear all the Way-Points
 	void clearAllPointsRViz();
+	// Modify marker control 
+	void modifyMarkerControl(std::string mesh_name);
 	void transformPointsViz(std::string frame);
 	//! Slot for handling the even when a way-point is out of the IK solution of the loaded robot.
 	void wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
@@ -191,7 +194,9 @@ private:
 
 	geometry_msgs::Vector3 WAY_POINT_SCALE_CONTROL;
 	geometry_msgs::Vector3 ARROW_INTER_SCALE_CONTROL;
+	geometry_msgs::Vector3 MESH_SCALE_CONTROL;
 	geometry_msgs::Pose parent_home_;
+	geometry_msgs::Pose OBJECT_POSE;
 
 	float INTERACTIVE_MARKER_SCALE;
 	float ARROW_INTERACTIVE_SCALE;

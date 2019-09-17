@@ -788,6 +788,13 @@ void PathPlanningWidget::loadPointsObject()
   ui_.tabWidget->setEnabled(true);
   ui_.progressBar->hide();
 
+  // Get mesh name and update control
+  std::string mesh_name = desired_object.geometry_path[0];
+  if (mesh_name != ""){
+    Q_EMIT modifyMarkerControl_signal(mesh_name);
+  }
+  
+  // Update mesh text field 
   ROS_INFO("Completed load process for clean path");
 }
 
@@ -872,6 +879,7 @@ void PathPlanningWidget::clearAllPoints_slot()
 
   Q_EMIT clearAllPoints_signal();
 }
+
 void PathPlanningWidget::clearAllInteractiveBoxes_slot()
 {
   Q_EMIT clearAllInteractiveBoxes_signal();
