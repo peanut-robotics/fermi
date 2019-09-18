@@ -92,6 +92,7 @@ void AddWayPoint::onInitialize()
   menu_handler_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Attach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Detach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Retransform points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -135,6 +136,8 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(sendSendSelectedPlanGroup(int)), path_generate, SLOT(getSelectedGroupIndex(int)));
 
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
+
+  connect(this, SIGNAL(retransformPoints_signal(const visualization_msgs::InteractiveMarkerFeedbackConstPtr)), widget_, SLOT(retransformPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr)));
 
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
@@ -283,6 +286,10 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
       else if (menu_item == 6){
         ROS_INFO("Detaching points from object");
         points_attached_to_object = false;
+      }
+      else if (menu_item == 7){
+        ROS_INFO("Retransforming points");
+        Q_EMIT retransformPoints_signal(feedback);
       }
       break;
     }
@@ -747,9 +754,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 0;
 
-  // control_inter_arrow.name = "rotate_x";
-  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  // msg.controls.push_back(control_inter_arrow);
+  control_inter_arrow.name = "rotate_x";
+  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_x";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
@@ -762,9 +769,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 1;
   control_inter_arrow.orientation.z = 0;
 
-  // control_inter_arrow.name = "rotate_z";
-  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  // msg.controls.push_back(control_inter_arrow);
+  control_inter_arrow.name = "rotate_z";
+  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_z";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
@@ -777,9 +784,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 1;
 
-  // control_inter_arrow.name = "rotate_y";
-  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  // msg.controls.push_back(control_inter_arrow);
+  control_inter_arrow.name = "rotate_y";
+  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_y";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
