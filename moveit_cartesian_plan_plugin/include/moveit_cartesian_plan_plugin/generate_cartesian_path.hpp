@@ -120,7 +120,7 @@ protected:
 	tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener* tfListener;
 
-	bool check_ik = true;
+	bool check_ik = false;
 };
 
 #endif // GENERATE_CARTESIAN_PATH_H_
