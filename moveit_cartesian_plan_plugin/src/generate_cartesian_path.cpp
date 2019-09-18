@@ -436,7 +436,7 @@ void GenerateCartesianPath::checkWayPointValidity(const std::vector<tf::Transfor
     tf::transformTFToEigen(waypoint_tf, waypoint1);
     interpolated.push_back(waypoint1);
 
-    ROS_INFO_STREAM("Length of interpolated points: " << std::to_string(interpolated.size()));
+    ROS_DEBUG_STREAM("Length of interpolated points: " << std::to_string(interpolated.size()));
 
     bool found_ik;
     int any_invalid = 0;

@@ -551,17 +551,17 @@
 								<property name="title">
 									<string>Cartesian Path Parameters</string>
 								</property>
-								<widget class="QLabel" name="label_5">
+								<widget class="QPushButton" name="step_size_btn">
 									<property name="geometry">
 										<rect>
 											<x>10</x>
-											<y>20</y>
-											<width>101</width>
-											<height>31</height>
+											<y>30</y>
+											<width>102</width>
+											<height>29</height>
 										</rect>
 									</property>
 									<property name="text">
-										<string>Step size (m) :</string>
+										<string>Step size (m):</string>
 									</property>
 								</widget>
 								<widget class="QLineEdit" name="lnEdit_StepSize">
@@ -664,7 +664,7 @@
 															border-color :rgb(48, 48, 48)</string>
 									</property>
 								</widget>
-								<widget class="QPushButton" name="transform_robot_model_frame">
+								<!-- <widget class="QPushButton" name="transform_robot_model_frame">
 									<property name="geometry">
 										<rect>
 											<x>160</x>
@@ -676,7 +676,7 @@
 									<property name="text">
 										<string>Transform points</string>
 									</property>
-								</widget>
+								</widget> -->
 							</widget>
 						<widget class="QLabel" name="lbl_cartPathCompleted">
 							<property name="geometry">

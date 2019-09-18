@@ -204,6 +204,7 @@ namespace moveit_cartesian_plan_plugin
 			// Transform points
 			void retransformPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr feedback);
 
+			void ChangeStepSize();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
