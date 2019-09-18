@@ -649,7 +649,7 @@
 										<string>Pose Frame :</string>
 									</property>
 								</widget>
-								<widget class="QLineEdit" name="robot_model_frame">
+								<widget class="QLabel" name="robot_model_frame">
 									<property name="geometry">
 										<rect>
 											<x>160</x>
