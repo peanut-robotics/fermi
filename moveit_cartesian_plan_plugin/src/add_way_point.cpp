@@ -551,7 +551,7 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
         */
   InteractiveMarker int_marker;
   ROS_WARN_STREAM("Adding point! " << std::to_string(count_arrow));
-  ROS_INFO_STREAM("Markers intractive frame is: " << target_frame_);
+  ROS_DEBUG_STREAM("Markers intractive frame is: " << target_frame_);
 
   int_marker.header.frame_id = target_frame_;
 
@@ -583,7 +583,7 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
 
     waypoints_pos.push_back(point_pos);
 
-      ROS_INFO_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
+      ROS_DEBUG_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
       Q_EMIT addPointRViz(point_pos,count);
     }
     else

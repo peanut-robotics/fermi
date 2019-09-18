@@ -229,7 +229,7 @@ void PathPlanningWidget::insertRow(const tf::Transform &point_pos, const int cou
           One child for the orientation giving us the Euler Angles of each axis.
       */
 
-  ROS_INFO("inserting new row in the TreeView");
+  ROS_DEBUG"inserting new row in the TreeView");
   QAbstractItemModel *model = ui_.treeView->model();
 
   //convert the quartenion to roll pitch yaw angle
