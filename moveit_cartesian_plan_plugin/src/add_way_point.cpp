@@ -700,7 +700,6 @@ Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs:
 
   marker.type = Marker::MESH_RESOURCE;
   marker.scale = MESH_SCALE_CONTROL;
-  marker.pose = object_pose;
   marker.mesh_resource = "package://peanut_datasets_pkg/meshes/" + mesh_name; 
 
   //make the markers with interesting color
@@ -748,9 +747,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 0;
 
-  control_inter_arrow.name = "rotate_x";
-  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  msg.controls.push_back(control_inter_arrow);
+  // control_inter_arrow.name = "rotate_x";
+  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  // msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_x";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
@@ -763,9 +762,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 1;
   control_inter_arrow.orientation.z = 0;
 
-  control_inter_arrow.name = "rotate_z";
-  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  msg.controls.push_back(control_inter_arrow);
+  // control_inter_arrow.name = "rotate_z";
+  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  // msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_z";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
@@ -778,9 +777,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 1;
 
-  control_inter_arrow.name = "rotate_y";
-  control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
-  msg.controls.push_back(control_inter_arrow);
+  // control_inter_arrow.name = "rotate_y";
+  // control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
+  // msg.controls.push_back(control_inter_arrow);
 
   control_inter_arrow.name = "move_y";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::MOVE_AXIS;
@@ -1004,10 +1003,10 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   }
 
   // Assuming that the object pose has remained constant
-  // desired_object.origin.translation.x = parent_home_.position.x;
-  // desired_object.origin.translation.y = parent_home_.position.y;
-  // desired_object.origin.translation.z = parent_home_.position.z;
-  // desired_object.origin.rotation = parent_home_.orientation;
+  desired_object.origin.translation.x = parent_home_.position.x;
+  desired_object.origin.translation.y = parent_home_.position.y;
+  desired_object.origin.translation.z = parent_home_.position.z;
+  desired_object.origin.rotation = parent_home_.orientation;
 
   object_world_tfmsg = desired_object.origin;
   tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
