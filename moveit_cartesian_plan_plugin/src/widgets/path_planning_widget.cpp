@@ -745,12 +745,20 @@ void PathPlanningWidget::loadPointsObject()
   // Load object poses and update ui/server points
   int i = 0;
   tf::Transform pose_tf;
+  tf::Quaternion q;
+
   ROS_INFO_STREAM("Loading clean path with "<<clean_path.object_poses.size()<< " points");
-  for (auto const pose : clean_path.object_poses) // object_poses are in object frame
+  for (auto pose : clean_path.object_poses) // object_poses are in object frame
   {
     i++;
     tf::poseMsgToTF(pose, pose_tf);
     pose_tf = object_world_tf * pose_tf;
+    
+    // Normalize 
+    q = pose_tf.getRotation();
+    q = q.normalize();
+    pose_tf.setRotation(q);
+
     percent_complete = (i + 1) * 100 / num_robot_poses;
     ui_.progressBar->setValue(percent_complete);
     Q_EMIT addPoint(pose_tf);
