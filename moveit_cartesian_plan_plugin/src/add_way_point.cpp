@@ -306,22 +306,28 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
           markers.push_back(cur_marker);
         }
 
-        // Get delta to home marker
-        geometry_msgs::Point delta;
-        delta.x = feedback->pose.position.x - parent_home_.position.x;
-        delta.y = feedback->pose.position.y - parent_home_.position.y;
-        delta.z = feedback->pose.position.z - parent_home_.position.z;
+        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv;
+        geometry_msgs::Pose T_o2_w_msg, T_o1_w_msg;
+
+        T_o2_w_msg = feedback->pose; // Transformation of frame O2 wrt world
+        T_o1_w_msg = parent_home_; // Transformation of frame O1 wrt world
+        tf::poseMsgToTF(T_o2_w_msg, T_o2_w);
+        tf::poseMsgToTF(T_o1_w_msg, T_o1_w);
+        T_o1_w_inv = T_o1_w.inverse();
 
         // Apply delta to all markers    
+        tf::Pose p1, p2;
+        geometry_msgs::Pose current_marker_pose_msg;
         for (InteractiveMarker cur_marker : markers)
         {
-          tf::Transform point_pos;
-          cur_marker.pose.position.x += delta.x;
-          cur_marker.pose.position.y += delta.y;
-          cur_marker.pose.position.z += delta.z;
-          tf::poseMsgToTF(cur_marker.pose, point_pos);
-          pointPoseUpdated(point_pos, cur_marker.name.c_str());
-          Q_EMIT pointPoseUpdatedRViz(point_pos, cur_marker.name.c_str());
+          current_marker_pose_msg =  cur_marker.pose;
+          tf::poseMsgToTF(current_marker_pose_msg, p1);
+
+          // Apply transform
+          p2 = T_o2_w * T_o1_w_inv * p1;
+
+          pointPoseUpdated(p2, cur_marker.name.c_str());
+          Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
         }
       }
 
@@ -1147,7 +1153,10 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose
 
   // Update marker pose 
   interaction_marker.pose = object_pose;
+  
 
+  // Update parent_home
+  parent_home_ = object_pose;
   // Update server
   interaction_marker.controls.at(0) = control_button;
   server->insert(interaction_marker);
