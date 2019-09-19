@@ -201,9 +201,6 @@ namespace moveit_cartesian_plan_plugin
 			// Helpers
 			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
-			// Transform points
-			void retransformPoints(const visualization_msgs::InteractiveMarkerFeedbackConstPtr feedback);
-
 			void ChangeStepSize();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
