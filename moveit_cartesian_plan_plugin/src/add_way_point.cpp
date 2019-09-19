@@ -43,6 +43,14 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   MESH_SCALE_CONTROL.x = 1;
   MESH_SCALE_CONTROL.y = 1;
   MESH_SCALE_CONTROL.z = 1;
+  
+  CONTROL_MARKER_POSE.position.x = 0;
+  CONTROL_MARKER_POSE.position.y = 0;
+  CONTROL_MARKER_POSE.position.z = 0;
+  CONTROL_MARKER_POSE.orientation.w = 1;
+  CONTROL_MARKER_POSE.orientation.x = 0;
+  CONTROL_MARKER_POSE.orientation.y = 0;
+  CONTROL_MARKER_POSE.orientation.z = 0;
 
   ARROW_INTERACTIVE_SCALE = 0.2;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
@@ -708,6 +716,7 @@ Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs:
   marker.scale = MESH_SCALE_CONTROL;
   marker.mesh_resource = "package://peanut_datasets_pkg/meshes/" + mesh_name; 
 
+  marker.pose = CONTROL_MARKER_POSE;
   //make the markers with interesting color
   marker.color = ARROW_INTER_COLOR;
 

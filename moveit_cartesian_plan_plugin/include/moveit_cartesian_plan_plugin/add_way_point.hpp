@@ -196,6 +196,7 @@ private:
 	geometry_msgs::Vector3 WAY_POINT_SCALE_CONTROL;
 	geometry_msgs::Vector3 ARROW_INTER_SCALE_CONTROL;
 	geometry_msgs::Vector3 MESH_SCALE_CONTROL;
+	geometry_msgs::Pose CONTROL_MARKER_POSE;
 	geometry_msgs::Pose parent_home_;
 
 	float INTERACTIVE_MARKER_SCALE;
