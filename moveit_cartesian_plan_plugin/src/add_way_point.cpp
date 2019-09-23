@@ -1042,9 +1042,12 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     waypoints_object_frame.push_back(waypoint_pose); 
   }
 
-  /* Save cached path and robot poses in clean path
+  /* 
+  Save cached path and robot poses in clean path
   Cached path poses are in map frame
-  Clean path poses are in object frame */
+  Clean path poses are in object frame
+  When saving, cached paths are intialized to empty joint trajectories
+  */
   if (clean_path.cached_paths.empty()){
     clean_path.cached_paths = one_cached_path_vec;
   }

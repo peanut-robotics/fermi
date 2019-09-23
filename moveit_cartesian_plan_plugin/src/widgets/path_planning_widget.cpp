@@ -865,6 +865,13 @@ void PathPlanningWidget::savePointsObject()
     clean_path.cached_paths = empty_cached_path_list;
   }
 
+  /*
+  The following data is saved/overwritten here
+  - Elevator height
+  - Max step size
+  - Jump threshold
+  - Tool name 
+  */
   clean_path.cached_paths.at(0).elevator_height = ui_.el_lbl->text().toDouble();
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
