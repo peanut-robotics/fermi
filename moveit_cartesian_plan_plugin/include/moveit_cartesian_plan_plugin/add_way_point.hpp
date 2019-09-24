@@ -84,11 +84,13 @@ public:
 	//! Fucntion for all the interactive marker interactions
 	virtual void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
 	virtual void processFeedbackInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
+	void processFeedbackPointsInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 
     //! Make a new Interactive Marker Way-Point
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
+	void makePointsInteractiveMarker();
 	ros::ServiceClient set_clean_path_proxy_;
 	ros::ServiceClient get_objects_proxy_;
 	ros::ServiceClient set_objects_proxy_;
@@ -111,10 +113,15 @@ private:
     //! Function to handle the entries made from the Way-Points interactive markers Menu.
 	virtual void changeMarkerControlAndPose(std::string marker_name, std::string control_mode);
 
-    //! Define a server for the Interactive Markers.
+	// Offset helper function 
+	void addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset);
+	void ModifyPointsMarkerPose();
+    
+	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
 	interactive_markers::MenuHandler menu_handler_inter;
+	interactive_markers::MenuHandler menu_handler_points_inter;
 
     //! Vector for storing all the User Entered Way-Points.
 	std::vector<tf::Transform> waypoints_pos;
@@ -198,7 +205,8 @@ private:
 	geometry_msgs::Vector3 MESH_SCALE_CONTROL;
 	geometry_msgs::Pose CONTROL_MARKER_POSE;
 	geometry_msgs::Pose parent_home_;
-
+	geometry_msgs::Pose points_parent_home_;
+	
 	float INTERACTIVE_MARKER_SCALE;
 	float ARROW_INTERACTIVE_SCALE;
 };

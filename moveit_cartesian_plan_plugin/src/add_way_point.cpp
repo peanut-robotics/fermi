@@ -335,6 +335,79 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
       // Update home markers
       parent_home_ = feedback->pose;
       tf::poseMsgToTF(feedback->pose, box_pos);
+
+      // Update points home marker
+      ModifyPointsMarkerPose();
+    }
+  }
+}
+
+void AddWayPoint::ModifyPointsMarkerPose(){
+  
+  InteractiveMarker interaction_marker;
+  InteractiveMarkerControl control_button;
+
+  // Get markers
+  server->get("move_points_button", interaction_marker);
+  control_button = interaction_marker.controls.at(0);
+  
+    // Update marker pose 
+  addPoseOffset(parent_home_, interaction_marker.pose);
+  points_parent_home_ = interaction_marker.pose;
+
+  // Update control button
+  control_button.markers[0] = makeInterArrow(interaction_marker);
+
+  // Update server
+  interaction_marker.controls.at(0) = control_button;
+  server->insert(interaction_marker);
+  server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  server->applyChanges();
+
+}
+
+void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback){
+  
+  switch (feedback -> event_type){
+    case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
+    { 
+      if (true){
+        // Get markers 
+        std::vector<InteractiveMarker> markers;
+        InteractiveMarker cur_marker;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          server->get(std::to_string(i), cur_marker);
+          markers.push_back(cur_marker);
+        }
+
+        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv;
+        geometry_msgs::Pose T_o2_w_msg, T_o1_w_msg;
+
+        T_o2_w_msg = feedback->pose; // Transformation of frame O2 wrt world
+        T_o1_w_msg = points_parent_home_; // Transformation of frame O1 wrt world
+        tf::poseMsgToTF(T_o2_w_msg, T_o2_w);
+        tf::poseMsgToTF(T_o1_w_msg, T_o1_w);
+        T_o1_w_inv = T_o1_w.inverse();
+
+        // Apply delta to all markers    
+        tf::Pose p1, p2;
+        geometry_msgs::Pose current_marker_pose_msg;
+        for (InteractiveMarker cur_marker : markers)
+        {
+          current_marker_pose_msg =  cur_marker.pose;
+          tf::poseMsgToTF(current_marker_pose_msg, p1);
+
+          // Apply transform
+          p2 = T_o2_w * T_o1_w_inv * p1;
+
+          pointPoseUpdated(p2, cur_marker.name.c_str());
+          Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
+        }
+      }
+
+      // Save pose
+      points_parent_home_ = feedback -> pose;
     }
   }
 }
@@ -833,6 +906,35 @@ void AddWayPoint::makeInteractiveMarker()
   //add interaction feedback to the markers
   server->setCallback(inter_arrow_marker_.name, boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 }
+
+void AddWayPoint::makePointsInteractiveMarker()
+{
+  //Create the Points Interactive Marker and update the RViz enviroment.
+  
+  InteractiveMarker inter_arrow_marker_;
+  inter_arrow_marker_.header.frame_id = target_frame_;
+  inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
+
+  geometry_msgs::Pose pose;
+  tf::poseTFToMsg(box_pos, inter_arrow_marker_.pose);
+
+  // Offset pose
+  inter_arrow_marker_.pose.position.x += 0.2;
+  inter_arrow_marker_.pose.position.y += 0.2;
+  inter_arrow_marker_.pose.position.z -= 0.2;
+  inter_arrow_marker_.description = "Interaction Marker";
+
+  //button like interactive marker. Detect when we have left click with the mouse and add new arrow then
+  inter_arrow_marker_.name = "move_points_button";
+
+  makeInteractiveMarkerControl(inter_arrow_marker_);
+  server->insert(inter_arrow_marker_);
+  menu_handler_points_inter.apply(*server, inter_arrow_marker_.name);
+ 
+  server->setCallback(inter_arrow_marker_.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+}
+
+
 void AddWayPoint::parseWayPoints()
 {
   /*! Get the vector of all Way-Points and convert it to geometry_msgs::Pose and send Qt signal when ready.
@@ -1141,6 +1243,7 @@ void AddWayPoint::clearAllPointsRViz()
   //delete the waypoints_pos vector
   count = 0;
   makeInteractiveMarker();
+  makePointsInteractiveMarker();
   server->applyChanges();
 }
 
@@ -1162,6 +1265,7 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose
 
   // Update parent_home
   parent_home_ = object_pose;
+
   // Update server
   interaction_marker.controls.at(0) = control_button;
   server->insert(interaction_marker);
@@ -1254,7 +1358,15 @@ void AddWayPoint::getRobotModelFrame_slot(const std::string robot_model_frame, c
 
   count = 0;
   makeInteractiveMarker();
+  makePointsInteractiveMarker();
   server->applyChanges();
+}
+
+void AddWayPoint::addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset){
+  pose_offset.orientation = pose_in.orientation;
+  pose_offset.position.x = pose_in.position.x + 0.2;
+  pose_offset.position.y = pose_in.position.y + 0.2;
+  pose_offset.position.z = pose_in.position.z - 0.2;
 }
 
 } // namespace moveit_cartesian_plan_plugin
