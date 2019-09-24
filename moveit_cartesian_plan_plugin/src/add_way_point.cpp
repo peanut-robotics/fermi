@@ -101,6 +101,8 @@ void AddWayPoint::onInitialize()
   menu_handler_points_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Select all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Deselect all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -379,6 +381,24 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           // Update marker
           modifyMarkerControl(mesh_name_, parent_home_);
         } 
+        else if (menu_item == 4){
+          // Select all points
+          for (int i = 1; i < waypoints_pos.size(); i++)
+          {
+            ROS_DEBUG("Selecting all points");
+            changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+            server->applyChanges();
+          }
+        }
+        else if (menu_item == 5){
+          // Deselect all points
+          for (int i = 1; i < waypoints_pos.size(); i++)
+          {
+            ROS_DEBUG("Deselecting all points");
+            changeMarkerControlAndPose(std::to_string(i), "adjust_hide");
+            server->applyChanges();
+          }
+        }
         else{
           ROS_ERROR("Menu button not implemented");
           break;
