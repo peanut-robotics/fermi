@@ -395,8 +395,8 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           server->get(std::to_string(i), cur_marker);
           if (cur_marker.controls.size() > 2){
             // Only move selected points
-          markers.push_back(cur_marker);
-        }
+            markers.push_back(cur_marker);
+          }
         }
 
         tf::Pose T_o2_w, T_o1_w, T_o1_w_inv, T;
@@ -908,7 +908,7 @@ void AddWayPoint::makeInteractiveMarker()
   inter_arrow_marker_.header.frame_id = target_frame_;
   inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
 
-  ROS_INFO_STREAM("Marker Frame is:" << target_frame_);
+  ROS_DEBUG_STREAM("Marker Frame is: " << target_frame_);
 
   geometry_msgs::Pose pose;
   tf::poseTFToMsg(box_pos, inter_arrow_marker_.pose);
