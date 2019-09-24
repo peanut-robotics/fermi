@@ -633,9 +633,11 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
     control_view_details.orientation_mode = InteractiveMarkerControl::FIXED;
   }
 
+  double q_norm = sqrt(2);
+
   //*************rotate and move around the x-axis********************
-  control_view_details.orientation.w = 1;
-  control_view_details.orientation.x = 1;
+  control_view_details.orientation.w = 1/q_norm;
+  control_view_details.orientation.x = 1/q_norm;
   control_view_details.orientation.y = 0;
   control_view_details.orientation.z = 0;
 
@@ -649,9 +651,9 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
   //*****************************************************************
 
   //*************rotate and move around the z-axis********************
-  control_view_details.orientation.w = 1;
+  control_view_details.orientation.w = 1/q_norm;
   control_view_details.orientation.x = 0;
-  control_view_details.orientation.y = 1;
+  control_view_details.orientation.y = 1/q_norm;
   control_view_details.orientation.z = 0;
 
   control_view_details.name = "rotate_z";
@@ -664,10 +666,10 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
   //*****************************************************************
 
   //*************rotate and move around the y-axis********************
-  control_view_details.orientation.w = 1;
+  control_view_details.orientation.w = 1/q_norm;
   control_view_details.orientation.x = 0;
   control_view_details.orientation.y = 0;
-  control_view_details.orientation.z = 1;
+  control_view_details.orientation.z = 1/q_norm;
 
   control_view_details.name = "rotate_y";
   control_view_details.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
@@ -896,9 +898,12 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   //server.reset( new interactive_markers::InteractiveMarkerServer("moveit_cartesian_plan_plugin","",false));
   InteractiveMarkerControl control_inter_arrow;
   control_inter_arrow.always_visible = true;
+
+  double q_norm = sqrt(2);
+
   //*************rotate and move around the x-axis********************
-  control_inter_arrow.orientation.w = 1;
-  control_inter_arrow.orientation.x = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
+  control_inter_arrow.orientation.x = 1/q_norm;
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 0;
 
@@ -912,9 +917,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   //*****************************************************************
 
   //*************rotate and move around the z-axis********************
-  control_inter_arrow.orientation.w = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
   control_inter_arrow.orientation.x = 0;
-  control_inter_arrow.orientation.y = 1;
+  control_inter_arrow.orientation.y = 1/q_norm;
   control_inter_arrow.orientation.z = 0;
 
   control_inter_arrow.name = "rotate_z";
@@ -927,10 +932,10 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   //*****************************************************************
 
   //*************rotate and move around the y-axis********************
-  control_inter_arrow.orientation.w = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
   control_inter_arrow.orientation.x = 0;
   control_inter_arrow.orientation.y = 0;
-  control_inter_arrow.orientation.z = 1;
+  control_inter_arrow.orientation.z = 1/q_norm;
 
   control_inter_arrow.name = "rotate_y";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
