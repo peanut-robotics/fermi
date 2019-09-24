@@ -393,10 +393,13 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         for (int i = 1; i <= waypoints_pos.size(); i++)
         {
           server->get(std::to_string(i), cur_marker);
+          if (cur_marker.controls.size() > 2){
+            // Only move selected points
           markers.push_back(cur_marker);
         }
+        }
 
-        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv;
+        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv, T;
         geometry_msgs::Pose T_o2_w_msg, T_o1_w_msg;
 
         T_o2_w_msg = feedback->pose; // Transformation of frame O2 wrt world
@@ -404,24 +407,22 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         tf::poseMsgToTF(T_o2_w_msg, T_o2_w);
         tf::poseMsgToTF(T_o1_w_msg, T_o1_w);
         T_o1_w_inv = T_o1_w.inverse();
+        T =  T_o2_w * T_o1_w_inv; // Final transformation matrix
 
         // Apply delta to all markers    
         tf::Pose p1, p2;
         geometry_msgs::Pose current_marker_pose_msg;
         for (InteractiveMarker cur_marker : markers)
         {
-          if (cur_marker.controls.size() > 2){
-            // Only move selected points
           current_marker_pose_msg =  cur_marker.pose;
           tf::poseMsgToTF(current_marker_pose_msg, p1);
 
           // Apply transform
-          p2 = T_o2_w * T_o1_w_inv * p1;
+          p2 = T * p1;
 
           pointPoseUpdated(p2, cur_marker.name.c_str());
           Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
         }
-      }
       }
       // Save pose
       points_parent_home_ = feedback -> pose;
