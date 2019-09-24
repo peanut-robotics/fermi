@@ -329,6 +329,9 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           {
             changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
           }
+
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
         }
         else if (menu_item == 2)
         { // duplicate and flip
@@ -361,6 +364,8 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           {
             changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
           }
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
         }
         else if (menu_item == 3)
         {
@@ -370,9 +375,13 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           tf::poseMsgToTF(cur_pos, point_pos);
           std::vector<tf::Transform> pos_vec = {point_pos};
           insert(insertion_point, pos_vec);
+          
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
         } 
         else{
           ROS_ERROR("Menu button not implemented");
+          break;
         }
     }
     case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
@@ -1117,6 +1126,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
 
   // Update object info
   // Update mesh name
+  mesh_name_ = mesh_name;
   if(desired_object.geometry_path.size() == 0){
     desired_object.geometry_path.push_back(mesh_name);  
   }
@@ -1262,6 +1272,7 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose
   control_button = interaction_marker.controls.at(0);
   
   // Update control button
+  mesh_name_ = mesh_name;
   control_button.markers[0] = makeMeshResourceMarker(mesh_name, object_pose);
 
   // Update marker pose 

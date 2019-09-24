@@ -138,6 +138,7 @@ private:
 	tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener* tfListener;
 	bool points_attached_to_object = true;
+	std::string mesh_name_;
 
 protected Q_SLOTS:
 	//! rviz::Panel virtual functions for loading Panel Configuration.
