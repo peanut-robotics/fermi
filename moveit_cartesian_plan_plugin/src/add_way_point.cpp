@@ -203,7 +203,10 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
       interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
       std::string marker_name = feedback->marker_name;
       InteractiveMarker interaction_marker;
-      server->get(feedback->marker_name.c_str(), interaction_marker);
+      if (!server->get(feedback->marker_name.c_str(), interaction_marker)){
+        ROS_ERROR_STREAM("Could not get marker with ID: "<<feedback->marker_name.c_str());
+        return;
+      }
 
       if (menu_item == 1)
       {
@@ -229,7 +232,10 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
         InteractiveMarker cur_marker;
         for (int i = 1; i <= waypoints_pos.size(); i++)
         {
-          server->get(std::to_string(i), cur_marker);
+          if (!server->get(std::to_string(i), cur_marker)){
+            ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+            return;
+          }
           markers.push_back(cur_marker);
         }
 
@@ -274,7 +280,14 @@ void AddWayPoint::ModifyPointsMarkerPose(){
   InteractiveMarkerControl control_button;
 
   // Get markers
-  server->get("move_points_button", interaction_marker);
+  if (!server->get("move_points_button", interaction_marker)){
+    ROS_ERROR("Could not get marker move_points_button");
+    return;
+  }
+  if (interaction_marker.controls.size() == 0){
+    ROS_ERROR("Points marker does not have control");
+    return;
+  }
   control_button = interaction_marker.controls.at(0);
   
     // Update marker pose 
@@ -282,6 +295,10 @@ void AddWayPoint::ModifyPointsMarkerPose(){
   points_parent_home_ = interaction_marker.pose;
 
   // Update control button
+  if (control_button.markers.size() == 0){
+    ROS_ERROR("Points marker control button does not have marker");
+    return;
+  }
   control_button.markers[0] = makeInterArrow(interaction_marker);
 
   // Update server
@@ -309,7 +326,10 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           int last_marker_index = 1;
           for (int i = 1; i <= waypoints_pos.size(); i++)
           {
-            server->get(std::to_string(i), cur_marker);
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
             if (cur_marker.controls.size() > 2)
             {
               geometry_msgs::Pose cur_pos = cur_marker.pose;
@@ -343,7 +363,10 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           int last_marker_index = 1;
           for (int i = 1; i <= waypoints_pos.size(); i++)
           {
-            server->get(std::to_string(i), cur_marker);
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
             if (cur_marker.controls.size() > 2)
             {
               geometry_msgs::Pose cur_pos = cur_marker.pose;
@@ -412,7 +435,10 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         InteractiveMarker cur_marker;
         for (int i = 1; i <= waypoints_pos.size(); i++)
         {
-          server->get(std::to_string(i), cur_marker);
+          if (!server->get(std::to_string(i), cur_marker)){
+            ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+            return;
+          }
           if (cur_marker.controls.size() > 2){
             // Only move selected points
             markers.push_back(cur_marker);
@@ -744,7 +770,10 @@ void AddWayPoint::changeMarkerControlAndPose(std::string marker_name, std::strin
        Here the user can change the control either to freely move the Way-Point or get the 6DOF pose control option.
    */
   InteractiveMarker int_marker;
-  server->get(marker_name, int_marker);
+  if (!server->get(marker_name, int_marker)){
+    ROS_ERROR_STREAM("Could not get marker with ID: "<<marker_name);
+    return;
+  }
   int_marker.controls.clear();
 
   if (control_mode == "adjust_eef")
@@ -1292,7 +1321,10 @@ void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose
   InteractiveMarkerControl control_button;
 
   // Get markers
-  server->get("add_point_button", interaction_marker);
+  if (!server->get("add_point_button", interaction_marker)){
+    ROS_ERROR("Could not get marker add_points_button");
+    return;
+  }
   control_button = interaction_marker.controls.at(0);
   
   // Update control button
@@ -1319,7 +1351,10 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geo
   visualization_msgs::Marker point_marker;
   std::stringstream marker_name;
   marker_name << point_number;
-  server->get(marker_name.str(), int_marker);
+  if (!server->get(marker_name.str(), int_marker)){
+    ROS_ERROR_STREAM("Could not get marker with ID: "<<marker_name.str());
+    return;
+  }
 
   int control_size = int_marker.controls.size();
   ROS_DEBUG_STREAM("size of controls for marker: " << control_size);
