@@ -310,7 +310,7 @@ void PathPlanningWidget::removeRow(int marker_nr)
   QAbstractItemModel *model = ui_.treeView->model();
 
   model->removeRow(marker_nr, QModelIndex());
-  ROS_INFO_STREAM("deleting point nr: " << marker_nr);
+  ROS_INFO_STREAM("Deleting point : " << marker_nr);
 
   for (int i = marker_nr; i <= model->rowCount(); ++i)
   {
@@ -388,7 +388,7 @@ void PathPlanningWidget::treeViewDataChanged(const QModelIndex &index, const QMo
   qRegisterMetaType<std::string>("std::string");
   QAbstractItemModel *model = ui_.treeView->model();
   QVariant index_data;
-  ROS_INFO_STREAM("Data changed in index:" << index.row() << "parent row" << index2.parent().row());
+  ROS_DEBUG_STREAM("Data changed in index:" << index.row() << "parent row" << index2.parent().row());
 
   if ((index.parent() == QModelIndex()) && (index.row() != 0))
   {

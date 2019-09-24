@@ -182,7 +182,6 @@ void AddWayPoint::addPointFromUI(const tf::Transform point_pos)
 {
   /*! Function for handling the signal of the RQT to add a new Way-Point in the RViz enviroment.
   */
-  ROS_INFO("Point Added");
   makeArrow(point_pos, count);
   server->applyChanges();
 }
@@ -636,7 +635,7 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
   /*! Function for adding a new Way-Point in the RViz scene and here we send the signal to notify the RQT Widget that a new Way-Point has been added.
         */
   InteractiveMarker int_marker;
-  ROS_WARN_STREAM("Adding point! " << std::to_string(count_arrow));
+  ROS_DEBUG_STREAM("Adding point! " << std::to_string(count_arrow));
   ROS_DEBUG_STREAM("Markers intractive frame is: " << target_frame_);
 
   int_marker.header.frame_id = target_frame_;
@@ -653,7 +652,7 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
         */
   if (waypoints_pos.empty())
   {
-    ROS_INFO("Adding first arrow!");
+    ROS_DEBUG("Adding first arrow!");
     count_arrow++;
     count = count_arrow;
 
@@ -699,7 +698,7 @@ void AddWayPoint::clearAllInteractiveBoxes()
   std::string default_string = "adjust_hide";
   for (int i = 1; i <= waypoints_pos.size(); i++)
   {
-    ROS_INFO_STREAM("clearing box for " << std::to_string(i));
+    ROS_DEBUG_STREAM("clearing box for " << std::to_string(i));
     changeMarkerControlAndPose(std::to_string(i), default_string);
     server->applyChanges();
   }
