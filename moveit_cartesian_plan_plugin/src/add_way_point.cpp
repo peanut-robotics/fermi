@@ -383,7 +383,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         } 
         else if (menu_item == 4){
           // Select all points
-          for (int i = 1; i < waypoints_pos.size(); i++)
+          for (int i = 1; i <= waypoints_pos.size(); i++)
           {
             ROS_DEBUG("Selecting all points");
             changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
@@ -392,7 +392,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         }
         else if (menu_item == 5){
           // Deselect all points
-          for (int i = 1; i < waypoints_pos.size(); i++)
+          for (int i = 1; i <= waypoints_pos.size(); i++)
           {
             ROS_DEBUG("Deselecting all points");
             changeMarkerControlAndPose(std::to_string(i), "adjust_hide");
