@@ -410,6 +410,8 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         geometry_msgs::Pose current_marker_pose_msg;
         for (InteractiveMarker cur_marker : markers)
         {
+          if (cur_marker.controls.size() > 2){
+            // Only move selected points
           current_marker_pose_msg =  cur_marker.pose;
           tf::poseMsgToTF(current_marker_pose_msg, p1);
 
@@ -419,6 +421,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           pointPoseUpdated(p2, cur_marker.name.c_str());
           Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
         }
+      }
       }
       // Save pose
       points_parent_home_ = feedback -> pose;
