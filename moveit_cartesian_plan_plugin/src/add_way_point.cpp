@@ -299,12 +299,14 @@ void AddWayPoint::ModifyPointsMarkerPose(){
     ROS_ERROR("Points marker control button does not have marker");
     return;
   }
-  control_button.markers[0] = makeInterArrow(interaction_marker);
+  control_button.markers.at(0) = makeInterArrow(interaction_marker);
 
   // Update server
   interaction_marker.controls.at(0) = control_button;
   server->insert(interaction_marker);
-  server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  if (!server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1))){
+    ROS_ERROR("Could not insert marker");
+  }
   server->applyChanges();
 
 }
@@ -574,8 +576,9 @@ void AddWayPoint::pointPoseUpdated(const tf::Transform &point_pos, const char *m
   {
     int index = atoi(marker_name);
 
-    if (index > waypoints_pos.size())
+    if ((index > waypoints_pos.size()) || (index < 1) )
     {
+      ROS_ERROR_STREAM("Trying to access incorrect index: "<< index);
       return;
     }
 
