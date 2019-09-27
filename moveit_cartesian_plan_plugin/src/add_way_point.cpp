@@ -268,8 +268,6 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
       parent_home_ = feedback->pose;
       tf::poseMsgToTF(feedback->pose, box_pos);
 
-      // Update points home marker
-      ModifyPointsMarkerPose();
     }
   }
 }
