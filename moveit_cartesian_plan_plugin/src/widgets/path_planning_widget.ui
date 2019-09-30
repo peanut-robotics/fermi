@@ -201,7 +201,7 @@
           <layout class="QVBoxLayout" name="verticalLayout_2"/>
          </item>
          <item row="20" column="0">
-          <widget class="QCheckBox" name="chk_is_ref_nav_pose">
+          <widget class="QCheckBox" name="chk_isRefPose">
            <property name="text">
             <string>Is Ref Nav Pose</string>
            </property>
