@@ -15,6 +15,9 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
+  get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
+  set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
+
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   
@@ -816,9 +819,14 @@ void PathPlanningWidget::loadPointsObject()
 void PathPlanningWidget::savePoints(){
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
-  }else{
+  }
+  else if(ui_.chk_isRefPose->isChecked()){
+    PathPlanningWidget::saveRefNavPose();
+  }
+  else{
     PathPlanningWidget::savePointsObject();
   }
+
 }
 void PathPlanningWidget::loadPoints(){
   if (ui_.chk_istoolpath->isChecked()){
@@ -831,6 +839,190 @@ void PathPlanningWidget::savePointsTool(){
   ROS_INFO("Begin saving tool path to file");
   Q_EMIT saveToolBtn_press();
 }
+
+void PathPlanningWidget::saveRefNavPose(){
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+
+  // Check task data
+  if (object_id != 0){
+    ROS_ERROR_STREAM("Cannot save reference nav pose to object with ID: << "<<object_id<<". ID can only be 0");
+    return;
+  }
+
+    // Transforms 
+  tf2_ros::TransformListener tfListener(tfBuffer_);
+  geometry_msgs::Transform robot_world_tf;
+  geometry_msgs::Transform object_world_tf;
+
+  Eigen::Affine3d object_world_eigen;
+  Eigen::Affine3d robot_object_eigen;
+  Eigen::Affine3d robot_world_eigen;
+
+  geometry_msgs::Quaternion quat_msg;
+
+  // Get objects
+  bool found_tf = false;
+  std::string obj_name;
+  peanut_cotyledon::GetObjects get_objects_srv;
+  peanut_cotyledon::Object desired_object;
+  get_objects_srv.request.floor_name = floor_name;
+  get_objects_srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(get_objects_srv)){
+    for(auto& obj : get_objects_srv.response.objects){
+      if(obj.id == object_id){
+        if (obj.name != "reference"){
+          ROS_ERROR_STREAM("Object with ID 0 has name: " <<obj.name<<". It must be named reference");
+          return;
+        }
+        desired_object = obj;
+        object_world_tf = obj.origin;
+        tf::transformMsgToEigen (object_world_tf, object_world_eigen);
+        found_tf = true;
+        break;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return;
+  }
+
+  if(!found_tf){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Get current robot location
+  int count = 0;
+  while(true){
+    try{
+      robot_world_tf = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0)).transform;
+      tf::transformMsgToEigen (robot_world_tf, robot_world_eigen);
+      break;
+    }
+    catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
+      ROS_WARN("%s",ex.what());
+      count += 1;
+      if(count > 5){
+        return;
+      }
+      ros::Duration(1.0).sleep();
+    }
+  }
+
+  // Robot wrt object 
+  robot_object_eigen = object_world_eigen.inverse() * robot_world_eigen;
+
+  // Check if task exists
+  peanut_cotyledon::GetTasks tasks_srv;
+  peanut_cotyledon::Task desired_task;
+  tasks_srv.request.floor_name = floor_name;
+  tasks_srv.request.area_name = area_name;
+  tasks_srv.request.object_id = object_id;
+  if (!get_tasks_proxy_.call(tasks_srv)){
+    ROS_ERROR("Could not call get_tasks service");
+  }
+
+  // Find task
+  bool found_task = false;
+  for(auto& task: tasks_srv.response.tasks){
+    if (task.name == task_name){
+      desired_task = task;
+      found_task = true;
+      break;
+    }
+  }
+
+  if(found_task){
+    // Check task type
+    if(desired_task.task_type != peanut_cotyledon::Task::NAVIGATE){
+      ROS_ERROR_STREAM("Existing task: "<<desired_task.name<<" is not of type NAVIGATE");
+      return;
+    }
+  }
+  else{
+    // Create and add new task
+    ROS_INFO_STREAM("Creating and adding new task "<<task_name);
+    peanut_cotyledon::Task new_task;
+    new_task.name = task_name;
+    new_task.task_type = peanut_cotyledon::Task::NAVIGATE;
+
+    peanut_cotyledon::SetTasks set_tasks_srv;
+    set_tasks_srv.request.floor_name = floor_name;
+    set_tasks_srv.request.area_name = area_name;
+    set_tasks_srv.request.object_id = object_id;
+    set_tasks_srv.request.tasks = tasks_srv.response.tasks;
+    set_tasks_srv.request.tasks.push_back(new_task);
+
+    if (set_tasks_proxy_.call(set_tasks_srv)){
+      if (!set_tasks_srv.response.success){
+        ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
+      }
+    }
+    else{
+      ROS_ERROR("Could not call set_tasks service");
+      return;
+    }
+  }
+  
+  // Get clean path for this path
+  peanut_cotyledon::GetCleanPath clean_path_srv;
+  clean_path_srv.request.floor_name = floor_name;
+  clean_path_srv.request.area_name = area_name;
+  clean_path_srv.request.object_id = object_id;
+  clean_path_srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(clean_path_srv))
+  {
+    clean_path = clean_path_srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call get_clean_path service");
+    return;
+  }
+
+  // Add a cached path if it does not exist
+  if(clean_path.cached_paths.size() == 0){
+    peanut_cotyledon::CachedPath cach_path;
+    clean_path.cached_paths.push_back(cach_path);
+  }
+
+  // Convert Transform to pose and update cached path
+  Eigen::Matrix3d rot = robot_object_eigen.linear();
+  Eigen::Quaterniond quat(rot);
+  tf::quaternionEigenToMsg(quat, quat_msg);
+
+  geometry_msgs::Pose robot_object_pose;
+  robot_object_pose.position.x = robot_object_eigen.translation()[0];
+  robot_object_pose.position.y = robot_object_eigen.translation()[1];
+  robot_object_pose.position.z = robot_object_eigen.translation()[2];
+  robot_object_pose.orientation = quat_msg;
+  clean_path.cached_paths.at(0).nav_pose = robot_object_pose;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath set_path_srv;
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(set_path_srv.response.success){
+      ROS_INFO("Updated reference nav pose");
+    }
+    else{
+      ROS_ERROR_STREAM("Could not update reference nav pose. Error: "<<set_path_srv.response.message);
+      return;
+    }
+  }  
+}
+
 void PathPlanningWidget::savePointsObject()
 {
   /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.

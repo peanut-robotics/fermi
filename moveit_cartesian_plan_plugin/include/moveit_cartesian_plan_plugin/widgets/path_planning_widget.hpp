@@ -43,6 +43,8 @@
 #include <map>
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
+
+// Cotyledon
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
@@ -50,6 +52,11 @@
 #include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_cotyledon/Object.h>
+#include <peanut_cotyledon/Task.h>
+#include <peanut_cotyledon/GetTasks.h>
+#include <peanut_cotyledon/SetTasks.h>
+#include <peanut_cotyledon/CachedPath.h>
+
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 #include <kortex_driver/ClearFaults.h>
@@ -96,6 +103,8 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
+			ros::ServiceClient get_tasks_proxy_;
+			ros::ServiceClient set_tasks_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
@@ -151,6 +160,7 @@ namespace moveit_cartesian_plan_plugin
 			void loadPointsTool();
 			void savePoints();
 			void loadPoints();
+			void saveRefNavPose();
 			//! Send a signal that a load the Way-Points from a file button has been pressed.
 			void loadPointsObject();
 			//! slot connected to clear all the boxes for interaction around points
