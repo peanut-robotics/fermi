@@ -98,7 +98,6 @@ void PathPlanningWidget::init()
   connect(ui_.btn_ClearAllPoints, SIGNAL(clicked()), this, SLOT(clearAllPoints_slot()));
   connect(ui_.btn_ClearAllBoxes, SIGNAL(clicked()), this, SLOT(clearAllInteractiveBoxes_slot()));
 
-  connect(ui_.btn_moveToHome, SIGNAL(clicked()), this, SLOT(moveToHomeFromUI()));
   //connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
 
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
