@@ -24,7 +24,7 @@
    <item row="2" column="1">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_1">
       <attribute name="title">
@@ -686,16 +686,16 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>290</y>
-         <width>461</width>
-         <height>41</height>
+         <y>530</y>
+         <width>261</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="font">
         <font>
          <pointsize>12</pointsize>
          <weight>75</weight>
-         <italic>true</italic>
+         <italic>false</italic>
          <bold>true</bold>
         </font>
        </property>
@@ -874,7 +874,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Emergency stops</string>
+        <string>Emergency Stops</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_8">
