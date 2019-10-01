@@ -103,6 +103,8 @@ void AddWayPoint::onInitialize()
   menu_handler_points_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Select all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Deselect all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Recenter", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -407,9 +409,9 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         else if (menu_item == 4){
           // Select all points
           InteractiveMarker cur_marker;
+          ROS_DEBUG("Selecting all points");
           for (int i = 1; i <= waypoints_pos.size(); i++)
           {
-            ROS_DEBUG("Selecting all points");
             if (!server->get(std::to_string(i), cur_marker)){
               ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
               return;
@@ -426,6 +428,9 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
             changeMarkerControlAndPose(std::to_string(i), "adjust_hide");
             server->applyChanges();
           }
+        }
+        else if (menu_item == 6){
+          ModifyPointsMarkerPose();
         }
         else{
           ROS_ERROR("Menu button not implemented");
