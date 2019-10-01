@@ -297,7 +297,7 @@ void AddWayPoint::ModifyPointsMarkerPose(){
     ROS_ERROR("Points marker control button does not have marker");
     return;
   }
-  control_button.markers.at(0) = makeInterArrow(interaction_marker);
+  control_button.markers.at(0) = makeInterArrow(interaction_marker, 1);
 
   // Update server
   interaction_marker.controls.at(0) = control_button;
@@ -867,7 +867,7 @@ Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs:
 
 }
 
-Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
+Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg, const int type)
 {
   /*! Define the Marker Arrow which the user can add new Way-Points with.
 
@@ -875,7 +875,12 @@ Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
   //define a marker
   Marker marker;
 
+  if (type == 0){
   marker.type = Marker::CUBE;
+  }
+  else{
+    marker.type = Marker::SPHERE;
+  }
   marker.scale = ARROW_INTER_SCALE_CONTROL;
 
   //make the markers with interesting color
@@ -884,7 +889,7 @@ Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
   return marker;
 }
 
-InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveMarker &msg)
+InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveMarker &msg, const int type)
 {
   /*! Set the User Interactive Marker with 6DOF control.
   */
@@ -893,7 +898,7 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_button.always_visible = true;
   control_button.interaction_mode = InteractiveMarkerControl::BUTTON;
   control_button.name = "button_interaction";
-  control_button.markers.push_back(makeInterArrow(msg));
+  control_button.markers.push_back(makeInterArrow(msg, type));
 
   msg.controls.push_back(control_button);
   //server.reset( new interactive_markers::InteractiveMarkerServer("moveit_cartesian_plan_plugin","",false));
@@ -1000,7 +1005,7 @@ void AddWayPoint::makePointsInteractiveMarker()
   //button like interactive marker. Detect when we have left click with the mouse and add new arrow then
   inter_arrow_marker_.name = "move_points_button";
 
-  makeInteractiveMarkerControl(inter_arrow_marker_);
+  makeInteractiveMarkerControl(inter_arrow_marker_, 1);
   server->insert(inter_arrow_marker_);
   menu_handler_points_inter.apply(*server, inter_arrow_marker_.name);
  
