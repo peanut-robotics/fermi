@@ -406,10 +406,15 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         } 
         else if (menu_item == 4){
           // Select all points
+          InteractiveMarker cur_marker;
           for (int i = 1; i <= waypoints_pos.size(); i++)
           {
             ROS_DEBUG("Selecting all points");
-            changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
+            changeMarkerControlAndPose(cur_marker.name.c_str(), "adjust_frame");
             server->applyChanges();
           }
         }
