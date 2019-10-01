@@ -801,14 +801,13 @@ void PathPlanningWidget::loadPointsObject()
 
   // Get obj info and update control
   std::string mesh_name = desired_object.geometry_path[0];
-  if (!mesh_name.empty()){
     geometry_msgs::Pose object_pose;
     object_pose.position.x = desired_object.origin.translation.x;
     object_pose.position.y = desired_object.origin.translation.y;
     object_pose.position.z = desired_object.origin.translation.z;
     object_pose.orientation = desired_object.origin.rotation;
+  // #TODO this call updates parent_home as well. Add a function to update parent_home only.
     Q_EMIT modifyMarkerControl_signal(mesh_name, object_pose);
-  }
   
   // Update mesh text field 
   ui_.mesh_name_lbl->setText(QString::fromStdString(mesh_name));
