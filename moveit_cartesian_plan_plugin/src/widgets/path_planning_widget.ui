@@ -708,7 +708,7 @@
         <rect>
          <x>10</x>
          <y>490</y>
-         <width>211</width>
+         <width>261</width>
          <height>31</height>
         </rect>
        </property>
@@ -928,24 +928,6 @@
        </property>
        <property name="text">
         <string>Check IK For All Points</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="ik_enable_lbk">
-       <property name="geometry">
-        <rect>
-         <x>230</x>
-         <y>490</y>
-         <width>41</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">border-style: outset;
-															border-width: 2px;
-															border-color :rgb(48, 48, 48)</string>
-       </property>
-       <property name="text">
-        <string/>
        </property>
       </widget>
      </widget>
