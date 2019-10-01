@@ -944,7 +944,7 @@ void PathPlanningWidget::saveRefNavPose(){
   }
 
   // Save Nav pose
-  addNavPose();
+  addNavPoseHelper();
 }
 
 void PathPlanningWidget::savePointsObject()
@@ -1100,7 +1100,16 @@ void PathPlanningWidget::moveElevatorHelper()
 
 void PathPlanningWidget::addNavPose()
 {
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save Nav Task Pose?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::Yes){
+    ROS_INFO("Saving Nav Pose");
   QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addNavPoseHelper);
+}
+  else{
+    ROS_INFO("Did not save Nav Pose");
+    return;
+  }
 }
 
 void PathPlanningWidget::addNavPoseHelper()
