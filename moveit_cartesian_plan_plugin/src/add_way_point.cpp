@@ -149,6 +149,8 @@ void AddWayPoint::onInitialize()
 
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
+  connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
+ 
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
 
@@ -1463,6 +1465,13 @@ void AddWayPoint::addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msg
   pose_offset.position.x = pose_in.position.x + 0.2;
   pose_offset.position.y = pose_in.position.y + 0.2;
   pose_offset.position.z = pose_in.position.z - 0.2;
+}
+
+void AddWayPoint::CheckAllPointsIK(){
+  ROS_INFO("Checking IK for all points");
+  for(int i = 1; i <= waypoints_pos.size(); i++){
+    Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, i);
+  }
 }
 
 } // namespace moveit_cartesian_plan_plugin

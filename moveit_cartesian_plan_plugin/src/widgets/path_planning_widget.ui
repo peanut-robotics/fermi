@@ -917,6 +917,19 @@
         <string>Miscellanous</string>
        </property>
       </widget>
+      <widget class="QPushButton" name="btn_checkAllIK">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>530</y>
+         <width>261</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Check IK For All Points</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">

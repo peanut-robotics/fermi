@@ -207,7 +207,8 @@ namespace moveit_cartesian_plan_plugin
 			
 			// Slots for check ik
 			void ChangeCheckIK();
-
+			void CheckAllPointsIK();
+			
 			// Helpers
 			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
@@ -245,6 +246,7 @@ namespace moveit_cartesian_plan_plugin
 			void sendSendSelectedPlanGroup(int index);
 
 			void ChangeCheckIK_signal();
+			void CheckAllPointsIK_signal();
 		};
 	}
 

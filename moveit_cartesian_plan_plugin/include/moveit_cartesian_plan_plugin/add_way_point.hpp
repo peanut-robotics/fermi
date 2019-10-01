@@ -116,7 +116,7 @@ private:
 	// Offset helper function 
 	void addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset);
 	void ModifyPointsMarkerPose();
-    
+	
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
@@ -175,6 +175,8 @@ public Q_SLOTS:
 	void wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
 	//! Get the name of the Transformation frame of the Robot.
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
+	// Check IK for all points
+	void CheckAllPointsIK();
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.

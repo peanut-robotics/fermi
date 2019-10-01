@@ -111,6 +111,7 @@ void PathPlanningWidget::init()
   connect(ui_.start_controller_btn, SIGNAL(clicked()), this, SLOT(startController()));
 
   connect(ui_.btn_checkIK, SIGNAL(clicked()), this, SLOT(ChangeCheckIK()));
+  connect(ui_.btn_checkAllIK, SIGNAL(clicked()), this, SLOT(CheckAllPointsIK()));
   connect(ui_.step_size_btn, SIGNAL(clicked()), this, SLOT(ChangeStepSize()));
 }
 
@@ -1365,6 +1366,10 @@ void PathPlanningWidget::stopAll(){
 
 void PathPlanningWidget::ChangeCheckIK(){
   Q_EMIT ChangeCheckIK_signal();
+}
+
+void PathPlanningWidget::CheckAllPointsIK(){
+  Q_EMIT CheckAllPointsIK_signal();
 }
 
 bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
