@@ -761,6 +761,20 @@ void PathPlanningWidget::loadPointsObject()
     q = pose_tf.getRotation();
     q = q.normalize();
     pose_tf.setRotation(q);
+    
+    // if( std::isnan(pose_tf.getOrigin()[0]) || std::isnan(pose_tf.getOrigin()[1]) || std::isnan(pose_tf.getOrigin()[2]) ||
+    //     std::isnan(pose_tf.getRotation().getW()) || std::isnan(pose_tf.getRotation().getAxis()[0]) || 
+    //     std::isnan(pose_tf.getRotation().getAxis()[1]) || std::isnan(pose_tf.getRotation().getAxis()[2])){
+    //       ROS_ERROR("Points contains NaNs. Cannot load path");
+    //       return;
+    // }
+
+    // if( std::isinf(pose_tf.getOrigin()[0]) || std::isinf(pose_tf.getOrigin()[1]) || std::isinf(pose_tf.getOrigin()[2]) ||
+    //     std::isinf(pose_tf.getRotation().getW()) || std::isinf(pose_tf.getRotation().getAxis()[0]) || 
+    //     std::isinf(pose_tf.getRotation().getAxis()[1]) || std::isinf(pose_tf.getRotation().getAxis()[2])){
+    //       ROS_ERROR("Points contains Inf. Cannot load path");
+    //       return;
+    // }
 
     percent_complete = (i + 1) * 100 / num_robot_poses;
     ui_.progressBar->setValue(percent_complete);

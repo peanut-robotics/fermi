@@ -151,6 +151,8 @@ void AddWayPoint::onInitialize()
 
   connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
  
+  connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
+
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
 
@@ -292,6 +294,20 @@ void AddWayPoint::ModifyPointsMarkerPose(){
   }
   control_button = interaction_marker.controls.at(0);
   
+  // Check for nan 
+  // if(std::isnan(parent_home_.position.x) || std::isnan(parent_home_.position.y) || std::isnan(parent_home_.position.z) ||
+  //    std::isnan(parent_home_.orientation.x) || std::isnan(parent_home_.orientation.y) || std::isnan(parent_home_.orientation.z) ||
+  //    std::isnan(parent_home_.orientation.w)){
+  //      ROS_ERROR("parent_home_ has an invalid pose");
+  //      return;
+  //   }
+  // if(std::isinf(parent_home_.position.x) || std::isinf(parent_home_.position.y) || std::isinf(parent_home_.position.z) ||
+  //    std::isinf(parent_home_.orientation.x) || std::isinf(parent_home_.orientation.y) || std::isinf(parent_home_.orientation.z) ||
+  //    std::isinf(parent_home_.orientation.w)){
+  //      ROS_ERROR("parent_home_ has an invalid pose: infinity");
+  //      return;
+  //   }
+    
     // Update marker pose 
   addPoseOffset(parent_home_, interaction_marker.pose);
   points_parent_home_ = interaction_marker.pose;
@@ -424,9 +440,9 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
         }
         else if (menu_item == 5){
           // Deselect all points
+          ROS_DEBUG("Deselecting all points");
           for (int i = 1; i <= waypoints_pos.size(); i++)
           {
-            ROS_DEBUG("Deselecting all points");
             changeMarkerControlAndPose(std::to_string(i), "adjust_hide");
             server->applyChanges();
           }
@@ -441,7 +457,6 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
     }
     case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
     { 
-      if (true){
         // Get markers 
         std::vector<InteractiveMarker> markers;
         InteractiveMarker cur_marker;
@@ -481,7 +496,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           pointPoseUpdated(p2, cur_marker.name.c_str());
           Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
         }
-      }
+
       // Save pose
       points_parent_home_ = feedback -> pose;
     }
@@ -1309,7 +1324,7 @@ void AddWayPoint::transformPointsViz(std::string frame)
   std::vector<tf::Transform> waypoints_pos_copy;
 
   const geometry_msgs::Transform constTransform = transformStamped.transform;
-  ROS_INFO_STREAM("transform: " << transformStamped);
+  ROS_DEBUG_STREAM("transform: " << transformStamped);
   tf::Transform transform_old_new;
   tf::transformMsgToTF(constTransform, transform_old_new);
 

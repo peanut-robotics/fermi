@@ -191,7 +191,8 @@ Q_SIGNALS:
 	void wayPoints_signal(std::vector<geometry_msgs::Pose> waypoints);
 	//! Signal to check if the way-point is in valid IK solution.
 	void onUpdatePosCheckIkValidity(const std::vector<tf::Transform> waypoints_pos, const int point_number);
-
+	// Marker points signals
+	void ModifyPointsMarkerPose_signal();
 protected:
 	//! The class that GUI RQT User Interactions.
     QWidget *widget_;
