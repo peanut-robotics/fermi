@@ -1532,6 +1532,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   
   // Loop through states
   ROS_INFO("IK Results");
+  ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
   for(double& delta_h : delta_hs){
     /*
     Apply transformation to all waypoints
@@ -1545,7 +1546,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
       tf::transformTFToEigen(transformed_waypoint, check_ik_point);
       // Check IK
       ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
-      addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+      //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
     }
     printIKInformation(delta_h, h, ik_result);
   } 
@@ -1583,7 +1584,7 @@ void AddWayPoint::printIKInformation(const double delta_h, const double h, const
       success = false;
     }
   }
-  ROS_INFO_STREAM("Height: "<<(delta_h + h)<<"\tSuccess: "<<success<<"\tRate: "<<100.0*success_count/(n*1.0)<<"%");
+  ROS_INFO_STREAM(std::left<<std::setw(15)<<(delta_h + h)<<std::setw(15)<<std::left<<success<<std::setw(15)<<std::left<<100.0*success_count/(n*1.0));
 }
 
 void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
