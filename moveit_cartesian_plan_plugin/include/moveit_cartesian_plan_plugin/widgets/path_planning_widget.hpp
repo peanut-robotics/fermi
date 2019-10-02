@@ -213,6 +213,7 @@ namespace moveit_cartesian_plan_plugin
 			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
 			void ChangeStepSize();
+			void RobotIKPlanning();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );
@@ -247,7 +248,8 @@ namespace moveit_cartesian_plan_plugin
 
 			void ChangeCheckIK_signal();
 			void CheckAllPointsIK_signal();
-
+			void RobotIKPlanning_signal();
+			
 			// Signal to modify points control marker
 			void ModifyPointsMarkerPose_signal();
 		};

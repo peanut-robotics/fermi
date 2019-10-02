@@ -113,6 +113,8 @@ void PathPlanningWidget::init()
   connect(ui_.btn_checkIK, SIGNAL(clicked()), this, SLOT(ChangeCheckIK()));
   connect(ui_.btn_checkAllIK, SIGNAL(clicked()), this, SLOT(CheckAllPointsIK()));
   connect(ui_.step_size_btn, SIGNAL(clicked()), this, SLOT(ChangeStepSize()));
+  connect(ui_.btn_ik_planning, SIGNAL(clicked()), this, SLOT(RobotIKPlanning()));
+
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -797,7 +799,7 @@ void PathPlanningWidget::loadPointsObject()
 
   // Get elevator height
   elevator_height = clean_path.cached_paths.at(0).elevator_height;
-  
+
   try
   {
     ROS_INFO("Setting step size and frame id");
@@ -1420,6 +1422,10 @@ bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string are
 
 void PathPlanningWidget::ChangeStepSize(){
   PathPlanningWidget::sendCartTrajectoryParamsFromUI();
+}
+
+void PathPlanningWidget::RobotIKPlanning(){
+  Q_EMIT RobotIKPlanning_signal();
 }
 
 } // namespace widgets

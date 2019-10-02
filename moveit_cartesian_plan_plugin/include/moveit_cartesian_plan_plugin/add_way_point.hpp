@@ -31,7 +31,7 @@
 #include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/Object.h>
 #include <trajectory_msgs/JointTrajectory.h>
-
+#include <peanut_kinematics/jaco3_ik.h>
 #include <rviz/properties/bool_property.h>
 #include <rviz/properties/string_property.h>
 #include <moveit_cartesian_plan_plugin/widgets/path_planning_widget.hpp>
@@ -94,8 +94,9 @@ public:
 	ros::ServiceClient set_clean_path_proxy_;
 	ros::ServiceClient get_objects_proxy_;
 	ros::ServiceClient set_objects_proxy_;
+	ros::Publisher marker_pub_;
 	ros::NodeHandle nh_;
-
+	
 private:
 	//! Function for creating a way-point marker
 	Marker makeWayPoint( InteractiveMarker &msg );
@@ -117,6 +118,10 @@ private:
 	void addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset);
 	void ModifyPointsMarkerPose();
 	
+	void addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index);
+
+	void addHeight(const tf::Transform start, const double delta_h, tf::Transform& end);
+
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
@@ -177,6 +182,7 @@ public Q_SLOTS:
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
 	// Check IK for all points
 	void CheckAllPointsIK();
+	void RobotIKPlanning();
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.

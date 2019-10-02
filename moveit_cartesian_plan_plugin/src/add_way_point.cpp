@@ -57,6 +57,8 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
   set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
 
+  marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+
   ROS_INFO("Constructor created");
 }
 
@@ -150,7 +152,8 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
   connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
- 
+  connect(widget_, SIGNAL(RobotIKPlanning_signal()), this, SLOT(RobotIKPlanning()));
+
   connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
 
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
@@ -1487,6 +1490,103 @@ void AddWayPoint::CheckAllPointsIK(){
   for(int i = 1; i <= waypoints_pos.size(); i++){
     Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, i);
   }
+}
+
+void AddWayPoint::RobotIKPlanning(){
+  ROS_INFO("Checking IK for robot states");
+
+  std::vector<double> heights = {0.3};
+  geometry_msgs::Transform base_link_world_tfmsg;
+  tf::Transform T, base_link_world_tf, transformed_waypoint;
+  std::vector<tf::Transform> transformed_waypoints;
+  tf::Vector3 translation = tf::Vector3(0,0,0);
+  Eigen::Affine3d check_ik_point;
+  std::vector<bool> ik_result;
+
+  // Get baselink transform
+  try{
+    base_link_world_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
+  }
+  catch (tf2::TransformException &ex){
+    ROS_ERROR("%s",ex.what());
+    return;
+  }
+  tf::transformMsgToTF(base_link_world_tfmsg, base_link_world_tf);
+
+  //Initialize vectors
+  tf::Transform empty_tf;
+  for(int i = 0; i < waypoints_pos.size(); i++){
+    transformed_waypoints.push_back(empty_tf);
+    ik_result.push_back(false);
+  }
+
+  // Loop through states
+  for(double& delta_h : heights){
+    /*
+    Apply transformation to all waypoints
+    At the end, transformed_waypoint is in base_link frame
+    */
+    for(int i = 0; i < waypoints_pos.size(); i++){
+      ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
+      addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
+      transformed_waypoint = base_link_world_tf * transformed_waypoint;
+      transformed_waypoints[i] = transformed_waypoint;
+      tf::transformTFToEigen(transformed_waypoint, check_ik_point);
+      // Check IK
+      ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+      addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+    }
+  } 
+  
+}
+
+void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf::Transform& end){
+  end = start;
+  tf::Vector3 origin = end.getOrigin();
+  origin[2] += delta_h;
+  end.setOrigin(origin);
+}
+
+void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
+  visualization_msgs::Marker marker;
+
+  ROS_INFO_STREAM( marker_pose.getOrigin()[0] << " "<< marker_pose.getOrigin()[1]<<" "<< marker_pose.getOrigin()[2]);
+  marker.header.frame_id = "/base_link";
+  marker.header.stamp = ros::Time::now();
+
+  marker.ns = "ik_checking";
+  marker.id = index;
+
+  marker.type = visualization_msgs::Marker::CYLINDER;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.pose.position.x = marker_pose.getOrigin()[0];
+  marker.pose.position.y = marker_pose.getOrigin()[1];
+  marker.pose.position.z = marker_pose.getOrigin()[2];
+  marker.pose.orientation.x = 0;//marker_pose.getRotation().getAxis()[0];
+  marker.pose.orientation.y = 0;//marker_pose.getRotation().getAxis()[1];
+  marker.pose.orientation.z = 0;//marker_pose.getRotation().getAxis()[2];
+  marker.pose.orientation.w = 1;//marker_pose.getRotation().getW();
+
+  marker.scale.x = 0.05;
+  marker.scale.y = 0.05;
+  marker.scale.z = 0.05;
+
+  if(is_valid_ik){
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 1.0;
+  }
+  else{
+    marker.color.r = 1.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 0.8;
+  }
+
+  marker.lifetime = ros::Duration(20);
+  marker_pub_.publish(marker);
 }
 
 } // namespace moveit_cartesian_plan_plugin
