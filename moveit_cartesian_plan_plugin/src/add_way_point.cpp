@@ -1514,6 +1514,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   // Transforms
   geometry_msgs::Transform base_link_world_tfmsg;
   tf::Transform T, base_link_world_tf, transformed_waypoint;
+  std::vector<tf::Transform> transformed_waypoints;
   tf::Vector3 translation = tf::Vector3(0,0,0);
   Eigen::Affine3d check_ik_point;
 
@@ -1533,8 +1534,10 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   }
   tf::transformMsgToTF(base_link_world_tfmsg, base_link_world_tf);
 
-  // Initialize vectors
-  for(int i = 0; i < delta_xy.size(); i++){
+  //Initialize vectors
+  tf::Transform empty_tf;
+  for(int i = 0; i < waypoints_pos.size(); i++){
+    transformed_waypoints.push_back(empty_tf);
     ik_result.push_back(false);
   }
   
@@ -1547,23 +1550,16 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
     At the end, transformed_waypoint is in base_link frame
     */
     for(int i = 0; i < waypoints_pos.size(); i++){
-      // Apply elevator height transform
+      //ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
       addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
       transformed_waypoint = base_link_world_tf * transformed_waypoint;
-
-      for(int j = 0; j < delta_xy.size(); j++){
-        // Apply mobile base transform
-        addDeltaXY(delta_xy[j], transformed_waypoint);
-
-        // Check IK 
-        tf::transformTFToEigen(transformed_waypoint, check_ik_point);
-        ik_result[j] = jaco3_kinematics::ik_exists(check_ik_point, 150);
-        //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
-        
-        // Print Info
-        printIKInformation(delta_h, h, delta_xy[]ik_result);
-      }
+      transformed_waypoints[i] = transformed_waypoint;
+      tf::transformTFToEigen(transformed_waypoint, check_ik_point);
+      // Check IK
+      ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+      //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
     }
+    printIKInformation(delta_h, h, ik_result);
   } 
   
 }
