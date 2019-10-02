@@ -248,8 +248,8 @@ namespace moveit_cartesian_plan_plugin
 
 			void ChangeCheckIK_signal();
 			void CheckAllPointsIK_signal();
-			void RobotIKPlanning_signal();
-			
+			void RobotIKPlanning_signal(const double upper_limit, const double lower_limit, const double step_size, const double h);
+
 			// Signal to modify points control marker
 			void ModifyPointsMarkerPose_signal();
 		};

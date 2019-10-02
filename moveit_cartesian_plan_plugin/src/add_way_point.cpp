@@ -152,7 +152,7 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
   connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
-  connect(widget_, SIGNAL(RobotIKPlanning_signal()), this, SLOT(RobotIKPlanning()));
+  connect(widget_, SIGNAL(RobotIKPlanning_signal(const double, const double, const double, const double)), this, SLOT(RobotIKPlanning(const double, const double, const double, const double)));
 
   connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
 
@@ -1492,13 +1492,13 @@ void AddWayPoint::CheckAllPointsIK(){
   }
 }
 
-void AddWayPoint::RobotIKPlanning(){
+void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current){
   ROS_INFO("Checking IK for robot states");
 
-  double h_lower_limit = 0.5;
-  double h_upper_limit = 1;
-  double h_step = 0.1;
-  double h = 0.75;
+  double h_lower_limit = lower_limit;
+  double h_upper_limit = upper_limit;
+  double h_step = step_size;
+  double h = h_current;
 
   std::vector<double> delta_hs;
   geometry_msgs::Transform base_link_world_tfmsg;
@@ -1532,7 +1532,6 @@ void AddWayPoint::RobotIKPlanning(){
   
   // Loop through states
   ROS_INFO("IK Results");
-  ROS_INFO_STREAM("ElHt(m) "<<"\tSuccess "<<"\tRate(%)");
   for(double& delta_h : delta_hs){
     /*
     Apply transformation to all waypoints
@@ -1584,7 +1583,7 @@ void AddWayPoint::printIKInformation(const double delta_h, const double h, const
       success = false;
     }
   }
-  ROS_INFO_STREAM((delta_h + h)<<"\t"<<success<<"\t"<<100.0*success_count/(n*1.0));
+  ROS_INFO_STREAM("Height: "<<(delta_h + h)<<"\tSuccess: "<<success<<"\tRate: "<<100.0*success_count/(n*1.0)<<"%");
 }
 
 void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){

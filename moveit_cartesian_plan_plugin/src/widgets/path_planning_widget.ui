@@ -1136,7 +1136,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Run IK check</string>
+        <string>Run Elevator IK Check</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_10">
@@ -1159,7 +1159,7 @@
         <string>Elevator IK</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit">
+      <widget class="QLineEdit" name="h_lower_limit">
        <property name="geometry">
         <rect>
          <x>110</x>
@@ -1205,7 +1205,7 @@
         <string>Upper Limit</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit_2">
+      <widget class="QLineEdit" name="h_upper_limit">
        <property name="geometry">
         <rect>
          <x>110</x>
@@ -1233,7 +1233,7 @@
         <string>Step Size</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit_3">
+      <widget class="QLineEdit" name="h_step_size">
        <property name="geometry">
         <rect>
          <x>110</x>

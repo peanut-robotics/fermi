@@ -184,7 +184,7 @@ public Q_SLOTS:
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
 	// Check IK for all points
 	void CheckAllPointsIK();
-	void RobotIKPlanning();
+	void RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h);
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.

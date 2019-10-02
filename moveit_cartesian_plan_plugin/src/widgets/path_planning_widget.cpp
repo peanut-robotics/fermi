@@ -1425,7 +1425,13 @@ void PathPlanningWidget::ChangeStepSize(){
 }
 
 void PathPlanningWidget::RobotIKPlanning(){
-  Q_EMIT RobotIKPlanning_signal();
+  // Get data
+  double upper_limit = ui_.h_upper_limit->text().toDouble();
+  double lower_limit = ui_.h_lower_limit->text().toDouble();
+  double step_size = ui_.h_step_size->text().toDouble();
+  double h = ui_.el_lbl->text().toDouble();
+  
+  Q_EMIT RobotIKPlanning_signal(upper_limit, lower_limit, step_size, h);
 }
 
 } // namespace widgets
