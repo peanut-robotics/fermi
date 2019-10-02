@@ -121,6 +121,8 @@ private:
 	void addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index);
 
 	void addHeight(const tf::Transform start, const double delta_h, tf::Transform& end);
+	void printIKInformation(const double delta_h, const double h, const std::vector<bool> ik_result);
+	void getDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
 
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;

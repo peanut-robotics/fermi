@@ -1495,14 +1495,24 @@ void AddWayPoint::CheckAllPointsIK(){
 void AddWayPoint::RobotIKPlanning(){
   ROS_INFO("Checking IK for robot states");
 
-  std::vector<double> heights = {0.3};
+  double h_lower_limit = 0.5;
+  double h_upper_limit = 1;
+  double h_step = 0.1;
+  double h = 0.75;
+
+  std::vector<double> delta_hs;
   geometry_msgs::Transform base_link_world_tfmsg;
   tf::Transform T, base_link_world_tf, transformed_waypoint;
   std::vector<tf::Transform> transformed_waypoints;
   tf::Vector3 translation = tf::Vector3(0,0,0);
   Eigen::Affine3d check_ik_point;
-  std::vector<bool> ik_result;
 
+  // Get heights
+  getDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
+
+  // IK checking
+  std::vector<bool> ik_result;
+  std::vector<double> ik_success_rate;
   // Get baselink transform
   try{
     base_link_world_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
@@ -1519,15 +1529,17 @@ void AddWayPoint::RobotIKPlanning(){
     transformed_waypoints.push_back(empty_tf);
     ik_result.push_back(false);
   }
-
+  
   // Loop through states
-  for(double& delta_h : heights){
+  ROS_INFO("IK Results");
+  ROS_INFO_STREAM("ElHt(m) "<<"\tSuccess "<<"\tRate(%)");
+  for(double& delta_h : delta_hs){
     /*
     Apply transformation to all waypoints
     At the end, transformed_waypoint is in base_link frame
     */
     for(int i = 0; i < waypoints_pos.size(); i++){
-      ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
+      //ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
       addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
       transformed_waypoint = base_link_world_tf * transformed_waypoint;
       transformed_waypoints[i] = transformed_waypoint;
@@ -1536,8 +1548,20 @@ void AddWayPoint::RobotIKPlanning(){
       ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
       addIKValidityMarker(transformed_waypoint, ik_result[i], i);
     }
+    printIKInformation(delta_h, h, ik_result);
   } 
   
+}
+
+void AddWayPoint::getDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs){
+  double n = (h2 - h1)/h_step + 1;
+  double abs_h;
+  delta_hs.clear();
+
+  for(int i = 0 ; i < n; i++){
+    abs_h = h1 + i*h_step;
+    delta_hs.push_back(double(abs_h - h));
+  }
 }
 
 void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf::Transform& end){
@@ -1547,10 +1571,26 @@ void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf:
   end.setOrigin(origin);
 }
 
+void AddWayPoint::printIKInformation(const double delta_h, const double h, const std::vector<bool> ik_result){
+  int n = ik_result.size();
+  int success_count = 0;
+  bool success = true;
+
+  for(auto ik : ik_result){
+    if(ik){
+      success_count += 1;
+    }
+    else{
+      success = false;
+    }
+  }
+  ROS_INFO_STREAM((delta_h + h)<<"\t"<<success<<"\t"<<100.0*success_count/(n*1.0));
+}
+
 void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
   visualization_msgs::Marker marker;
 
-  ROS_INFO_STREAM( marker_pose.getOrigin()[0] << " "<< marker_pose.getOrigin()[1]<<" "<< marker_pose.getOrigin()[2]);
+  //ROS_INFO_STREAM( marker_pose.getOrigin()[0] << " "<< marker_pose.getOrigin()[1]<<" "<< marker_pose.getOrigin()[2]);
   marker.header.frame_id = "/base_link";
   marker.header.stamp = ros::Time::now();
 
