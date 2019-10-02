@@ -1495,24 +1495,34 @@ void AddWayPoint::CheckAllPointsIK(){
 void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current){
   ROS_INFO("Checking IK for robot states");
 
+  // Elevator parameters
   double h_lower_limit = lower_limit;
   double h_upper_limit = upper_limit;
   double h_step = step_size;
   double h = h_current;
 
+  // Mobile base parameters
+  double radius = 0.5;
+  double angle_step = 10; // degrees
+  double radius_step = 0.1;
+
+  // IK checking
+  std::vector<bool> ik_result;
   std::vector<double> delta_hs;
+  std::vector<std::vector<double>> delta_xy;
+
+  // Transforms
   geometry_msgs::Transform base_link_world_tfmsg;
   tf::Transform T, base_link_world_tf, transformed_waypoint;
-  std::vector<tf::Transform> transformed_waypoints;
   tf::Vector3 translation = tf::Vector3(0,0,0);
   Eigen::Affine3d check_ik_point;
 
   // Get heights
-  getDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
+  GetDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
 
-  // IK checking
-  std::vector<bool> ik_result;
-  std::vector<double> ik_success_rate;
+  // Get position increments
+  GetDeltaXY(radius, angle_step, radius_step, delta_xy);
+
   // Get baselink transform
   try{
     base_link_world_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
@@ -1523,10 +1533,8 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   }
   tf::transformMsgToTF(base_link_world_tfmsg, base_link_world_tf);
 
-  //Initialize vectors
-  tf::Transform empty_tf;
-  for(int i = 0; i < waypoints_pos.size(); i++){
-    transformed_waypoints.push_back(empty_tf);
+  // Initialize vectors
+  for(int i = 0; i < delta_xy.size(); i++){
     ik_result.push_back(false);
   }
   
@@ -1539,21 +1547,59 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
     At the end, transformed_waypoint is in base_link frame
     */
     for(int i = 0; i < waypoints_pos.size(); i++){
-      //ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
+      // Apply elevator height transform
       addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
       transformed_waypoint = base_link_world_tf * transformed_waypoint;
-      transformed_waypoints[i] = transformed_waypoint;
-      tf::transformTFToEigen(transformed_waypoint, check_ik_point);
-      // Check IK
-      ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
-      //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+
+      for(int j = 0; j < delta_xy.size(); j++){
+        // Apply mobile base transform
+        addDeltaXY(delta_xy[j], transformed_waypoint);
+
+        // Check IK 
+        tf::transformTFToEigen(transformed_waypoint, check_ik_point);
+        ik_result[j] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+        //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+        
+        // Print Info
+        printIKInformation(delta_h, h, delta_xy[]ik_result);
+      }
     }
-    printIKInformation(delta_h, h, ik_result);
   } 
   
 }
 
-void AddWayPoint::getDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs){
+void AddWayPoint::GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals){
+  double n = (max_val - min_val)/step + 1;
+  double val;
+  delta_vals.clear();
+
+  for(int i = 0 ; i < n; i++){
+    val = min_val + i*step;
+    delta_vals.push_back(double(val));
+  }
+}
+
+void AddWayPoint::GetDeltaXY(const double radius, const double angle_step, const double radius_step, std::vector<std::vector<double>>& delta_xy){
+  // radius_step is in degrees
+  std::vector<double> theta_steps, radius_steps;
+  delta_xy.clear();
+
+  // Get deltas
+  GetDelta(0.0, 3.14, DEG2RAD(angle_step), theta_steps);
+  GetDelta(radius_step, radius, radius_step, radius_steps);
+  
+  // Find dx and dy
+  std::vector<double> dxdy;
+  for(auto& t : theta_steps){
+    for(auto& r : radius_steps){
+      dxdy = {r*cos(t), r*sin(t)};
+      delta_xy.push_back(dxdy);
+    }
+  }
+
+}
+
+void AddWayPoint::GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs){
   double n = (h2 - h1)/h_step + 1;
   double abs_h;
   delta_hs.clear();

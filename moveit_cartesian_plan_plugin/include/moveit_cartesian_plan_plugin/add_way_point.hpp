@@ -50,6 +50,10 @@
 #include <tf/transform_datatypes.h>
 #endif
 
+// macros
+#ifndef DEG2RAD
+#define DEG2RAD(x) ((x)*0.017453293)
+#endif
 
 namespace rviz
 {
@@ -122,7 +126,9 @@ private:
 
 	void addHeight(const tf::Transform start, const double delta_h, tf::Transform& end);
 	void printIKInformation(const double delta_h, const double h, const std::vector<bool> ik_result);
-	void getDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
+	void GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
+	void GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals);
+	void GetDeltaXY(const double radius, const double angle_step, const double radius_step, std::vector<std::vector<double>>& delta_xy);
 
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
