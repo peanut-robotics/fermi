@@ -725,7 +725,7 @@ void PathPlanningWidget::loadPointsObject()
     return;
   }
 
-  if (clean_path.cached_paths.empty() || clean_path.object_poses.empty()/*clean_path.cached_paths.at(0).robot_poses.empty()*/)
+  if (clean_path.cached_paths.empty() || clean_path.object_poses.empty())
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
@@ -795,6 +795,9 @@ void PathPlanningWidget::loadPointsObject()
       Q_EMIT configEdited_signal(startConfig);
   }
 
+  // Get elevator height
+  elevator_height = clean_path.cached_paths.at(0).elevator_height;
+  
   try
   {
     ROS_INFO("Setting step size and frame id");
