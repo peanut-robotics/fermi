@@ -1543,7 +1543,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   
   // Loop through states
   ROS_INFO("IK Results");
-  ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
+  ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
   for(double& delta_h : delta_hs){
     for(std::vector<double> dxdy : delta_xy){
     /*
@@ -1563,7 +1563,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
       ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
         addIKValidityMarker(transformed_waypoint, ik_result[i], i);
     }
-    printIKInformation(delta_h, h, ik_result);
+      printIKInformation(delta_h, h, dxdy, ik_result);
   } 
   } 
   
@@ -1574,12 +1574,16 @@ void AddWayPoint::AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoin
   Dxdy increments are applied to the waypoint that is in the base_link frame
   From a top down view of the arm with the arm extending forward,
   the base_link_x axis points to the right and base_link_z axis points forward along the arm
-  x = x + dx 
-  z = z + dy*/
+  x = x - dx 
+  z = z - dy
+  
+  Note the negative sign. This is because we want to check if the points are feasible if the robot moves by dxdy.
+  Therefore the points must move the other direction
+  */
   
   tf::Vector3 origin = waypoint.getOrigin();
-  origin[0] += dxdy[0];
-  origin[2] += dxdy[1];
+  origin[0] -= dxdy[0];
+  origin[2] -= dxdy[1];
   waypoint.setOrigin(origin);
 }
 
@@ -1632,7 +1636,7 @@ void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf:
   end.setOrigin(origin);
 }
 
-void AddWayPoint::printIKInformation(const double delta_h, const double h, const std::vector<bool> ik_result){
+void AddWayPoint::printIKInformation(const double delta_h, const double h, const std::vector<double> dxdy, const std::vector<bool> ik_result){
   int n = ik_result.size();
   int success_count = 0;
   bool success = true;
@@ -1645,7 +1649,7 @@ void AddWayPoint::printIKInformation(const double delta_h, const double h, const
       success = false;
     }
   }
-  ROS_INFO_STREAM(std::left<<std::setw(15)<<(delta_h + h)<<std::setw(15)<<std::left<<success<<std::setw(15)<<std::left<<100.0*success_count/(n*1.0));
+  ROS_INFO_STREAM(std::left<<std::setw(15)<<(delta_h + h)<<std::left<<std::setw(15)<<dxdy[0]<<std::left<<std::setw(15)<<dxdy[1]<<std::setw(15)<<std::left<<success<<std::setw(15)<<std::left<<100.0*success_count/(n*1.0));
 }
 
 void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
