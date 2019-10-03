@@ -50,6 +50,7 @@
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/SetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/Task.h>
@@ -103,6 +104,7 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
+			ros::ServiceClient set_objects_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
 			ros::ServiceClient set_tasks_proxy_;
   			ros::Publisher robot_goal_pub;
@@ -211,10 +213,13 @@ namespace moveit_cartesian_plan_plugin
 
 			// Helpers
 			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
+			bool setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj);
 
 			void ChangeStepSize();
 			void RobotIKPlanning();
 			void SetTool();
+			void SetMesh();
+
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );

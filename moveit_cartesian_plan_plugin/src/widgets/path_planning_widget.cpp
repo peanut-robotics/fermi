@@ -15,6 +15,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
+  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
   get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
   set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
 
@@ -116,6 +117,7 @@ void PathPlanningWidget::init()
   connect(ui_.btn_ik_planning, SIGNAL(clicked()), this, SLOT(RobotIKPlanning()));
 
   connect(ui_.set_tool_btn, SIGNAL(clicked()), this, SLOT(SetTool()));
+  connect(ui_.set_mesh_btn, SIGNAL(clicked()), this, SLOT(SetMesh()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1421,6 +1423,28 @@ bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string are
   return false;  
 }
 
+bool PathPlanningWidget::setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj){
+  // Set objects
+  peanut_cotyledon::SetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.objects.push_back(obj);
+
+  if (set_objects_proxy_.call(srv)){
+    if(srv.response.success){
+      ROS_INFO("Updated mesh name for object");
+      return true;
+    }
+    else{
+      ROS_INFO_STREAM("Unable to set mesh name for object.Error: "<<srv.response.message);
+    }
+  }
+  else{
+    ROS_ERROR("Could not call set objects service");
+    return false;
+  } 
+}
+
 void PathPlanningWidget::ChangeStepSize(){
   PathPlanningWidget::sendCartTrajectoryParamsFromUI();
 }
@@ -1487,6 +1511,29 @@ void PathPlanningWidget::SetTool(){
   }  
 
 }
+
+void PathPlanningWidget::SetMesh(){
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::Object desired_object;
+
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Set geometry name
+  desired_object.geometry_path.clear();
+  desired_object.geometry_path.push_back(mesh_name);
+
+  // Set object
+  setObjectHelper(floor_name, area_name, object_id, desired_object);
+}
+
 
 } // namespace widgets
 } // namespace moveit_cartesian_plan_plugin
