@@ -1545,23 +1545,42 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   ROS_INFO("IK Results");
   ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
   for(double& delta_h : delta_hs){
+    for(std::vector<double> dxdy : delta_xy){
     /*
     Apply transformation to all waypoints
     At the end, transformed_waypoint is in base_link frame
     */
     for(int i = 0; i < waypoints_pos.size(); i++){
-      //ROS_INFO_STREAM(  waypoints_pos.at(i).getOrigin()[0] << " "<< waypoints_pos.at(i).getOrigin()[1]<<" "<<  waypoints_pos.at(i).getOrigin()[2]);
+        // Apply elevator height transform
       addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
       transformed_waypoint = base_link_world_tf * transformed_waypoint;
-      transformed_waypoints[i] = transformed_waypoint;
-      tf::transformTFToEigen(transformed_waypoint, check_ik_point);
+
+        // Apply dxdy transform
+        AddDxdy(dxdy, transformed_waypoint);
+
       // Check IK
+        tf::transformTFToEigen(transformed_waypoint, check_ik_point);
       ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
-      //addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+        addIKValidityMarker(transformed_waypoint, ik_result[i], i);
     }
     printIKInformation(delta_h, h, ik_result);
   } 
+  } 
   
+}
+
+void AddWayPoint::AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint){
+  /*
+  Dxdy increments are applied to the waypoint that is in the base_link frame
+  From a top down view of the arm with the arm extending forward,
+  the base_link_x axis points to the right and base_link_z axis points forward along the arm
+  x = x + dx 
+  z = z + dy*/
+  
+  tf::Vector3 origin = waypoint.getOrigin();
+  origin[0] += dxdy[0];
+  origin[2] += dxdy[1];
+  waypoint.setOrigin(origin);
 }
 
 void AddWayPoint::GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals){

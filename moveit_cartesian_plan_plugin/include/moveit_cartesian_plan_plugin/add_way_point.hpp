@@ -129,7 +129,8 @@ private:
 	void GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
 	void GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals);
 	void GetDeltaXY(const double radius, const double angle_step, const double radius_step, std::vector<std::vector<double>>& delta_xy);
-
+	void AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint);
+	
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
