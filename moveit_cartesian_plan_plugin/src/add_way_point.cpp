@@ -1503,8 +1503,8 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
 
   // Mobile base parameters
   double radius = 0.5;
-  double angle_step = 10; // degrees
-  double radius_step = 0.1;
+  double angle_step = 90; // degrees
+  double radius_step = 0.25;
 
   // IK checking
   std::vector<bool> ik_result;
@@ -1541,30 +1541,33 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
     ik_result.push_back(false);
   }
   
+  delta_xy = {{0.2,0.2}, {0.1,0.1}};
+  delta_hs = {0, 0.1};
+
   // Loop through states
   ROS_INFO("IK Results");
   ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
   for(double& delta_h : delta_hs){
     for(std::vector<double> dxdy : delta_xy){
-    /*
-    Apply transformation to all waypoints
-    At the end, transformed_waypoint is in base_link frame
-    */
-    for(int i = 0; i < waypoints_pos.size(); i++){
+      /*
+      Apply transformation to all waypoints
+      At the end, transformed_waypoint is in base_link frame
+      */
+      for(int i = 0; i < waypoints_pos.size(); i++){
         // Apply elevator height transform
-      addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
-      transformed_waypoint = base_link_world_tf * transformed_waypoint;
+        addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
+        transformed_waypoint = base_link_world_tf * transformed_waypoint;
 
         // Apply dxdy transform
         AddDxdy(dxdy, transformed_waypoint);
 
-      // Check IK
+        // Check IK
         tf::transformTFToEigen(transformed_waypoint, check_ik_point);
-      ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+        ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
         addIKValidityMarker(transformed_waypoint, ik_result[i], i);
-    }
+      }
       printIKInformation(delta_h, h, dxdy, ik_result);
-  } 
+    }
   } 
   
 }
@@ -1580,7 +1583,7 @@ void AddWayPoint::AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoin
   Note the negative sign. This is because we want to check if the points are feasible if the robot moves by dxdy.
   Therefore the points must move the other direction
   */
-  
+
   tf::Vector3 origin = waypoint.getOrigin();
   origin[0] -= dxdy[0];
   origin[2] -= dxdy[1];

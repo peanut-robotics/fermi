@@ -1130,7 +1130,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>380</y>
+         <y>420</y>
          <width>161</width>
          <height>27</height>
         </rect>
@@ -1263,7 +1263,7 @@
         <string>Mobile Base Parameters</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit">
+      <widget class="QLineEdit" name="robot_ik_radius">
        <property name="geometry">
         <rect>
          <x>120</x>
@@ -1295,7 +1295,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>277</y>
+         <y>360</y>
          <width>111</width>
          <height>31</height>
         </rect>
@@ -1309,11 +1309,11 @@
         <string>Ang Step(Deg)</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit_2">
+      <widget class="QLineEdit" name="robot_ik_ang_step">
        <property name="geometry">
         <rect>
          <x>120</x>
-         <y>280</y>
+         <y>360</y>
          <width>51</width>
          <height>27</height>
         </rect>
@@ -1323,7 +1323,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>320</y>
+         <y>280</y>
          <width>111</width>
          <height>21</height>
         </rect>
@@ -1335,6 +1335,44 @@
        </property>
        <property name="text">
         <string>Radius Step</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="robot_ik_radius_step">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>280</y>
+         <width>51</width>
+         <height>27</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_18">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>320</y>
+         <width>121</width>
+         <height>29</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Min Ang(Deg)</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit">
+       <property name="geometry">
+        <rect>
+         <x>120</x>
+         <y>320</y>
+         <width>51</width>
+         <height>27</height>
+        </rect>
        </property>
       </widget>
      </widget>
