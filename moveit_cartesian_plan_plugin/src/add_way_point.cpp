@@ -152,7 +152,8 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
   connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
-  connect(widget_, SIGNAL(RobotIKPlanning_signal(const double, const double, const double, const double)), this, SLOT(RobotIKPlanning(const double, const double, const double, const double)));
+  connect(widget_, SIGNAL(RobotIKPlanning_signal(const double, const double, const double, const double, const double, const double, const double, const double, const double)),
+          this, SLOT(RobotIKPlanning(const double, const double, const double, const double, const double, const double, const double, const double, const double)));
 
   connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
 
@@ -1492,7 +1493,8 @@ void AddWayPoint::CheckAllPointsIK(){
   }
 }
 
-void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current){
+void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current,
+                                  const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step){
   ROS_INFO("Checking IK for robot states");
 
   // Elevator parameters
@@ -1500,11 +1502,6 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   double h_upper_limit = upper_limit;
   double h_step = step_size;
   double h = h_current;
-
-  // Mobile base parameters
-  double radius = 0.5;
-  double angle_step = 90; // degrees
-  double radius_step = 0.25;
 
   // IK checking
   std::vector<bool> ik_result;
@@ -1522,7 +1519,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   GetDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
 
   // Get position increments
-  GetDeltaXY(radius, angle_step, radius_step, delta_xy);
+  GetDeltaXY(radius, radius_step, max_angle, min_angle, angle_step, delta_xy);
 
   // Get baselink transform
   try{
@@ -1541,9 +1538,6 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
     ik_result.push_back(false);
   }
   
-  delta_xy = {{0.2,0.2}, {0.1,0.1}};
-  delta_hs = {0, 0.1};
-
   // Loop through states
   ROS_INFO("IK Results");
   ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
@@ -1601,13 +1595,13 @@ void AddWayPoint::GetDelta(const double min_val, const double max_val, const dou
   }
 }
 
-void AddWayPoint::GetDeltaXY(const double radius, const double angle_step, const double radius_step, std::vector<std::vector<double>>& delta_xy){
+void AddWayPoint::GetDeltaXY(const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step, std::vector<std::vector<double>>& delta_xy){
   // radius_step is in degrees
   std::vector<double> theta_steps, radius_steps;
   delta_xy.clear();
 
   // Get deltas
-  GetDelta(0.0, 3.14, DEG2RAD(angle_step), theta_steps);
+  GetDelta(DEG2RAD(min_angle), DEG2RAD(max_angle), DEG2RAD(angle_step), theta_steps);
   GetDelta(radius_step, radius, radius_step, radius_steps);
   
   // Find dx and dy

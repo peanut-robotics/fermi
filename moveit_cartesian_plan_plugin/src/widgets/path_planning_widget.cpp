@@ -1432,10 +1432,11 @@ void PathPlanningWidget::RobotIKPlanning(){
   double h = ui_.el_lbl->text().toDouble();
   double radius = ui_.robot_ik_radius->text().toDouble();
   double radius_step = ui_.robot_ik_radius_step->text().toDouble();
-  double min_angle  
-  double max_angle
-  double angle_step = ui_.robot_ik_angle_step->text().toDouble();
-  Q_EMIT RobotIKPlanning_signal(upper_limit, lower_limit, step_size, h, radius, radius_step, min_angle, max_angle, angle_step);
+  double max_angle = ui_.robot_ik_max_ang->text().toDouble();
+  double min_angle = ui_.robot_ik_min_ang->text().toDouble();
+  double angle_step = ui_.robot_ik_ang_step->text().toDouble();
+
+  Q_EMIT RobotIKPlanning_signal(upper_limit, lower_limit, step_size, h, radius, radius_step, max_angle, min_angle, angle_step);
 }
 
 } // namespace widgets

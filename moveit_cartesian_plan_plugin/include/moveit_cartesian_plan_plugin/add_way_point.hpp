@@ -128,7 +128,7 @@ private:
 	void printIKInformation(const double delta_h, const double h, const std::vector<double> dxdy, const std::vector<bool> ik_result);
 	void GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
 	void GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals);
-	void GetDeltaXY(const double radius, const double angle_step, const double radius_step, std::vector<std::vector<double>>& delta_xy);
+	void GetDeltaXY( const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step, std::vector<std::vector<double>>& delta_xy);
 	void AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint);
 	
 	//! Define a server for the Interactive Markers.
@@ -191,7 +191,8 @@ public Q_SLOTS:
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
 	// Check IK for all points
 	void CheckAllPointsIK();
-	void RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h);
+	void RobotIKPlanning(	const double upper_limit, const double lower_limit, const double step_size, const double h,
+							const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step);
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.
