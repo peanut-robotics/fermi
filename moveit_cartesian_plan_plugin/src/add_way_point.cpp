@@ -1312,7 +1312,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
 
 void AddWayPoint::transformPointsViz(std::string frame)
 {
-  ROS_INFO_STREAM("The frame we want the points in is " << frame << " the frame we are currently in is" << target_frame_);
+  ROS_DEBUG_STREAM("The frame we want the points in is " << frame << " the frame we are currently in is " << target_frame_);
   geometry_msgs::TransformStamped transformStamped;
   try
   {
@@ -1491,6 +1491,7 @@ void AddWayPoint::CheckAllPointsIK(){
   for(int i = 1; i <= waypoints_pos.size(); i++){
     Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, i);
   }
+  ROS_INFO("IK check complete");
 }
 
 void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current,

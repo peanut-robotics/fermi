@@ -214,6 +214,7 @@ namespace moveit_cartesian_plan_plugin
 
 			void ChangeStepSize();
 			void RobotIKPlanning();
+			void SetTool();
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
 		    void addPoint( const tf::Transform point_pos );

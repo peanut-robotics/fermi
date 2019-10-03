@@ -115,6 +115,7 @@ void PathPlanningWidget::init()
   connect(ui_.step_size_btn, SIGNAL(clicked()), this, SLOT(ChangeStepSize()));
   connect(ui_.btn_ik_planning, SIGNAL(clicked()), this, SLOT(RobotIKPlanning()));
 
+  connect(ui_.set_tool_btn, SIGNAL(clicked()), this, SLOT(SetTool()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1437,6 +1438,54 @@ void PathPlanningWidget::RobotIKPlanning(){
   double angle_step = ui_.robot_ik_ang_step->text().toDouble();
 
   Q_EMIT RobotIKPlanning_signal(upper_limit, lower_limit, step_size, h, radius, radius_step, max_angle, min_angle, angle_step);
+}
+
+void PathPlanningWidget::SetTool(){
+  std::string tool = ui_.tool_name_lbl->text().toStdString();
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
+  }
+
+  // Set tool
+  clean_path.tool_name = tool;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath set_path_srv;
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(set_path_srv.response.success){
+      ROS_INFO_STREAM("Updated tool name to "<<tool);
+    }
+    else{
+      ROS_ERROR_STREAM("Could not update tool. Error: "<<set_path_srv.response.message);
+      return;
+    }
+  }  
+
 }
 
 } // namespace widgets
