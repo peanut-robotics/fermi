@@ -72,7 +72,6 @@ void PathPlanningWidget::init()
   ui_.btnRemovePoint->setToolTip(tr("Remove a selected Way-Point"));
 
   connect(ui_.btnAddPoint, SIGNAL(clicked()), this, SLOT(pointAddUI()));
-  connect(ui_.btnRemovePoint, SIGNAL(clicked()), this, SLOT(pointDeletedUI()));
   connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(selectedPoint(const QModelIndex &, const QModelIndex &)));
   connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(treeViewDataChanged(const QModelIndex &, const QModelIndex &)));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
@@ -211,106 +210,7 @@ void PathPlanningWidget::pointAddUI()
 
   pointRange();
 }
-void PathPlanningWidget::pointDeletedUI()
-{
-  /*! Function for deleting a Way-Point from the RQT GUI.
-           The name of the Way-Point that needs to be deleted corresponds to the txtPointName line edit field.
-           This slot is connected to the Remove Point button signal. After completion of this function a signal is send to Inform the RViz enviroment that a Way-Point has been deleted from the RQT Widget.
-       */
-  std::string marker_name;
-  QString qtPointNr = ui_.txtPointName->text();
-  marker_name = qtPointNr.toUtf8().constData();
 
-  int marker_nr = atoi(marker_name.c_str());
-
-  if (strcmp(marker_name.c_str(), "0") != 0)
-  {
-    removeRow(marker_nr);
-    pointRange();
-    Q_EMIT pointDelUI_signal(marker_name.c_str());
-  }
-}
-void PathPlanningWidget::insertRow(const tf::Transform &point_pos, const int count)
-{
-  /*! Whenever we have a new Way-Point insereted either from the RViz or the RQT Widget the the TreeView needs to update the information and insert new row that corresponds to the new insered point.
-          This function takes care of parsing the data recieved from the RViz or the RQT widget and creating new row with the appropriate data format and Children. One for the position giving us the current position of the Way-Point in all the axis.
-          One child for the orientation giving us the Euler Angles of each axis.
-      */
-
-  ROS_DEBUG("inserting new row in the TreeView");
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  //convert the quartenion to roll pitch yaw angle
-  tf::Vector3 p = point_pos.getOrigin();
-  tfScalar rx, ry, rz;
-  point_pos.getBasis().getRPY(rx, ry, rz, 1);
-
-  if (count == 0)
-  {
-    model->insertRow(count, model->index(count, 0));
-
-    model->setData(model->index(0, 0, QModelIndex()), QVariant("add_point_button"), Qt::EditRole);
-    pointRange();
-  }
-  else
-  {
-
-    if (!model->insertRow(count, model->index(count, 0))) //&& count==0
-    {
-      return;
-    }
-    //set the strings of each axis of the position
-    QString pos_x = QString::number(p.x());
-    QString pos_y = QString::number(p.y());
-    QString pos_z = QString::number(p.z());
-
-    //repeat that with the orientation
-    QString orient_x = QString::number(RAD2DEG(rx));
-    QString orient_y = QString::number(RAD2DEG(ry));
-    QString orient_z = QString::number(RAD2DEG(rz));
-
-    model->setData(model->index(count, 0), QVariant(count), Qt::EditRole);
-
-    //add a child to the last inserted item. First add children in the treeview that
-    //are just telling the user that if he expands them he can see details about the position and orientation of each point
-    QModelIndex ind = model->index(count, 0);
-    model->insertRows(0, 2, ind);
-    QModelIndex chldind_pos = model->index(0, 0, ind);
-    QModelIndex chldind_orient = model->index(1, 0, ind);
-    model->setData(chldind_pos, QVariant("Position"), Qt::EditRole);
-    model->setData(chldind_orient, QVariant("Orientation"), Qt::EditRole);
-    //*****************************Set the children for the position**********************************************************
-    //now add information about each child separately. For the position we have coordinates for X,Y,Z axis.
-    //therefore we add 3 rows of information
-    model->insertRows(0, 3, chldind_pos);
-
-    //next we set up the data for each of these columns. First the names
-    model->setData(model->index(0, 0, chldind_pos), QVariant("X:"), Qt::EditRole);
-    model->setData(model->index(1, 0, chldind_pos), QVariant("Y:"), Qt::EditRole);
-    model->setData(model->index(2, 0, chldind_pos), QVariant("Z:"), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
-    model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
-    model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
-    //***************************************************************************************************************************
-
-    //*****************************Set the children for the orientation**********************************************************
-    //now we repeat everything again,similar as the position for adding the children for the orientation
-    model->insertRows(0, 3, chldind_orient);
-    //next we set up the data for each of these columns. First the names
-    model->setData(model->index(0, 0, chldind_orient), QVariant("Rx:"), Qt::EditRole);
-    model->setData(model->index(1, 0, chldind_orient), QVariant("Ry:"), Qt::EditRole);
-    model->setData(model->index(2, 0, chldind_orient), QVariant("Rz:"), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
-    model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
-    model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-    //****************************************************************************************************************************
-    pointRange();
-  }
-}
 void PathPlanningWidget::removeRow(int marker_nr)
 {
   /*! When the user deletes certain Way-Point either from the RViz or the RQT Widget the TreeView needs to delete that particular row and update the state of the TreeWidget.
@@ -1014,15 +914,10 @@ void PathPlanningWidget::transformPointsToFrame()
 }
 void PathPlanningWidget::clearAllPoints_slot()
 {
-  /*! Clear all the Way-Points from the RViz enviroment and the TreeView.
+  /*! Clear all the Way-Points from the RViz enviroment
       */
-  QAbstractItemModel *model = ui_.treeView->model();
-  model->removeRows(0, model->rowCount());
-  ui_.txtPointName->setText("0");
   tf::Transform t;
   t.setIdentity();
-  insertRow(t, 0);
-  pointRange();
 
   Q_EMIT clearAllPoints_signal();
 }

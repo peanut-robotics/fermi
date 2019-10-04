@@ -199,8 +199,6 @@ Q_SIGNALS:
 	void initRviz();
 	//! Signal for notifying that a way-point was deleted in the RViz enviroment.
 	void pointDeleteRviz(int marker_name_nr);
-	//! Signal for notifying that a way-point has been added from the RViz enviroment.
-	void addPointRViz(const tf::Transform& point_pos, const int count);
 	//! Signal that the way-point position has been updated by the user from the RViz enviroment.
 	void pointPoseUpdatedRViz(const tf::Transform& point_pos, const char* marker_name);
 	//! Signal for sending all the Way-Points.

@@ -133,12 +133,8 @@ namespace moveit_cartesian_plan_plugin
 		protected Q_SLOTS:
 			//! Initialize the TreeView with the User Interactive Marker.
 		    void initTreeView();
-		    //! Handle the event of a Way-Point deleted from the RQT UI.
-			void pointDeletedUI();
 			//! Handle the event of a Way-Point added from the RQT UI.
 			void pointAddUI();
-			//! Insert a row in the TreeView.
-			void insertRow(const tf::Transform& point_pos,const int count);
 			//! Remove a row in the TreeView.
 			void removeRow(int marker_nr);
 			//! Handle the event when a User updates the pose of a Way-Point through the RQT UI.
