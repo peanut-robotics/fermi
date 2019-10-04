@@ -744,28 +744,6 @@ void PathPlanningWidget::clearAllInteractiveBoxes_slot()
 {
   Q_EMIT clearAllInteractiveBoxes_signal();
 }
-void PathPlanningWidget::setAddPointUIStartPos(const std::string robot_model_frame, const tf::Transform end_effector)
-{
-  /*! Setting the default values for the Add New Way-Point from the RQT.
-            The information is taken to correspond to the pose of the loaded Robot end-effector.
-        */
-  tf::Vector3 p = end_effector.getOrigin();
-  tfScalar rx, ry, rz;
-  end_effector.getBasis().getRPY(rx, ry, rz, 1);
-
-  rx = RAD2DEG(rx);
-  ry = RAD2DEG(ry);
-  rz = RAD2DEG(rz);
-
-  //set up the starting values for the lineEdit of the positions
-  ui_.LineEditX->setText(QString::number(p.x()));
-  ui_.LineEditY->setText(QString::number(p.y()));
-  ui_.LineEditZ->setText(QString::number(p.z()));
-  //set up the starting values for the lineEdit of the orientations, in Euler angles
-  ui_.LineEditRx->setText(QString::number(rx));
-  ui_.LineEditRy->setText(QString::number(ry));
-  ui_.LineEditRz->setText(QString::number(rz));
-}
 
 void PathPlanningWidget::cartesianPathStartedHandler()
 {

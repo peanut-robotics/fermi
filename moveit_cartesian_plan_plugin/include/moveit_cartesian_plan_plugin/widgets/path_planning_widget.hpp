@@ -154,8 +154,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
 			void transformPointsToFrame();
-			//! Set the start pose of the User Interactive Marker to correspond to the loaded robot base frame.
-			void setAddPointUIStartPos(const std::string robot_model_frame,const tf::Transform end_effector);
 			//! Slot for disabling the TabWidged while Cartesian Path is executed.
 			void cartesianPathStartedHandler();
 			//! Slot for enabling the TabWidged after Cartesian Path is executed.
