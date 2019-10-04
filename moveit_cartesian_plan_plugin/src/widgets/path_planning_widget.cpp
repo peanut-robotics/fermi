@@ -49,8 +49,8 @@ void PathPlanningWidget::init()
   ui_.txtPointName->setText("0");
   //set up the default values for the MoveIt and Cartesian Path
   ui_.lnEdit_PlanTime->setText("5.0");
-  ui_.lnEdit_StepSize->setText("0.01");
-  ui_.lnEdit_JmpThresh->setText("0.0");
+  ui_.lnEdit_StepSize->setText("0.03");
+  ui_.lnEdit_JmpThresh->setText("1.5");
 
   //set validators for the entries
   ui_.lnEdit_PlanTime->setValidator(new QDoubleValidator(1.0, 100.0, 2, ui_.lnEdit_PlanTime));
