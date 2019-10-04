@@ -1,5 +1,5 @@
 <library path="lib/libmoveit_cartesian_plan_plugin">
-  <class name="moveit_cartesian_plan_plugin/MoveIt Cartesian Plan Plug-in"
+  <class name="moveit_cartesian_plan_plugin/Peanut Teaching Tool"
          type="moveit_cartesian_plan_plugin::AddWayPoint"
          base_class_type="rviz::Panel">
     <description>
