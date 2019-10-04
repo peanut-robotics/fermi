@@ -21,7 +21,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="0" column="1">
     <widget class="QTabWidget" name="tabWidget">
      <property name="font">
       <font>
@@ -29,7 +29,7 @@
       </font>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="Home">
       <attribute name="title">
@@ -351,9 +351,9 @@
       <widget class="QPushButton" name="targetPoint">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>410</y>
-         <width>261</width>
+         <x>350</x>
+         <y>60</y>
+         <width>251</width>
          <height>31</height>
         </rect>
        </property>
@@ -364,7 +364,7 @@
       <widget class="QLabel" name="label_4">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>20</x>
          <y>56</y>
          <width>151</width>
          <height>31</height>
@@ -384,18 +384,18 @@
       <widget class="QLineEdit" name="lnEdit_PlanTime">
        <property name="geometry">
         <rect>
-         <x>160</x>
+         <x>170</x>
          <y>60</y>
          <width>101</width>
-         <height>27</height>
+         <height>31</height>
         </rect>
        </property>
       </widget>
       <widget class="QCheckBox" name="chk_AllowReplanning">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>300</y>
+         <x>20</x>
+         <y>330</y>
          <width>151</width>
          <height>22</height>
         </rect>
@@ -412,9 +412,9 @@
       <widget class="QLabel" name="lbl_cartPathCompleted">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>650</y>
-         <width>261</width>
+         <x>350</x>
+         <y>260</y>
+         <width>251</width>
          <height>31</height>
         </rect>
        </property>
@@ -428,7 +428,9 @@
        </property>
        <property name="styleSheet">
         <string notr="true">border-style: outset;
-															border-width: 2px;
+															box-color: white;
+															border-radius: 4px;
+															border-width: 1px;
 															border-color :rgb(48, 48, 48)</string>
        </property>
        <property name="text">
@@ -438,9 +440,9 @@
       <widget class="QPushButton" name="btn_ClearAllBoxes">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>550</y>
-         <width>261</width>
+         <x>350</x>
+         <y>180</y>
+         <width>251</width>
          <height>31</height>
         </rect>
        </property>
@@ -451,9 +453,9 @@
       <widget class="QPushButton" name="playSubset_btn">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>456</y>
-         <width>261</width>
+         <x>350</x>
+         <y>100</y>
+         <width>251</width>
          <height>31</height>
         </rect>
        </property>
@@ -464,8 +466,8 @@
       <widget class="QPushButton" name="prev_btn">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>500</y>
+         <x>350</x>
+         <y>140</y>
          <width>71</width>
          <height>31</height>
         </rect>
@@ -477,9 +479,9 @@
       <widget class="QPushButton" name="next_btn">
        <property name="geometry">
         <rect>
-         <x>209</x>
-         <y>500</y>
-         <width>61</width>
+         <x>529</x>
+         <y>140</y>
+         <width>71</width>
          <height>31</height>
         </rect>
        </property>
@@ -490,38 +492,42 @@
       <widget class="QLineEdit" name="start_idx">
        <property name="geometry">
         <rect>
-         <x>86</x>
-         <y>500</y>
-         <width>51</width>
+         <x>430</x>
+         <y>140</y>
+         <width>41</width>
          <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true">border-style: outset;
-											border-width: 2px;
-											border-color :rgb(48, 48, 48)</string>
+															box-color: white;
+															border-radius: 4px;
+															border-width: 1px;
+															border-color :rgb(48, 48, 48)</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="stop_idx">
        <property name="geometry">
         <rect>
-         <x>150</x>
-         <y>500</y>
-         <width>51</width>
+         <x>480</x>
+         <y>140</y>
+         <width>41</width>
          <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true">border-style: outset;
-											border-width: 2px;
-											border-color :rgb(48, 48, 48)</string>
+															box-color: white;
+															border-radius: 4px;
+															border-width: 1px;
+															border-color :rgb(48, 48, 48)</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_5">
        <property name="geometry">
         <rect>
-         <x>50</x>
-         <y>380</y>
+         <x>390</x>
+         <y>31</y>
          <width>161</width>
          <height>20</height>
         </rect>
@@ -540,9 +546,9 @@
       <widget class="QPushButton" name="btn_ClearAllPoints">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>600</y>
-         <width>264</width>
+         <x>350</x>
+         <y>220</y>
+         <width>251</width>
          <height>31</height>
         </rect>
        </property>
@@ -554,7 +560,7 @@
        <property name="geometry">
         <rect>
          <x>410</x>
-         <y>30</y>
+         <y>360</y>
          <width>131</width>
          <height>20</height>
         </rect>
@@ -573,9 +579,9 @@
       <widget class="QPushButton" name="stop_all_btn">
        <property name="geometry">
         <rect>
-         <x>380</x>
-         <y>60</y>
-         <width>191</width>
+         <x>350</x>
+         <y>390</y>
+         <width>251</width>
          <height>100</height>
         </rect>
        </property>
@@ -586,10 +592,10 @@
       <widget class="QPushButton" name="clear_faults_btn">
        <property name="geometry">
         <rect>
-         <x>380</x>
-         <y>210</y>
-         <width>191</width>
-         <height>27</height>
+         <x>350</x>
+         <y>540</y>
+         <width>251</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
@@ -599,10 +605,10 @@
       <widget class="QPushButton" name="start_controller_btn">
        <property name="geometry">
         <rect>
-         <x>380</x>
-         <y>170</y>
-         <width>191</width>
-         <height>27</height>
+         <x>350</x>
+         <y>500</y>
+         <width>251</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
@@ -612,8 +618,8 @@
       <widget class="QCheckBox" name="chk_FixStartState">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>280</y>
+         <x>20</x>
+         <y>300</y>
          <width>131</width>
          <height>22</height>
         </rect>
@@ -630,10 +636,10 @@
       <widget class="QPushButton" name="step_size_btn">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>330</y>
+         <x>20</x>
+         <y>360</y>
          <width>251</width>
-         <height>29</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="font">
@@ -648,10 +654,10 @@
       <widget class="QLineEdit" name="lnEdit_StepSize">
        <property name="geometry">
         <rect>
-         <x>160</x>
+         <x>170</x>
          <y>100</y>
          <width>101</width>
-         <height>27</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -661,8 +667,8 @@
       <widget class="QLabel" name="label_frame_name">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>220</y>
+         <x>20</x>
+         <y>225</y>
          <width>101</width>
          <height>21</height>
         </rect>
@@ -679,10 +685,10 @@
       <widget class="QLineEdit" name="lnEdit_JmpThresh">
        <property name="geometry">
         <rect>
-         <x>160</x>
+         <x>170</x>
          <y>140</y>
          <width>101</width>
-         <height>27</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -695,10 +701,10 @@
       <widget class="QLabel" name="robot_model_frame">
        <property name="geometry">
         <rect>
-         <x>160</x>
+         <x>170</x>
          <y>220</y>
          <width>101</width>
-         <height>26</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -712,9 +718,9 @@
       <widget class="QCheckBox" name="chk_AvoidColl">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>260</y>
-         <width>131</width>
+         <x>20</x>
+         <y>270</y>
+         <width>141</width>
          <height>22</height>
         </rect>
        </property>
@@ -730,7 +736,7 @@
       <widget class="QLabel" name="label_6">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>20</x>
          <y>143</y>
          <width>151</width>
          <height>21</height>
@@ -748,10 +754,10 @@
       <widget class="QLabel" name="label_8">
        <property name="geometry">
         <rect>
-         <x>30</x>
-         <y>30</y>
+         <x>40</x>
+         <y>31</y>
          <width>211</width>
-         <height>21</height>
+         <height>20</height>
         </rect>
        </property>
        <property name="font">
@@ -768,18 +774,18 @@
       <widget class="QComboBox" name="combo_planGroup">
        <property name="geometry">
         <rect>
-         <x>161</x>
+         <x>171</x>
          <y>180</y>
          <width>101</width>
-         <height>27</height>
+         <height>31</height>
         </rect>
        </property>
       </widget>
       <widget class="QLabel" name="label_9">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>180</y>
+         <x>20</x>
+         <y>184</y>
          <width>111</width>
          <height>21</height>
         </rect>
@@ -797,7 +803,7 @@
       <widget class="QLabel" name="label_23">
        <property name="geometry">
         <rect>
-         <x>10</x>
+         <x>20</x>
          <y>105</y>
          <width>101</width>
          <height>17</height>
@@ -1487,227 +1493,6 @@
         <string>General IK Checking</string>
        </property>
       </widget>
-     </widget>
-     <widget class="QWidget" name="PointsTree">
-      <attribute name="title">
-       <string>Points Tree</string>
-      </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="7" column="0" colspan="2">
-        <widget class="QGroupBox" name="newPointLayout">
-         <property name="autoFillBackground">
-          <bool>false</bool>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(226, 226, 226)</string>
-         </property>
-         <layout class="QFormLayout" name="FormLayoutObjectPose_2">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-          </property>
-          <item row="0" column="0">
-           <widget class="QGroupBox" name="groupBox">
-            <property name="font">
-             <font>
-              <pointsize>12</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="title">
-             <string>Add New Way-Point</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <spacer name="verticalSpacer_4">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Set Position/Orientation</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="xLabel">
-            <property name="text">
-             <string>X (m)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QLineEdit" name="LineEditX">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="yLabel">
-            <property name="text">
-             <string>Y (m)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="QLineEdit" name="LineEditY">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="0">
-           <widget class="QLabel" name="zLabel">
-            <property name="text">
-             <string>Z (m)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="1">
-           <widget class="QLineEdit" name="LineEditZ">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="0">
-           <widget class="QLabel" name="rxLabel">
-            <property name="text">
-             <string>Rx (deg)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="9" column="1">
-           <widget class="QLineEdit" name="LineEditRx">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="10" column="0">
-           <widget class="QLabel" name="ryLabel">
-            <property name="text">
-             <string>Ry (deg)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="10" column="1">
-           <widget class="QLineEdit" name="LineEditRy">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="12" column="0">
-           <widget class="QLabel" name="rzLabel">
-            <property name="text">
-             <string>Rz (deg)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="12" column="1">
-           <widget class="QLineEdit" name="LineEditRz">
-            <property name="styleSheet">
-             <string notr="true">border-style: outset;
-                border-width: 2px;
-                border-color :rgb(48, 48, 48)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="13" column="0">
-           <widget class="QPushButton" name="btnAddPoint">
-            <property name="text">
-             <string>Add Point</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Path Way Points</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" rowspan="4" colspan="3">
-        <widget class="QTreeView" name="treeView">
-         <property name="rootIsDecorated">
-          <bool>true</bool>
-         </property>
-         <property name="uniformRowHeights">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="2">
-        <layout class="QGridLayout" name="gridLayout_3">
-         <item row="4" column="0">
-          <widget class="QLineEdit" name="txtPointName"/>
-         </item>
-         <item row="5" column="0">
-          <widget class="QPushButton" name="btnRemovePoint">
-           <property name="text">
-            <string>Remove Point</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Point</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="minimumSize">
-            <size>
-             <width>262</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>12</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="title">
-            <string>Planning Group</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-      <zorder>label</zorder>
-      <zorder>treeView</zorder>
-      <zorder>newPointLayout</zorder>
-      <zorder></zorder>
      </widget>
     </widget>
    </item>
