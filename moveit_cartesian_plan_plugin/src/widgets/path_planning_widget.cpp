@@ -838,6 +838,12 @@ void PathPlanningWidget::loadPointsObject()
 }
 
 void PathPlanningWidget::savePoints(){
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save Path?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::No){
+    return;
+  }
+
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
   }
