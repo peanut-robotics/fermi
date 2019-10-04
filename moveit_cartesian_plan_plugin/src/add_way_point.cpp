@@ -115,7 +115,6 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(addPoint(tf::Transform)), this, SLOT(addPointFromUI(tf::Transform)));
   connect(widget_, SIGNAL(pointDelUI_signal(std::string)), this, SLOT(pointDeleted(std::string)));
   connect(widget_, SIGNAL(duplicateWaypoint_signal(std::string)), this, SLOT(duplicateWaypoint(std::string)));
-  connect(this, SIGNAL(pointPoseUpdatedRViz(const tf::Transform &, const char *)), widget_, SLOT(pointPosUpdated_slot(const tf::Transform &, const char *)));
   connect(widget_, SIGNAL(pointPosUpdated_signal(const tf::Transform &, const char *)), this, SLOT(pointPoseUpdated(const tf::Transform &, const char *)));
 
   connect(widget_, SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool, std::string, bool)), path_generate, SLOT(setCartParams(double, double, double, bool, bool, std::string, bool)));

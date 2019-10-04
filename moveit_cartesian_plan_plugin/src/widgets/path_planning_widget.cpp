@@ -72,8 +72,6 @@ void PathPlanningWidget::init()
   ui_.btnRemovePoint->setToolTip(tr("Remove a selected Way-Point"));
 
   connect(ui_.btnAddPoint, SIGNAL(clicked()), this, SLOT(pointAddUI()));
-  connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(selectedPoint(const QModelIndex &, const QModelIndex &)));
-  connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(treeViewDataChanged(const QModelIndex &, const QModelIndex &)));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_slot()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(playUntilPointBtn()));
@@ -176,20 +174,7 @@ void PathPlanningWidget::initTreeView()
   //update the validator for the lineEdit Point
   pointRange();
 }
-void PathPlanningWidget::selectedPoint(const QModelIndex &current, const QModelIndex &previous)
-{
-  /*! Get the selected point from the TreeView.
-          This is used for updating the information of the lineEdit which informs gives the number of the currently selected Way-Point.
-      */
-  ROS_INFO_STREAM("Selected Index Changed" << current.row());
 
-  if (current.parent() == QModelIndex())
-    ui_.txtPointName->setText(QString::number(current.row()));
-  else if ((current.parent() != QModelIndex()) && (current.parent().parent() == QModelIndex()))
-    ui_.txtPointName->setText(QString::number(current.parent().row()));
-  else
-    ui_.txtPointName->setText(QString::number(current.parent().parent().row()));
-}
 void PathPlanningWidget::pointAddUI()
 {
   /*! Function for adding new Way-Point from the RQT Widget.
@@ -211,107 +196,6 @@ void PathPlanningWidget::pointAddUI()
   pointRange();
 }
 
-void PathPlanningWidget::pointPosUpdated_slot(const tf::Transform &point_pos, const char *marker_name)
-{
-  /*! When the user updates the position of the Way-Point or the User Interactive Marker, the information in the TreeView also needs to be updated to correspond to the current pose of the InteractiveMarkers.
-
-        */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  tf::Vector3 p = point_pos.getOrigin();
-  tfScalar rx, ry, rz;
-  point_pos.getBasis().getRPY(rx, ry, rz, 1);
-
-  rx = RAD2DEG(rx);
-  ry = RAD2DEG(ry);
-  rz = RAD2DEG(rz);
-
-  //set the strings of each axis of the position
-  QString pos_x = QString::number(p.x());
-  QString pos_y = QString::number(p.y());
-  QString pos_z = QString::number(p.z());
-
-  //repeat that with the orientation
-  QString orient_x = QString::number(rx);
-  QString orient_y = QString::number(ry);
-  QString orient_z = QString::number(rz);
-
-  if ((strcmp(marker_name, "add_point_button") == 0) || (atoi(marker_name) == 0))
-  {
-    QString pos_s;
-    pos_s = pos_x + "; " + pos_y + "; " + pos_z + ";";
-    QString orient_s;
-    orient_s = orient_x + "; " + orient_y + "; " + orient_z + ";";
-
-    model->setData(model->index(0, 0), QVariant("add_point_button"), Qt::EditRole);
-    model->setData(model->index(0, 1), QVariant(pos_s), Qt::EditRole);
-    model->setData(model->index(0, 2), QVariant(orient_s), Qt::EditRole);
-  }
-  else
-  {
-
-    int changed_marker = atoi(marker_name);
-    //**********************update the positions and orientations of the children as well***********************************************************************************************
-    QModelIndex ind = model->index(changed_marker, 0);
-    QModelIndex chldind_pos = model->index(0, 0, ind);
-    QModelIndex chldind_orient = model->index(1, 0, ind);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
-    model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
-    model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
-    model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
-    model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-    //*****************************************************************************************************************************************************************************************
-  }
-}
-
-void PathPlanningWidget::treeViewDataChanged(const QModelIndex &index, const QModelIndex &index2)
-{
-  /*! This function handles the user interactions in the TreeView Widget.
-          The function captures an event of data change and updates the information in the TreeView and the RViz enviroment.
-      */
-  qRegisterMetaType<std::string>("std::string");
-  QAbstractItemModel *model = ui_.treeView->model();
-  QVariant index_data;
-  ROS_DEBUG_STREAM("Data changed in index:" << index.row() << "parent row" << index2.parent().row());
-
-  if ((index.parent() == QModelIndex()) && (index.row() != 0))
-  {
-  }
-  else if (((index.parent().parent()) != QModelIndex()) && (index.parent().parent().row() != 0))
-  {
-    QModelIndex main_root = index.parent().parent();
-    std::stringstream s;
-    s << main_root.row();
-    std::string temp_str = s.str();
-
-    QModelIndex chldind_pos = model->index(0, 0, main_root.sibling(main_root.row(), 0));
-    QModelIndex chldind_orient = model->index(1, 0, main_root.sibling(main_root.row(), 0));
-
-    QVariant pos_x = model->data(model->index(0, 1, chldind_pos), Qt::EditRole);
-    QVariant pos_y = model->data(model->index(1, 1, chldind_pos), Qt::EditRole);
-    QVariant pos_z = model->data(model->index(2, 1, chldind_pos), Qt::EditRole);
-
-    QVariant orient_x = model->data(model->index(0, 2, chldind_orient), Qt::EditRole);
-    QVariant orient_y = model->data(model->index(1, 2, chldind_orient), Qt::EditRole);
-    QVariant orient_z = model->data(model->index(2, 2, chldind_orient), Qt::EditRole);
-
-    tf::Vector3 p(pos_x.toDouble(), pos_y.toDouble(), pos_z.toDouble());
-
-    tfScalar rx, ry, rz;
-    rx = DEG2RAD(orient_x.toDouble());
-    ry = DEG2RAD(orient_y.toDouble());
-    rz = DEG2RAD(orient_z.toDouble());
-
-    tf::Transform point_pos = tf::Transform(tf::createQuaternionFromRPY(rx, ry, rz), p);
-
-    Q_EMIT pointPosUpdated_signal(point_pos, temp_str.c_str());
-  }
-}
 void PathPlanningWidget::parseWayPointBtn_slot()
 {
   /*! Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.

@@ -135,12 +135,6 @@ namespace moveit_cartesian_plan_plugin
 		    void initTreeView();
 			//! Handle the event of a Way-Point added from the RQT UI.
 			void pointAddUI();
-			//! Handle the event when a User updates the pose of a Way-Point through the RQT UI.
-			void pointPosUpdated_slot( const tf::Transform& point_pos, const char* marker_name);
-			//! Get the selected Way-Point from the RQT UI.
-			void selectedPoint(const QModelIndex& current, const QModelIndex& previous);
-			//! Handle the even when the data in the TreeView has been changed.
-			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
 			//! Slot for when the play until button is pressed
 			void playUntilPointBtn();
 			void goToPrev();
