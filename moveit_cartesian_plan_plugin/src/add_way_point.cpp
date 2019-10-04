@@ -117,7 +117,6 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(duplicateWaypoint_signal(std::string)), this, SLOT(duplicateWaypoint(std::string)));
   connect(this, SIGNAL(pointPoseUpdatedRViz(const tf::Transform &, const char *)), widget_, SLOT(pointPosUpdated_slot(const tf::Transform &, const char *)));
   connect(widget_, SIGNAL(pointPosUpdated_signal(const tf::Transform &, const char *)), this, SLOT(pointPoseUpdated(const tf::Transform &, const char *)));
-  connect(this, SIGNAL(pointDeleteRviz(int)), widget_, SLOT(removeRow(int)));
 
   connect(widget_, SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool, std::string, bool)), path_generate, SLOT(setCartParams(double, double, double, bool, bool, std::string, bool)));
 
@@ -536,8 +535,6 @@ void AddWayPoint::processFeedback(const visualization_msgs::InteractiveMarkerFee
 
     if (menu_item == 1)
     {
-      int marker_nr = atoi(marker_name.c_str());
-      Q_EMIT pointDeleteRviz(marker_nr);
       pointDeleted(marker_name);
     }
     else if (menu_item == 2)

@@ -211,25 +211,6 @@ void PathPlanningWidget::pointAddUI()
   pointRange();
 }
 
-void PathPlanningWidget::removeRow(int marker_nr)
-{
-  /*! When the user deletes certain Way-Point either from the RViz or the RQT Widget the TreeView needs to delete that particular row and update the state of the TreeWidget.
-      */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  model->removeRow(marker_nr, QModelIndex());
-  ROS_INFO_STREAM("Deleting point : " << marker_nr);
-
-  for (int i = marker_nr; i <= model->rowCount(); ++i)
-  {
-    model->setData(model->index((i - 1), 0, QModelIndex()), QVariant((i - 1)), Qt::EditRole);
-  }
-  //check how to properly set the selection
-  ui_.treeView->selectionModel()->setCurrentIndex(model->index((model->rowCount() - 1), 0, QModelIndex()), QItemSelectionModel::ClearAndSelect);
-  ui_.txtPointName->setText(QString::number(model->rowCount() - 1));
-  pointRange();
-}
-
 void PathPlanningWidget::pointPosUpdated_slot(const tf::Transform &point_pos, const char *marker_name)
 {
   /*! When the user updates the position of the Way-Point or the User Interactive Marker, the information in the TreeView also needs to be updated to correspond to the current pose of the InteractiveMarkers.
