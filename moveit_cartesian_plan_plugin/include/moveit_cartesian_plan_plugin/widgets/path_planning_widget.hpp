@@ -131,22 +131,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Checks the range of the points.
 			void pointRange();
 		protected Q_SLOTS:
-			//! Initialize the TreeView with the User Interactive Marker.
-		    void initTreeView();
-		    //! Handle the event of a Way-Point deleted from the RQT UI.
-			void pointDeletedUI();
-			//! Handle the event of a Way-Point added from the RQT UI.
-			void pointAddUI();
-			//! Insert a row in the TreeView.
-			void insertRow(const tf::Transform& point_pos,const int count);
-			//! Remove a row in the TreeView.
-			void removeRow(int marker_nr);
-			//! Handle the event when a User updates the pose of a Way-Point through the RQT UI.
-			void pointPosUpdated_slot( const tf::Transform& point_pos, const char* marker_name);
-			//! Get the selected Way-Point from the RQT UI.
-			void selectedPoint(const QModelIndex& current, const QModelIndex& previous);
-			//! Handle the even when the data in the TreeView has been changed.
-			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
 			//! Slot for when the play until button is pressed
 			void playUntilPointBtn();
 			void goToPrev();
@@ -170,8 +154,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
 			void transformPointsToFrame();
-			//! Set the start pose of the User Interactive Marker to correspond to the loaded robot base frame.
-			void setAddPointUIStartPos(const std::string robot_model_frame,const tf::Transform end_effector);
 			//! Slot for disabling the TabWidged while Cartesian Path is executed.
 			void cartesianPathStartedHandler();
 			//! Slot for enabling the TabWidged after Cartesian Path is executed.

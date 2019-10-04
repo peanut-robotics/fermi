@@ -110,15 +110,10 @@ void AddWayPoint::onInitialize()
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
-  connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), widget_, SLOT(setAddPointUIStartPos(const std::string, const tf::Transform)));
-
   connect(widget_, SIGNAL(addPoint(tf::Transform)), this, SLOT(addPointFromUI(tf::Transform)));
   connect(widget_, SIGNAL(pointDelUI_signal(std::string)), this, SLOT(pointDeleted(std::string)));
   connect(widget_, SIGNAL(duplicateWaypoint_signal(std::string)), this, SLOT(duplicateWaypoint(std::string)));
-  connect(this, SIGNAL(addPointRViz(const tf::Transform &, const int)), widget_, SLOT(insertRow(const tf::Transform &, const int)));
-  connect(this, SIGNAL(pointPoseUpdatedRViz(const tf::Transform &, const char *)), widget_, SLOT(pointPosUpdated_slot(const tf::Transform &, const char *)));
   connect(widget_, SIGNAL(pointPosUpdated_signal(const tf::Transform &, const char *)), this, SLOT(pointPoseUpdated(const tf::Transform &, const char *)));
-  connect(this, SIGNAL(pointDeleteRviz(int)), widget_, SLOT(removeRow(int)));
 
   connect(widget_, SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool, std::string, bool)), path_generate, SLOT(setCartParams(double, double, double, bool, bool, std::string, bool)));
 
@@ -548,8 +543,6 @@ void AddWayPoint::processFeedback(const visualization_msgs::InteractiveMarkerFee
 
     if (menu_item == 1)
     {
-      int marker_nr = atoi(marker_name.c_str());
-      Q_EMIT pointDeleteRviz(marker_nr);
       pointDeleted(marker_name);
     }
     else if (menu_item == 2)
@@ -761,7 +754,6 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
     count = count_arrow;
 
     waypoints_pos.push_back(point_pos);
-    Q_EMIT addPointRViz(point_pos, count);
   }
   /*! Check if we have points in the same position in the scene. If we do, do not add one and notify the RQT Widget so it can also add it to the TreeView.
         */
@@ -773,7 +765,6 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
     waypoints_pos.push_back(point_pos);
 
       ROS_DEBUG_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
-      Q_EMIT addPointRViz(point_pos,count);
     }
     else
     {
