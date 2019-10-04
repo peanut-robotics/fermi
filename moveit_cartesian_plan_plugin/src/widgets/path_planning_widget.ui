@@ -29,7 +29,7 @@
       </font>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="Home">
       <attribute name="title">
@@ -213,7 +213,7 @@
        <property name="geometry">
         <rect>
          <x>240</x>
-         <y>70</y>
+         <y>80</y>
          <width>121</width>
          <height>17</height>
         </rect>
@@ -242,8 +242,14 @@
          <height>31</height>
         </rect>
        </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The name of the mesh file located in the peanut_datasets_pkg/meshes folder. Eg: vanity_sink_peanut_office.dae&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="whatsThis">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the name of the mesh file located in the /home/peanut/Documents/peanut_ws/src/peanut_datasets/peanut_datasets_pkg folder. Eg: vanity_sink_peanut_office.dae&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="text">
-        <string>Mesh</string>
+        <string>Set Mesh</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="tool_name_lbl">
@@ -411,7 +417,7 @@
        <property name="geometry">
         <rect>
          <x>170</x>
-         <y>10</y>
+         <y>20</y>
          <width>291</width>
          <height>41</height>
         </rect>
@@ -503,7 +509,7 @@
        <property name="geometry">
         <rect>
          <x>380</x>
-         <y>260</y>
+         <y>262</y>
          <width>251</width>
          <height>31</height>
         </rect>
@@ -558,12 +564,12 @@
         <rect>
          <x>380</x>
          <y>140</y>
-         <width>71</width>
+         <width>72</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
-        <string>Prev</string>
+        <string>Previous</string>
        </property>
       </widget>
       <widget class="QPushButton" name="next_btn">
@@ -571,7 +577,7 @@
         <rect>
          <x>559</x>
          <y>140</y>
-         <width>71</width>
+         <width>72</width>
          <height>31</height>
         </rect>
        </property>
@@ -671,7 +677,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Update parameters</string>
+        <string>Update Parameters</string>
        </property>
       </widget>
       <widget class="QLineEdit" name="lnEdit_StepSize">
@@ -797,9 +803,9 @@
       <widget class="QComboBox" name="combo_planGroup">
        <property name="geometry">
         <rect>
-         <x>181</x>
+         <x>180</x>
          <y>179</y>
-         <width>101</width>
+         <width>102</width>
          <height>31</height>
         </rect>
        </property>
