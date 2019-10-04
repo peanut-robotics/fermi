@@ -46,7 +46,6 @@ void PathPlanningWidget::init()
       */
   ui_.setupUi(this);
 
-  ui_.txtPointName->setText("0");
   //set up the default values for the MoveIt and Cartesian Path
   ui_.lnEdit_PlanTime->setText("5.0");
   ui_.lnEdit_StepSize->setText("0.01");
@@ -66,8 +65,6 @@ void PathPlanningWidget::init()
   headers << tr("Point") << tr("Position (m)") << tr("Orientation (deg)");
   ui_.btn_LoadPath->setToolTip(tr("Load Way-Points from a file"));
   ui_.btn_SavePath->setToolTip(tr("Save Way-Points to a file"));
-  ui_.btnAddPoint->setToolTip(tr("Add a new Way-Point"));
-  ui_.btnRemovePoint->setToolTip(tr("Remove a selected Way-Point"));
 
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_slot()));
