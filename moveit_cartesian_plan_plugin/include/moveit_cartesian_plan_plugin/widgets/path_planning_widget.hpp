@@ -131,10 +131,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Checks the range of the points.
 			void pointRange();
 		protected Q_SLOTS:
-			//! Initialize the TreeView with the User Interactive Marker.
-		    void initTreeView();
-			//! Handle the event of a Way-Point added from the RQT UI.
-			void pointAddUI();
 			//! Slot for when the play until button is pressed
 			void playUntilPointBtn();
 			void goToPrev();

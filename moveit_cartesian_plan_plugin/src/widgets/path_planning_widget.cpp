@@ -64,14 +64,11 @@ void PathPlanningWidget::init()
 
   QStringList headers;
   headers << tr("Point") << tr("Position (m)") << tr("Orientation (deg)");
-  PointTreeModel *model = new PointTreeModel(headers, "add_point_button");
-  ui_.treeView->setModel(model);
   ui_.btn_LoadPath->setToolTip(tr("Load Way-Points from a file"));
   ui_.btn_SavePath->setToolTip(tr("Save Way-Points to a file"));
   ui_.btnAddPoint->setToolTip(tr("Add a new Way-Point"));
   ui_.btnRemovePoint->setToolTip(tr("Remove a selected Way-Point"));
 
-  connect(ui_.btnAddPoint, SIGNAL(clicked()), this, SLOT(pointAddUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_slot()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(playUntilPointBtn()));
@@ -150,50 +147,6 @@ void PathPlanningWidget::sendCartTrajectoryParamsFromUI()
   std::string robot_model_frame = ui_.robot_model_frame->text().toStdString();
 
   Q_EMIT cartesianPathParamsFromUI_signal(plan_time_, cart_step_size_, cart_jump_thresh_, moveit_replan_, avoid_collisions_, robot_model_frame, fix_start_state_);
-}
-void PathPlanningWidget::pointRange()
-{
-  /*! Get the current range of points from the TreeView.
-          This is essential for setting up the number of the item that should be run next.
-          Dealing with the data in the TreeView
-      */
-  QAbstractItemModel *model = ui_.treeView->model();
-  int count = model->rowCount() - 1;
-  ui_.txtPointName->setValidator(new QIntValidator(1, count, ui_.txtPointName));
-}
-
-void PathPlanningWidget::initTreeView()
-{
-  /*! Initialize the Qt TreeView and set the initial value of the User Interaction arrow.
-
-       */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  model->setData(model->index(0, 0, QModelIndex()), QVariant("add_point_button"), Qt::EditRole);
-
-  //update the validator for the lineEdit Point
-  pointRange();
-}
-
-void PathPlanningWidget::pointAddUI()
-{
-  /*! Function for adding new Way-Point from the RQT Widget.
-        The user can set the position and orientation of the Way-Point by entering their values in the LineEdit fields.
-        This function is connected to the AddPoint button click() signal and sends the addPoint(point_pos) to inform the RViz enviroment that a new Way-Point has been added.
-        */
-  double x, y, z, rx, ry, rz;
-  x = ui_.LineEditX->text().toDouble();
-  y = ui_.LineEditY->text().toDouble();
-  z = ui_.LineEditZ->text().toDouble();
-  rx = DEG2RAD(ui_.LineEditRx->text().toDouble());
-  ry = DEG2RAD(ui_.LineEditRy->text().toDouble());
-  rz = DEG2RAD(ui_.LineEditRz->text().toDouble());
-
-  // // create transform
-  tf::Transform point_pos(tf::Transform(tf::createQuaternionFromRPY(rx, ry, rz), tf::Vector3(x, y, z)));
-  Q_EMIT addPoint(point_pos);
-
-  pointRange();
 }
 
 void PathPlanningWidget::parseWayPointBtn_slot()
