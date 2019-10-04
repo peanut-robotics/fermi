@@ -161,6 +161,17 @@ void AddWayPoint::onInitialize()
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
 
     */
+
+  // Init poses
+  box_pos.setIdentity();
+  parent_home_.position.x = 0;
+  parent_home_.position.y = 0;
+  parent_home_.position.z = 0;
+  parent_home_.orientation.x = 0;
+  parent_home_.orientation.y = 0;
+  parent_home_.orientation.z = 0;
+  parent_home_.orientation.w = 1;
+
   Q_EMIT initRviz();
   ROS_INFO("ready.");
 
