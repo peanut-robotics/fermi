@@ -1543,7 +1543,7 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   
   // Loop through states
   ROS_INFO("IK Results");
-  ROS_INFO("Dx = Forward movement. Dy = Right movement");
+  ROS_INFO("Dx = Right movement. Dy = Forward movement");
   ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
   for(double& delta_h : delta_hs){
     for(std::vector<double> dxdy : delta_xy){
