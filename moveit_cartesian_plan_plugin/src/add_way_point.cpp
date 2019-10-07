@@ -1644,6 +1644,8 @@ void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf:
 }
 
 void AddWayPoint::printIKInformation(const double delta_h, const double h, const std::vector<double> dxdy, const std::vector<bool> ik_result){
+  using namespace std;
+
   int n = ik_result.size();
   int success_count = 0;
   bool success = true;
@@ -1656,7 +1658,11 @@ void AddWayPoint::printIKInformation(const double delta_h, const double h, const
       success = false;
     }
   }
-  ROS_INFO_STREAM(std::left<<std::setw(15)<<(delta_h + h)<<std::left<<std::setw(15)<<dxdy[0]<<std::left<<std::setw(15)<<dxdy[1]<<std::setw(15)<<std::left<<success<<std::setw(15)<<std::left<<100.0*success_count/(n*1.0));
+  ROS_INFO_STREAM(left<<setw(15)<<setprecision(2)<<(delta_h + h)<<
+                  left<<setw(15)<<setprecision(2)<<dxdy[0]<<
+                  left<<setw(15)<<setprecision(2)<<dxdy[1]<<
+                  left<<setw(15)<<left<<success<<
+                  left<<setw(15)<<left<<100.0*success_count/(n*1.0));
 }
 
 void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
