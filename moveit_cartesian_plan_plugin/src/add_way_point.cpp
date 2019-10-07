@@ -52,7 +52,7 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   CONTROL_MARKER_POSE.orientation.y = 0;
   CONTROL_MARKER_POSE.orientation.z = 0;
 
-  ARROW_INTERACTIVE_SCALE = 0.2;
+  ARROW_INTERACTIVE_SCALE = 0.4;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
   set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
@@ -886,8 +886,13 @@ void AddWayPoint::insert(std::vector<tf::Transform>::iterator insert_it, std::ve
 
 Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs::Pose object_pose){
   // Define the Marker Mesh which the user can add new Way-Points with
+  if(mesh_name == ""){
+    ROS_INFO("Not loading mesh since mesh_name is empty");
+    InteractiveMarker dummy_marker;
+    return makeInterArrow(dummy_marker, 0);
+  }
+  else{
   Marker marker;
-
   marker.type = Marker::MESH_RESOURCE;
   marker.scale = MESH_SCALE_CONTROL;
   marker.mesh_resource = "package://peanut_datasets_pkg/meshes/" + mesh_name; 
@@ -897,6 +902,7 @@ Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs:
   marker.color = ARROW_INTER_COLOR;
 
   return marker;
+  }
 
 }
 
