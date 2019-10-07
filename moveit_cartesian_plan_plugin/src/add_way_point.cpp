@@ -1549,10 +1549,11 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   
   // Loop through states
   ROS_INFO("IK Results");
+  ROS_INFO("Deviations are with respect to base_link frame");
   ROS_INFO("Dx = Right movement. Dy = Forward movement");
   ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
-  for(double& delta_h : delta_hs){
-    for(std::vector<double> dxdy : delta_xy){
+  for(const double& delta_h : delta_hs){
+    for(const std::vector<double>& dxdy : delta_xy){
       /*
       Apply transformation to all waypoints
       At the end, transformed_waypoint is in base_link frame
@@ -1616,8 +1617,8 @@ void AddWayPoint::GetDeltaXY(const double radius, const double radius_step, cons
   
   // Find dx and dy
   std::vector<double> dxdy;
-  for(auto& t : theta_steps){
-    for(auto& r : radius_steps){
+  for(const auto& t : theta_steps){
+    for(const auto& r : radius_steps){
       dxdy = {r*cos(t), r*sin(t)};
       delta_xy.push_back(dxdy);
     }
@@ -1649,8 +1650,8 @@ void AddWayPoint::printIKInformation(const double delta_h, const double h, const
   int n = ik_result.size();
   int success_count = 0;
   bool success = true;
-
-  for(auto ik : ik_result){
+  
+  for(const auto& ik : ik_result){
     if(ik){
       success_count += 1;
     }
