@@ -615,7 +615,7 @@ void AddWayPoint::pointPoseUpdated(const tf::Transform &point_pos, const char *m
       return;
     }
 
-    waypoints_pos[index - 1] = point_pos;
+    waypoints_pos.at(index - 1) = point_pos;
 
     s << index;
     Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, index);
@@ -1078,7 +1078,7 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
   {
     for (int i = min_index; i < max_index; i++)
     {
-      tf::poseTFToMsg(waypoints_pos[i], target_pose);
+      tf::poseTFToMsg(waypoints_pos.at(i), target_pose);
       waypoints.push_back(target_pose);
     }
   }
@@ -1186,8 +1186,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
   */
-  ROS_INFO("Saving clean path");
-  ROS_INFO_STREAM("The frame the poses are being saved in is " << target_frame_);
+  ROS_INFO("Saving clean path...");
   
   // Transforms and poses
   geometry_msgs::Transform target_map_tfmsg, object_world_tfmsg;
@@ -1286,7 +1285,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   if(set_clean_path_proxy_.call(srv))
   {
     if(srv.response.success){
-      ROS_INFO("Successfully saved");
+      ROS_INFO("Clean path successfully saved");
     }
     else {
       ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
@@ -1342,12 +1341,12 @@ void AddWayPoint::transformPointsViz(std::string frame)
 
   for (int i = 0; i < waypoints_pos.size(); i++)
   {
-    waypoints_pos_copy.push_back(waypoints_pos[i]);
-    waypoints_pos_copy[i] = transform_old_new * waypoints_pos_copy[i];
+    waypoints_pos_copy.push_back(waypoints_pos.at(i));
+    waypoints_pos_copy.at(i) = transform_old_new * waypoints_pos_copy.at(i);
   }
   clearAllPointsRViz();
   for (int i = 0; i < waypoints_pos_copy.size(); i++)
-    makeArrow(waypoints_pos_copy[i], i);
+    makeArrow(waypoints_pos_copy.at(i), i);
 
   waypoints_pos = waypoints_pos_copy;
   //delete the waypoints_pos vector
