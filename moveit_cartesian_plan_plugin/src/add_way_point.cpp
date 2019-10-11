@@ -1651,7 +1651,7 @@ void AddWayPoint::GetDeltaH(const double h1, const double h2, const double h_ste
 void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf::Transform& end){
   end = start;
   tf::Vector3 origin = end.getOrigin();
-  origin[2] += delta_h;
+  origin[2] -= delta_h;
   end.setOrigin(origin);
 }
 
