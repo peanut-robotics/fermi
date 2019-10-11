@@ -84,7 +84,6 @@ void AddWayPoint::onInitialize()
   menu_handler_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
   menu_handler_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("Add point at EEF", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -267,18 +266,6 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
       std::vector<tf::Transform> pos_vec = {point_pos};
       insert(insertion_point, pos_vec);
     } 
-    else if(menu_item == 5){
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
-      tf::Transform eff_pose;
-      // Get EFF pose
-      if(!getEFFPose(eff_pose)){
-        ROS_ERROR("Could not get eff transform");
-        return;
-      }
-      // Add point
-      std::vector<tf::Transform> pos_vec = {eff_pose};
-      insert(insertion_point, pos_vec);
-    }
     break;
   }
   case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
@@ -1138,21 +1125,6 @@ void AddWayPoint::getRobotModelFrame_slot(const std::string robot_model_frame, c
   count = 0;
   makeInteractiveMarker();
   server->applyChanges();
-}
-
-bool AddWayPoint::getEFFPose(tf::Transform& eff_pose){
-    geometry_msgs::Transform eff_pose_tfmsg;
-    try
-    {
-      eff_pose_tfmsg = tfBuffer.lookupTransform("base_link","end_effector_link", ros::Time(0)).transform;
-      tf::transformMsgToTF(eff_pose_tfmsg, eff_pose);
-      return true;
-    }
-    catch (tf2::TransformException &ex)
-    {
-      ROS_ERROR("%s", ex.what());
-      return false;
-    }
 }
 
 } // namespace moveit_cartesian_plan_plugin

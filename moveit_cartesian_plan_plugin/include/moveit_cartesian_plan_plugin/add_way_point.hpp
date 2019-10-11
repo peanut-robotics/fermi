@@ -100,8 +100,6 @@ private:
 	void makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
 	void insert(std::vector<tf::Transform>::iterator insert_it, std::vector<tf::Transform> pose_vector);
 
-	bool getEFFPose(tf::Transform& eff_pose);
-
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
 	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
     //! Function to handle the entries made from the Way-Points interactive markers Menu.
