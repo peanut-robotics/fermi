@@ -15,6 +15,10 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
+  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
+  get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
+  set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
+
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   
@@ -42,11 +46,10 @@ void PathPlanningWidget::init()
       */
   ui_.setupUi(this);
 
-  ui_.txtPointName->setText("0");
   //set up the default values for the MoveIt and Cartesian Path
   ui_.lnEdit_PlanTime->setText("5.0");
-  ui_.lnEdit_StepSize->setText("0.01");
-  ui_.lnEdit_JmpThresh->setText("0.0");
+  ui_.lnEdit_StepSize->setText("0.03");
+  ui_.lnEdit_JmpThresh->setText("1.5");
 
   //set validators for the entries
   ui_.lnEdit_PlanTime->setValidator(new QDoubleValidator(1.0, 100.0, 2, ui_.lnEdit_PlanTime));
@@ -60,17 +63,9 @@ void PathPlanningWidget::init()
 
   QStringList headers;
   headers << tr("Point") << tr("Position (m)") << tr("Orientation (deg)");
-  PointTreeModel *model = new PointTreeModel(headers, "add_point_button");
-  ui_.treeView->setModel(model);
   ui_.btn_LoadPath->setToolTip(tr("Load Way-Points from a file"));
   ui_.btn_SavePath->setToolTip(tr("Save Way-Points to a file"));
-  ui_.btnAddPoint->setToolTip(tr("Add a new Way-Point"));
-  ui_.btnRemovePoint->setToolTip(tr("Remove a selected Way-Point"));
 
-  connect(ui_.btnAddPoint, SIGNAL(clicked()), this, SLOT(pointAddUI()));
-  connect(ui_.btnRemovePoint, SIGNAL(clicked()), this, SLOT(pointDeletedUI()));
-  connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(selectedPoint(const QModelIndex &, const QModelIndex &)));
-  connect(ui_.treeView->selectionModel(), SIGNAL(currentChanged(const QModelIndex &, const QModelIndex &)), this, SLOT(treeViewDataChanged(const QModelIndex &, const QModelIndex &)));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_slot()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(playUntilPointBtn()));
@@ -95,8 +90,7 @@ void PathPlanningWidget::init()
   connect(ui_.btn_ClearAllPoints, SIGNAL(clicked()), this, SLOT(clearAllPoints_slot()));
   connect(ui_.btn_ClearAllBoxes, SIGNAL(clicked()), this, SLOT(clearAllInteractiveBoxes_slot()));
 
-  connect(ui_.btn_moveToHome, SIGNAL(clicked()), this, SLOT(moveToHomeFromUI()));
-  connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
+  //connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
 
   connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
 
@@ -109,6 +103,12 @@ void PathPlanningWidget::init()
   connect(ui_.start_controller_btn, SIGNAL(clicked()), this, SLOT(startController()));
 
   connect(ui_.btn_checkIK, SIGNAL(clicked()), this, SLOT(ChangeCheckIK()));
+  connect(ui_.btn_checkAllIK, SIGNAL(clicked()), this, SLOT(CheckAllPointsIK()));
+  connect(ui_.step_size_btn, SIGNAL(clicked()), this, SLOT(ChangeStepSize()));
+  connect(ui_.btn_ik_planning, SIGNAL(clicked()), this, SLOT(RobotIKPlanning()));
+
+  connect(ui_.set_tool_btn, SIGNAL(clicked()), this, SLOT(SetTool()));
+  connect(ui_.set_mesh_btn, SIGNAL(clicked()), this, SLOT(SetMesh()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -145,283 +145,7 @@ void PathPlanningWidget::sendCartTrajectoryParamsFromUI()
 
   Q_EMIT cartesianPathParamsFromUI_signal(plan_time_, cart_step_size_, cart_jump_thresh_, moveit_replan_, avoid_collisions_, robot_model_frame, fix_start_state_);
 }
-void PathPlanningWidget::pointRange()
-{
-  /*! Get the current range of points from the TreeView.
-          This is essential for setting up the number of the item that should be run next.
-          Dealing with the data in the TreeView
-      */
-  QAbstractItemModel *model = ui_.treeView->model();
-  int count = model->rowCount() - 1;
-  ui_.txtPointName->setValidator(new QIntValidator(1, count, ui_.txtPointName));
-}
 
-void PathPlanningWidget::initTreeView()
-{
-  /*! Initialize the Qt TreeView and set the initial value of the User Interaction arrow.
-
-       */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  model->setData(model->index(0, 0, QModelIndex()), QVariant("add_point_button"), Qt::EditRole);
-
-  //update the validator for the lineEdit Point
-  pointRange();
-}
-void PathPlanningWidget::selectedPoint(const QModelIndex &current, const QModelIndex &previous)
-{
-  /*! Get the selected point from the TreeView.
-          This is used for updating the information of the lineEdit which informs gives the number of the currently selected Way-Point.
-      */
-  ROS_INFO_STREAM("Selected Index Changed" << current.row());
-
-  if (current.parent() == QModelIndex())
-    ui_.txtPointName->setText(QString::number(current.row()));
-  else if ((current.parent() != QModelIndex()) && (current.parent().parent() == QModelIndex()))
-    ui_.txtPointName->setText(QString::number(current.parent().row()));
-  else
-    ui_.txtPointName->setText(QString::number(current.parent().parent().row()));
-}
-void PathPlanningWidget::pointAddUI()
-{
-  /*! Function for adding new Way-Point from the RQT Widget.
-        The user can set the position and orientation of the Way-Point by entering their values in the LineEdit fields.
-        This function is connected to the AddPoint button click() signal and sends the addPoint(point_pos) to inform the RViz enviroment that a new Way-Point has been added.
-        */
-  double x, y, z, rx, ry, rz;
-  x = ui_.LineEditX->text().toDouble();
-  y = ui_.LineEditY->text().toDouble();
-  z = ui_.LineEditZ->text().toDouble();
-  rx = DEG2RAD(ui_.LineEditRx->text().toDouble());
-  ry = DEG2RAD(ui_.LineEditRy->text().toDouble());
-  rz = DEG2RAD(ui_.LineEditRz->text().toDouble());
-
-  // // create transform
-  tf::Transform point_pos(tf::Transform(tf::createQuaternionFromRPY(rx, ry, rz), tf::Vector3(x, y, z)));
-  Q_EMIT addPoint(point_pos);
-
-  pointRange();
-}
-void PathPlanningWidget::pointDeletedUI()
-{
-  /*! Function for deleting a Way-Point from the RQT GUI.
-           The name of the Way-Point that needs to be deleted corresponds to the txtPointName line edit field.
-           This slot is connected to the Remove Point button signal. After completion of this function a signal is send to Inform the RViz enviroment that a Way-Point has been deleted from the RQT Widget.
-       */
-  std::string marker_name;
-  QString qtPointNr = ui_.txtPointName->text();
-  marker_name = qtPointNr.toUtf8().constData();
-
-  int marker_nr = atoi(marker_name.c_str());
-
-  if (strcmp(marker_name.c_str(), "0") != 0)
-  {
-    removeRow(marker_nr);
-    pointRange();
-    Q_EMIT pointDelUI_signal(marker_name.c_str());
-  }
-}
-void PathPlanningWidget::insertRow(const tf::Transform &point_pos, const int count)
-{
-  /*! Whenever we have a new Way-Point insereted either from the RViz or the RQT Widget the the TreeView needs to update the information and insert new row that corresponds to the new insered point.
-          This function takes care of parsing the data recieved from the RViz or the RQT widget and creating new row with the appropriate data format and Children. One for the position giving us the current position of the Way-Point in all the axis.
-          One child for the orientation giving us the Euler Angles of each axis.
-      */
-
-  ROS_INFO("inserting new row in the TreeView");
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  //convert the quartenion to roll pitch yaw angle
-  tf::Vector3 p = point_pos.getOrigin();
-  tfScalar rx, ry, rz;
-  point_pos.getBasis().getRPY(rx, ry, rz, 1);
-
-  if (count == 0)
-  {
-    model->insertRow(count, model->index(count, 0));
-
-    model->setData(model->index(0, 0, QModelIndex()), QVariant("add_point_button"), Qt::EditRole);
-    pointRange();
-  }
-  else
-  {
-
-    if (!model->insertRow(count, model->index(count, 0))) //&& count==0
-    {
-      return;
-    }
-    //set the strings of each axis of the position
-    QString pos_x = QString::number(p.x());
-    QString pos_y = QString::number(p.y());
-    QString pos_z = QString::number(p.z());
-
-    //repeat that with the orientation
-    QString orient_x = QString::number(RAD2DEG(rx));
-    QString orient_y = QString::number(RAD2DEG(ry));
-    QString orient_z = QString::number(RAD2DEG(rz));
-
-    model->setData(model->index(count, 0), QVariant(count), Qt::EditRole);
-
-    //add a child to the last inserted item. First add children in the treeview that
-    //are just telling the user that if he expands them he can see details about the position and orientation of each point
-    QModelIndex ind = model->index(count, 0);
-    model->insertRows(0, 2, ind);
-    QModelIndex chldind_pos = model->index(0, 0, ind);
-    QModelIndex chldind_orient = model->index(1, 0, ind);
-    model->setData(chldind_pos, QVariant("Position"), Qt::EditRole);
-    model->setData(chldind_orient, QVariant("Orientation"), Qt::EditRole);
-    //*****************************Set the children for the position**********************************************************
-    //now add information about each child separately. For the position we have coordinates for X,Y,Z axis.
-    //therefore we add 3 rows of information
-    model->insertRows(0, 3, chldind_pos);
-
-    //next we set up the data for each of these columns. First the names
-    model->setData(model->index(0, 0, chldind_pos), QVariant("X:"), Qt::EditRole);
-    model->setData(model->index(1, 0, chldind_pos), QVariant("Y:"), Qt::EditRole);
-    model->setData(model->index(2, 0, chldind_pos), QVariant("Z:"), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
-    model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
-    model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
-    //***************************************************************************************************************************
-
-    //*****************************Set the children for the orientation**********************************************************
-    //now we repeat everything again,similar as the position for adding the children for the orientation
-    model->insertRows(0, 3, chldind_orient);
-    //next we set up the data for each of these columns. First the names
-    model->setData(model->index(0, 0, chldind_orient), QVariant("Rx:"), Qt::EditRole);
-    model->setData(model->index(1, 0, chldind_orient), QVariant("Ry:"), Qt::EditRole);
-    model->setData(model->index(2, 0, chldind_orient), QVariant("Rz:"), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
-    model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
-    model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-    //****************************************************************************************************************************
-    pointRange();
-  }
-}
-void PathPlanningWidget::removeRow(int marker_nr)
-{
-  /*! When the user deletes certain Way-Point either from the RViz or the RQT Widget the TreeView needs to delete that particular row and update the state of the TreeWidget.
-      */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  model->removeRow(marker_nr, QModelIndex());
-  ROS_INFO_STREAM("deleting point nr: " << marker_nr);
-
-  for (int i = marker_nr; i <= model->rowCount(); ++i)
-  {
-    model->setData(model->index((i - 1), 0, QModelIndex()), QVariant((i - 1)), Qt::EditRole);
-  }
-  //check how to properly set the selection
-  ui_.treeView->selectionModel()->setCurrentIndex(model->index((model->rowCount() - 1), 0, QModelIndex()), QItemSelectionModel::ClearAndSelect);
-  ui_.txtPointName->setText(QString::number(model->rowCount() - 1));
-  pointRange();
-}
-
-void PathPlanningWidget::pointPosUpdated_slot(const tf::Transform &point_pos, const char *marker_name)
-{
-  /*! When the user updates the position of the Way-Point or the User Interactive Marker, the information in the TreeView also needs to be updated to correspond to the current pose of the InteractiveMarkers.
-
-        */
-  QAbstractItemModel *model = ui_.treeView->model();
-
-  tf::Vector3 p = point_pos.getOrigin();
-  tfScalar rx, ry, rz;
-  point_pos.getBasis().getRPY(rx, ry, rz, 1);
-
-  rx = RAD2DEG(rx);
-  ry = RAD2DEG(ry);
-  rz = RAD2DEG(rz);
-
-  //set the strings of each axis of the position
-  QString pos_x = QString::number(p.x());
-  QString pos_y = QString::number(p.y());
-  QString pos_z = QString::number(p.z());
-
-  //repeat that with the orientation
-  QString orient_x = QString::number(rx);
-  QString orient_y = QString::number(ry);
-  QString orient_z = QString::number(rz);
-
-  if ((strcmp(marker_name, "add_point_button") == 0) || (atoi(marker_name) == 0))
-  {
-    QString pos_s;
-    pos_s = pos_x + "; " + pos_y + "; " + pos_z + ";";
-    QString orient_s;
-    orient_s = orient_x + "; " + orient_y + "; " + orient_z + ";";
-
-    model->setData(model->index(0, 0), QVariant("add_point_button"), Qt::EditRole);
-    model->setData(model->index(0, 1), QVariant(pos_s), Qt::EditRole);
-    model->setData(model->index(0, 2), QVariant(orient_s), Qt::EditRole);
-  }
-  else
-  {
-
-    int changed_marker = atoi(marker_name);
-    //**********************update the positions and orientations of the children as well***********************************************************************************************
-    QModelIndex ind = model->index(changed_marker, 0);
-    QModelIndex chldind_pos = model->index(0, 0, ind);
-    QModelIndex chldind_orient = model->index(1, 0, ind);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 1, chldind_pos), QVariant(pos_x), Qt::EditRole);
-    model->setData(model->index(1, 1, chldind_pos), QVariant(pos_y), Qt::EditRole);
-    model->setData(model->index(2, 1, chldind_pos), QVariant(pos_z), Qt::EditRole);
-
-    //second we add the current position information, for each position axis separately
-    model->setData(model->index(0, 2, chldind_orient), QVariant(orient_x), Qt::EditRole);
-    model->setData(model->index(1, 2, chldind_orient), QVariant(orient_y), Qt::EditRole);
-    model->setData(model->index(2, 2, chldind_orient), QVariant(orient_z), Qt::EditRole);
-    //*****************************************************************************************************************************************************************************************
-  }
-}
-
-void PathPlanningWidget::treeViewDataChanged(const QModelIndex &index, const QModelIndex &index2)
-{
-  /*! This function handles the user interactions in the TreeView Widget.
-          The function captures an event of data change and updates the information in the TreeView and the RViz enviroment.
-      */
-  qRegisterMetaType<std::string>("std::string");
-  QAbstractItemModel *model = ui_.treeView->model();
-  QVariant index_data;
-  ROS_INFO_STREAM("Data changed in index:" << index.row() << "parent row" << index2.parent().row());
-
-  if ((index.parent() == QModelIndex()) && (index.row() != 0))
-  {
-  }
-  else if (((index.parent().parent()) != QModelIndex()) && (index.parent().parent().row() != 0))
-  {
-    QModelIndex main_root = index.parent().parent();
-    std::stringstream s;
-    s << main_root.row();
-    std::string temp_str = s.str();
-
-    QModelIndex chldind_pos = model->index(0, 0, main_root.sibling(main_root.row(), 0));
-    QModelIndex chldind_orient = model->index(1, 0, main_root.sibling(main_root.row(), 0));
-
-    QVariant pos_x = model->data(model->index(0, 1, chldind_pos), Qt::EditRole);
-    QVariant pos_y = model->data(model->index(1, 1, chldind_pos), Qt::EditRole);
-    QVariant pos_z = model->data(model->index(2, 1, chldind_pos), Qt::EditRole);
-
-    QVariant orient_x = model->data(model->index(0, 2, chldind_orient), Qt::EditRole);
-    QVariant orient_y = model->data(model->index(1, 2, chldind_orient), Qt::EditRole);
-    QVariant orient_z = model->data(model->index(2, 2, chldind_orient), Qt::EditRole);
-
-    tf::Vector3 p(pos_x.toDouble(), pos_y.toDouble(), pos_z.toDouble());
-
-    tfScalar rx, ry, rz;
-    rx = DEG2RAD(orient_x.toDouble());
-    ry = DEG2RAD(orient_y.toDouble());
-    rz = DEG2RAD(orient_z.toDouble());
-
-    tf::Transform point_pos = tf::Transform(tf::createQuaternionFromRPY(rx, ry, rz), p);
-
-    Q_EMIT pointPosUpdated_signal(point_pos, temp_str.c_str());
-  }
-}
 void PathPlanningWidget::parseWayPointBtn_slot()
 {
   /*! Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
@@ -673,130 +397,178 @@ void PathPlanningWidget::loadPointsTool(){
 
 void PathPlanningWidget::loadPointsObject()
 {
-  /*! Slot that takes care of opening a previously saved Way-Points yaml file.
-            Opens Qt Dialog for selecting the file, opens the file and parses the data.
-            After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
-        */
+  /* Slot that takes care of opening a previously saved Way-Points yaml file.
+    Opens Qt Dialog for selecting the file, opens the file and parses the data.
+    After reading and parsing the data from the file, the information regarding 
+    the pose of the Way-Points is send to the RQT and the RViz so they can update 
+    their enviroments.*/
 
+  const std::string frame_id = "map";
+  double elevator_height, percent_complete ;
+  int num_robot_poses; 
+
+  // Clean path data
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
-  try
+  peanut_cotyledon::Object desired_object;
+
+  // Transforms
+  geometry_msgs::Transform object_world_tfmsg;
+  tf::Transform object_world_tf;
+
+  // Clear all the scene before loading all the new points from the file!!
+  clearAllPoints_slot();
+
+  // Enforce target frame "map"
+  ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+  PathPlanningWidget::transformPointsToFrame();
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
   {
-    peanut_cotyledon::GetCleanPath srv;
-    srv.request.floor_name = floor_name;
-    srv.request.area_name = area_name;
-    srv.request.object_id = object_id;
-    srv.request.task_name = task_name;
-    // ROS_INFO_STREAM("sending request to get clean path" << srv);
-    if(get_clean_path_proxy_.call(srv))
-    {
-      clean_path = srv.response.clean_path;
-    }
-    else
-    {
-      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
-      ui_.tabWidget->setEnabled(true);
-      ui_.progressBar->hide();
-      return;
-    }
+    clean_path = srv.response.clean_path;
   }
-  catch (...)
+  else
   {
     ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
     return;
   }
-  ROS_INFO_STREAM("the clean_path is loaded");
-  
-  if (clean_path.cached_paths.empty() || clean_path.cached_paths.at(0).robot_poses.empty())
+
+  if (clean_path.cached_paths.empty() || clean_path.object_poses.empty())
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ROS_ERROR("the cached path associated with the clean path has an empty robot poses message");
+    ROS_ERROR("No object poses or cache paths in clean_path");
     return;
   }
-  else
-  {
-    ui_.tabWidget->setEnabled(false);
-    ui_.progressBar->show();
-
-    //clear all the scene before loading all the new points from the file!!
-    clearAllPoints_slot();
-
-    std::string frame_id;
-    double elevator_height = 1.0;
-    try
-    {
-      //define double for percent of completion
-      double percent_complete;
-      int end_of_points = clean_path.cached_paths.at(0).robot_poses.size();
-      ROS_INFO("at beginning of if statement line 593");
-      if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
-        ROS_INFO("the cached path is not empty");
-        std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
-        ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
-        ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
-        ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
-        ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
-        ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
-        ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
-        ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
-        ROS_INFO("the config was edited");
-        Q_EMIT configEdited_signal(startConfig);
-      }
-      try {
-        elevator_height = clean_path.cached_paths.at(0).elevator_height;
-      }
-      catch (...){
-        ROS_INFO("The loaded clean path cached_path and nav label are set to their defaults");
-      }
-      frame_id = "base_link";
-      std::string name;
-      int i = 0;
-      tf::Transform pose_tf;
-      ROS_INFO("running through for loop");
-      for (geometry_msgs::Pose pose : clean_path.cached_paths[0].robot_poses)
-      {
-        ROS_WARN_STREAM("pose in list before transform" << pose);
-        ROS_INFO_STREAM(std::to_string(i)<<"  ");
-        i++;
-        name = std::to_string(i);
-        tf::poseMsgToTF(pose, pose_tf);
-        ROS_INFO_STREAM("pose in list after transform" << pose);
-        percent_complete = (i + 1) * 100 / end_of_points;
-        ui_.progressBar->setValue(percent_complete);
-        Q_EMIT addPoint(pose_tf);
-      }
-      ROS_INFO("Setting step size and frame id");
-      ui_.el_lbl->setText(QString::number(elevator_height));
-      ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
-      ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
-      ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
-      ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
-      ui_.tool_name_lbl->setText(QString::fromStdString(clean_path.tool_name));
-    }
-    catch (...)
-    {
-      ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
-    }
-    // TODO call same pathway as button
-    ui_.tabWidget->setEnabled(true);
-    ui_.progressBar->hide();
-
-    PathPlanningWidget::transformPointsToFrame();
-    ROS_INFO("completed load process for clean path");
+  
+  ui_.tabWidget->setEnabled(false);
+  ui_.progressBar->show();
+  num_robot_poses = clean_path.object_poses.size();
+  
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
   }
+  object_world_tfmsg = desired_object.origin;
+  tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
+
+  // Load object poses and update ui/server points
+  int i = 0;
+  tf::Transform pose_tf;
+  tf::Quaternion q;
+
+  ROS_INFO_STREAM("Loading clean path with "<<clean_path.object_poses.size()<< " points");
+  for (auto pose : clean_path.object_poses) // object_poses are in object frame
+  {
+    i++;
+    tf::poseMsgToTF(pose, pose_tf);
+    pose_tf = object_world_tf * pose_tf;
+    
+    // Normalize 
+    q = pose_tf.getRotation();
+    q = q.normalize();
+    pose_tf.setRotation(q);
+    
+    // if( std::isnan(pose_tf.getOrigin()[0]) || std::isnan(pose_tf.getOrigin()[1]) || std::isnan(pose_tf.getOrigin()[2]) ||
+    //     std::isnan(pose_tf.getRotation().getW()) || std::isnan(pose_tf.getRotation().getAxis()[0]) || 
+    //     std::isnan(pose_tf.getRotation().getAxis()[1]) || std::isnan(pose_tf.getRotation().getAxis()[2])){
+    //       ROS_ERROR("Points contains NaNs. Cannot load path");
+    //       return;
+    // }
+
+    // if( std::isinf(pose_tf.getOrigin()[0]) || std::isinf(pose_tf.getOrigin()[1]) || std::isinf(pose_tf.getOrigin()[2]) ||
+    //     std::isinf(pose_tf.getRotation().getW()) || std::isinf(pose_tf.getRotation().getAxis()[0]) || 
+    //     std::isinf(pose_tf.getRotation().getAxis()[1]) || std::isinf(pose_tf.getRotation().getAxis()[2])){
+    //       ROS_ERROR("Points contains Inf. Cannot load path");
+    //       return;
+    // }
+
+    percent_complete = (i + 1) * 100 / num_robot_poses;
+    ui_.progressBar->setValue(percent_complete);
+    Q_EMIT addPoint(pose_tf);
+  }
+
+  // Set starting config 
+  if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
+      ROS_INFO("Cache path is present, loading starting config");
+      std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
+      ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+      ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+      ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+      ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+      ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+      ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+      ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+      Q_EMIT configEdited_signal(startConfig);
+  }
+
+  // Get elevator height
+  elevator_height = clean_path.cached_paths.at(0).elevator_height;
+
+  try
+  {
+    ROS_INFO("Setting step size and frame id");
+    ui_.el_lbl->setText(QString::number(elevator_height));
+    ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
+    ui_.lnEdit_StepSize->setText(QString::fromStdString(std::to_string(clean_path.max_step)));
+    ui_.chk_AvoidColl->setChecked(clean_path.avoid_collisions);
+    ui_.lnEdit_JmpThresh->setText(QString::fromStdString(std::to_string(clean_path.jump_threshold)));
+    ui_.tool_name_lbl->setText(QString::fromStdString(clean_path.tool_name));
+  }
+  catch (...)
+  {
+    ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
+  }
+
+  // TODO call same pathway as button
+  ui_.tabWidget->setEnabled(true);
+  ui_.progressBar->hide();
+
+  // Get obj info and update control
+  std::string mesh_name = desired_object.geometry_path[0];
+  geometry_msgs::Pose object_pose;
+  object_pose.position.x = desired_object.origin.translation.x;
+  object_pose.position.y = desired_object.origin.translation.y;
+  object_pose.position.z = desired_object.origin.translation.z;
+  object_pose.orientation = desired_object.origin.rotation;
+  // #TODO this call updates parent_home as well. Add a function to update parent_home only.
+  Q_EMIT modifyMarkerControl_signal(mesh_name, object_pose);
+  
+  // Update mesh text field 
+  ui_.mesh_name_lbl->setText(QString::fromStdString(mesh_name));
+  ROS_INFO("Completed load process for clean path");
 }
+
 void PathPlanningWidget::savePoints(){
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save Path?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::No){
+    return;
+  }
+
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
-  }else{
+  }
+  else if(ui_.chk_isRefPose->isChecked()){
+    PathPlanningWidget::saveRefNavPose();
+  }
+  else{
     PathPlanningWidget::savePointsObject();
   }
+
 }
 void PathPlanningWidget::loadPoints(){
   if (ui_.chk_istoolpath->isChecked()){
@@ -809,54 +581,149 @@ void PathPlanningWidget::savePointsTool(){
   ROS_INFO("Begin saving tool path to file");
   Q_EMIT saveToolBtn_press();
 }
-void PathPlanningWidget::savePointsObject()
-{
-  /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
-       */
-  try{
+
+void PathPlanningWidget::saveRefNavPose(){
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
   int object_id = ui_.object_id_line_edit->text().toInt();
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
-  try
-  {
-    peanut_cotyledon::GetCleanPath srv;
-    srv.request.floor_name = floor_name;
-    srv.request.area_name = area_name;
-    srv.request.object_id = object_id;
-    srv.request.task_name = task_name;
-    if(get_clean_path_proxy_.call(srv))
-    {
-      clean_path = srv.response.clean_path;
+
+  // Check task data
+  if (object_id != 0){
+    ROS_ERROR_STREAM("Cannot save reference nav pose to object with ID: << "<<object_id<<". ID can only be 0");
+    return;
+  }
+
+  // Check if task exists
+  peanut_cotyledon::GetTasks tasks_srv;
+  peanut_cotyledon::Task desired_task;
+  tasks_srv.request.floor_name = floor_name;
+  tasks_srv.request.area_name = area_name;
+  tasks_srv.request.object_id = object_id;
+  if (!get_tasks_proxy_.call(tasks_srv)){
+    ROS_ERROR("Could not call get_tasks service");
+    return;
+  }
+
+  // Find task
+  bool found_task = false;
+  for(auto& task: tasks_srv.response.tasks){
+    if (task.name == task_name){
+      desired_task = task;
+      found_task = true;
+      break;
     }
-    else
-    {
-      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  }
+
+  if(found_task){
+    // Check task type
+    if(desired_task.task_type != peanut_cotyledon::Task::NAVIGATE){
+      ROS_ERROR_STREAM("Existing task: "<<desired_task.name<<" is not of type NAVIGATE");
       return;
     }
   }
-  catch (...)
+  else{
+    // Create and add new task
+    ROS_INFO_STREAM("Creating and adding new task "<<task_name);
+    peanut_cotyledon::Task new_task;
+    new_task.name = task_name;
+    new_task.task_type = peanut_cotyledon::Task::NAVIGATE;
+
+    peanut_cotyledon::SetTasks set_tasks_srv;
+    set_tasks_srv.request.floor_name = floor_name;
+    set_tasks_srv.request.area_name = area_name;
+    set_tasks_srv.request.object_id = object_id;
+    set_tasks_srv.request.tasks = tasks_srv.response.tasks;
+    set_tasks_srv.request.tasks.push_back(new_task);
+
+    if (set_tasks_proxy_.call(set_tasks_srv)){
+      if (!set_tasks_srv.response.success){
+        ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
+        return;
+      }
+    }
+    else{
+      ROS_ERROR("Could not call set_tasks service");
+      return;
+    }
+  }
+  
+  // Get clean path for this path
+  peanut_cotyledon::GetCleanPath clean_path_srv;
+  clean_path_srv.request.floor_name = floor_name;
+  clean_path_srv.request.area_name = area_name;
+  clean_path_srv.request.object_id = object_id;
+  clean_path_srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(clean_path_srv))
+  {
+    clean_path = clean_path_srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call get_clean_path service");
+    return;
+  }
+
+  // Add a cached path if it does not exist
+  if(clean_path.cached_paths.size() == 0){
+    peanut_cotyledon::CachedPath cach_path;
+    clean_path.cached_paths.push_back(cach_path);
+  }
+
+  // Save Nav pose
+  addNavPoseHelper();
+}
+
+void PathPlanningWidget::savePointsObject()
+{
+  /*! Just inform the RViz enviroment that Save Way-Points button has been pressed.
+       */
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
   {
     ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
   }
+
   if (clean_path.cached_paths.empty()){
     peanut_cotyledon::CachedPath empty_cached_path;
     std::vector<peanut_cotyledon::CachedPath> empty_cached_path_list;
     empty_cached_path_list.push_back(empty_cached_path);
     clean_path.cached_paths = empty_cached_path_list;
   }
+
+  /*
+  The following data is saved/overwritten here
+  - Elevator height
+  - Max step size
+  - Jump threshold
+  - Tool name 
+  */
   clean_path.cached_paths.at(0).elevator_height = ui_.el_lbl->text().toDouble();
   clean_path.max_step = ui_.lnEdit_StepSize->text().toDouble();
   clean_path.avoid_collisions = ui_.chk_AvoidColl->isChecked();
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
   clean_path.tool_name = ui_.tool_name_lbl->text().toStdString();
 
-  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path);
-  }
-  catch (...){
-    ROS_ERROR("unkown error during save in path planning widget.cpp");
-  }
+  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path, mesh_name);
 }
 void PathPlanningWidget::transformPointsToFrame()
 {
@@ -868,43 +735,17 @@ void PathPlanningWidget::transformPointsToFrame()
 }
 void PathPlanningWidget::clearAllPoints_slot()
 {
-  /*! Clear all the Way-Points from the RViz enviroment and the TreeView.
+  /*! Clear all the Way-Points from the RViz enviroment
       */
-  QAbstractItemModel *model = ui_.treeView->model();
-  model->removeRows(0, model->rowCount());
-  ui_.txtPointName->setText("0");
   tf::Transform t;
   t.setIdentity();
-  insertRow(t, 0);
-  pointRange();
 
   Q_EMIT clearAllPoints_signal();
 }
+
 void PathPlanningWidget::clearAllInteractiveBoxes_slot()
 {
   Q_EMIT clearAllInteractiveBoxes_signal();
-}
-void PathPlanningWidget::setAddPointUIStartPos(const std::string robot_model_frame, const tf::Transform end_effector)
-{
-  /*! Setting the default values for the Add New Way-Point from the RQT.
-            The information is taken to correspond to the pose of the loaded Robot end-effector.
-        */
-  tf::Vector3 p = end_effector.getOrigin();
-  tfScalar rx, ry, rz;
-  end_effector.getBasis().getRPY(rx, ry, rz, 1);
-
-  rx = RAD2DEG(rx);
-  ry = RAD2DEG(ry);
-  rz = RAD2DEG(rz);
-
-  //set up the starting values for the lineEdit of the positions
-  ui_.LineEditX->setText(QString::number(p.x()));
-  ui_.LineEditY->setText(QString::number(p.y()));
-  ui_.LineEditZ->setText(QString::number(p.z()));
-  //set up the starting values for the lineEdit of the orientations, in Euler angles
-  ui_.LineEditRx->setText(QString::number(rx));
-  ui_.LineEditRy->setText(QString::number(ry));
-  ui_.LineEditRz->setText(QString::number(rz));
 }
 
 void PathPlanningWidget::cartesianPathStartedHandler()
@@ -961,7 +802,16 @@ void PathPlanningWidget::moveElevatorHelper()
 
 void PathPlanningWidget::addNavPose()
 {
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save Nav Task Pose?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::Yes){
+    ROS_INFO("Saving Nav Pose");
   QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addNavPoseHelper);
+}
+  else{
+    ROS_INFO("Did not save Nav Pose");
+    return;
+  }
 }
 
 void PathPlanningWidget::addNavPoseHelper()
@@ -1242,6 +1092,142 @@ void PathPlanningWidget::stopAll(){
 void PathPlanningWidget::ChangeCheckIK(){
   Q_EMIT ChangeCheckIK_signal();
 }
+
+void PathPlanningWidget::CheckAllPointsIK(){
+  Q_EMIT CheckAllPointsIK_signal();
+}
+
+bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+  // Get objects
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        desired_obj = obj;
+        return true;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return false;
+  }
+  return false;  
+}
+
+bool PathPlanningWidget::setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj){
+  // Set objects
+  peanut_cotyledon::SetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.objects.push_back(obj);
+
+  if (set_objects_proxy_.call(srv)){
+    if(srv.response.success){
+      ROS_INFO("Updated mesh name for object");
+      return true;
+    }
+    else{
+      ROS_INFO_STREAM("Unable to set mesh name for object.Error: "<<srv.response.message);
+    }
+  }
+  else{
+    ROS_ERROR("Could not call set objects service");
+    return false;
+  } 
+}
+
+void PathPlanningWidget::ChangeStepSize(){
+  PathPlanningWidget::sendCartTrajectoryParamsFromUI();
+}
+
+void PathPlanningWidget::RobotIKPlanning(){
+  // Get data
+  double upper_limit = ui_.h_upper_limit->text().toDouble();
+  double lower_limit = ui_.h_lower_limit->text().toDouble();
+  double step_size = ui_.h_step_size->text().toDouble();
+  double h = ui_.el_lbl->text().toDouble();
+  double radius = ui_.robot_ik_radius->text().toDouble();
+  double radius_step = ui_.robot_ik_radius_step->text().toDouble();
+  double max_angle = ui_.robot_ik_max_ang->text().toDouble();
+  double min_angle = ui_.robot_ik_min_ang->text().toDouble();
+  double angle_step = ui_.robot_ik_ang_step->text().toDouble();
+
+  Q_EMIT RobotIKPlanning_signal(upper_limit, lower_limit, step_size, h, radius, radius_step, max_angle, min_angle, angle_step);
+}
+
+void PathPlanningWidget::SetTool(){
+  std::string tool = ui_.tool_name_lbl->text().toStdString();
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::CleanPath clean_path;
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+    return;
+  }
+
+  // Set tool
+  clean_path.tool_name = tool;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath set_path_srv;
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(set_path_srv.response.success){
+      ROS_INFO_STREAM("Updated tool name to "<<tool);
+    }
+    else{
+      ROS_ERROR_STREAM("Could not update tool. Error: "<<set_path_srv.response.message);
+      return;
+    }
+  }  
+
+}
+
+void PathPlanningWidget::SetMesh(){
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
+  peanut_cotyledon::Object desired_object;
+
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Set geometry name
+  desired_object.geometry_path.clear();
+  desired_object.geometry_path.push_back(mesh_name);
+
+  // Set object
+  setObjectHelper(floor_name, area_name, object_id, desired_object);
+}
+
 
 } // namespace widgets
 } // namespace moveit_cartesian_plan_plugin

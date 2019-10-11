@@ -43,12 +43,21 @@
 #include <map>
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
+
+// Cotyledon
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/SetObjects.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
+#include <peanut_cotyledon/Object.h>
+#include <peanut_cotyledon/Task.h>
+#include <peanut_cotyledon/GetTasks.h>
+#include <peanut_cotyledon/SetTasks.h>
+#include <peanut_cotyledon/CachedPath.h>
+
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
 #include <kortex_driver/ClearFaults.h>
@@ -95,6 +104,9 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
+			ros::ServiceClient set_objects_proxy_;
+			ros::ServiceClient get_tasks_proxy_;
+			ros::ServiceClient set_tasks_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
@@ -119,22 +131,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Checks the range of the points.
 			void pointRange();
 		protected Q_SLOTS:
-			//! Initialize the TreeView with the User Interactive Marker.
-		    void initTreeView();
-		    //! Handle the event of a Way-Point deleted from the RQT UI.
-			void pointDeletedUI();
-			//! Handle the event of a Way-Point added from the RQT UI.
-			void pointAddUI();
-			//! Insert a row in the TreeView.
-			void insertRow(const tf::Transform& point_pos,const int count);
-			//! Remove a row in the TreeView.
-			void removeRow(int marker_nr);
-			//! Handle the event when a User updates the pose of a Way-Point through the RQT UI.
-			void pointPosUpdated_slot( const tf::Transform& point_pos, const char* marker_name);
-			//! Get the selected Way-Point from the RQT UI.
-			void selectedPoint(const QModelIndex& current, const QModelIndex& previous);
-			//! Handle the even when the data in the TreeView has been changed.
-			void treeViewDataChanged(const QModelIndex &index,const QModelIndex &index2);
 			//! Slot for when the play until button is pressed
 			void playUntilPointBtn();
 			void goToPrev();
@@ -150,6 +146,7 @@ namespace moveit_cartesian_plan_plugin
 			void loadPointsTool();
 			void savePoints();
 			void loadPoints();
+			void saveRefNavPose();
 			//! Send a signal that a load the Way-Points from a file button has been pressed.
 			void loadPointsObject();
 			//! slot connected to clear all the boxes for interaction around points
@@ -157,8 +154,6 @@ namespace moveit_cartesian_plan_plugin
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
 			void transformPointsToFrame();
-			//! Set the start pose of the User Interactive Marker to correspond to the loaded robot base frame.
-			void setAddPointUIStartPos(const std::string robot_model_frame,const tf::Transform end_effector);
 			//! Slot for disabling the TabWidged while Cartesian Path is executed.
 			void cartesianPathStartedHandler();
 			//! Slot for enabling the TabWidged after Cartesian Path is executed.
@@ -187,7 +182,7 @@ namespace moveit_cartesian_plan_plugin
 			void addNavPoseHelper();
 			void goToNavPose();
 			void goToNavPoseHelper();
-
+			
 			// Slots for faults
 			void clearFaults();
 			void stopAll();
@@ -196,6 +191,16 @@ namespace moveit_cartesian_plan_plugin
 			
 			// Slots for check ik
 			void ChangeCheckIK();
+			void CheckAllPointsIK();
+
+			// Helpers
+			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
+			bool setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj);
+
+			void ChangeStepSize();
+			void RobotIKPlanning();
+			void SetTool();
+			void SetMesh();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
@@ -213,9 +218,11 @@ namespace moveit_cartesian_plan_plugin
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    void saveToolBtn_press();
 			//! Save to file button has been pressed.
-		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
+		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
+			// Signal to modify control marker
+			void modifyMarkerControl_signal(std::string mesh_name, geometry_msgs::Pose object_pose);
 			void transformPointsViz(std::string frame);
 			//! signal that the clear all boxes button has been pressed.
 			void clearAllInteractiveBoxes_signal();
@@ -228,6 +235,12 @@ namespace moveit_cartesian_plan_plugin
 			void sendSendSelectedPlanGroup(int index);
 
 			void ChangeCheckIK_signal();
+			void CheckAllPointsIK_signal();
+			void RobotIKPlanning_signal(const double upper_limit, const double lower_limit, const double step_size, const double h,
+										const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step);
+
+			// Signal to modify points control marker
+			void ModifyPointsMarkerPose_signal();
 		};
 	}
 

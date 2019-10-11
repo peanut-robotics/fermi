@@ -27,8 +27,11 @@
 #include <message_filters/subscriber.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
+#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/Object.h>
 #include <trajectory_msgs/JointTrajectory.h>
-
+#include <peanut_kinematics/jaco3_ik.h>
 #include <rviz/properties/bool_property.h>
 #include <rviz/properties/string_property.h>
 #include <moveit_cartesian_plan_plugin/widgets/path_planning_widget.hpp>
@@ -44,9 +47,13 @@
 #include <QtConcurrent/QtConcurrent>
 // #include <QtConcurrentRun>
 #include <QFuture>
-
+#include <tf/transform_datatypes.h>
 #endif
 
+// macros
+#ifndef DEG2RAD
+#define DEG2RAD(x) ((x)*0.017453293)
+#endif
 
 namespace rviz
 {
@@ -81,34 +88,54 @@ public:
 	//! Fucntion for all the interactive marker interactions
 	virtual void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
 	virtual void processFeedbackInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback );
+	void processFeedbackPointsInter( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 
     //! Make a new Interactive Marker Way-Point
 	virtual void makeArrow(const tf::Transform& point_pos,int count_arrow);
 	//! User Interaction Arrow Marker
 	virtual void makeInteractiveMarker();
+	void makePointsInteractiveMarker();
 	ros::ServiceClient set_clean_path_proxy_;
+	ros::ServiceClient get_objects_proxy_;
+	ros::ServiceClient set_objects_proxy_;
+	ros::Publisher marker_pub_;
 	ros::NodeHandle nh_;
-
+	
 private:
 	//! Function for creating a way-point marker
 	Marker makeWayPoint( InteractiveMarker &msg );
 	//! Function to create the InteractionArrow Marker
-	Marker makeInterArrow( InteractiveMarker &msg );
+	Marker makeInterArrow( InteractiveMarker &msg, const int type = 0 );
+	Marker makeMeshResourceMarker(std::string path, geometry_msgs::Pose object_pose);
 	//! Create controls for each different marker. Here we have control for the defaulot starting control ArrowMarkers(the cartesian way points)
 	void makeArrowControlDefault(InteractiveMarker &msg );
     //! 6DOF control for the Ingteractive Markers
 	void makeArrowControlDetails(InteractiveMarker &msg, bool is_frame_fixed );
 	void insert(std::vector<tf::Transform>::iterator insert_it, std::vector<tf::Transform> pose_vector);
-
+	
 	//! The box control can be used as a pointer to a certain 3D location and when clicked it will add a arrow to that location.
-	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box );
+	InteractiveMarkerControl& makeInteractiveMarkerControl( InteractiveMarker &msg_box, const int type = 0);
     //! Function to handle the entries made from the Way-Points interactive markers Menu.
 	virtual void changeMarkerControlAndPose(std::string marker_name, std::string control_mode);
 
-    //! Define a server for the Interactive Markers.
+	// Offset helper function 
+	void addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset);
+	void ModifyPointsMarkerPose();
+	
+	void addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index);
+
+	void addHeight(const tf::Transform start, const double delta_h, tf::Transform& end);
+	void printIKInformation(const double delta_h, const double h, const std::vector<double> dxdy, const std::vector<bool> ik_result);
+	void GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs);
+	void GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals);
+	void GetDeltaXY( const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step, std::vector<std::vector<double>>& delta_xy);
+	void AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint);
+	
+	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
 	interactive_markers::MenuHandler menu_handler_inter;
+	interactive_markers::MenuHandler menu_handler_points_inter;
 
     //! Vector for storing all the User Entered Way-Points.
 	std::vector<tf::Transform> waypoints_pos;
@@ -124,6 +151,8 @@ private:
 
 	tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener* tfListener;
+	bool points_attached_to_object = true;
+	std::string mesh_name_;
 
 protected Q_SLOTS:
 	//! rviz::Panel virtual functions for loading Panel Configuration.
@@ -145,34 +174,37 @@ public Q_SLOTS:
 	void parseWayPoints();
 	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
-	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path);
+	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
+	bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();
 
 	//! Clear all the Way-Points
 	void clearAllPointsRViz();
+	// Modify marker control 
+	void modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose object_pose);
 	void transformPointsViz(std::string frame);
 	//! Slot for handling the even when a way-point is out of the IK solution of the loaded robot.
 	void wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
 	//! Get the name of the Transformation frame of the Robot.
 	void getRobotModelFrame_slot(const std::string robot_model_frame,const tf::Transform end_effector);
+	// Check IK for all points
+	void CheckAllPointsIK();
+	void RobotIKPlanning(	const double upper_limit, const double lower_limit, const double step_size, const double h,
+							const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step);
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.
 	void initRviz();
-	//! Signal for notifying that a way-point was deleted in the RViz enviroment.
-	void pointDeleteRviz(int marker_name_nr);
-	//! Signal for notifying that a way-point has been added from the RViz enviroment.
-	void addPointRViz(const tf::Transform& point_pos, const int count);
 	//! Signal that the way-point position has been updated by the user from the RViz enviroment.
 	void pointPoseUpdatedRViz(const tf::Transform& point_pos, const char* marker_name);
 	//! Signal for sending all the Way-Points.
 	void wayPoints_signal(std::vector<geometry_msgs::Pose> waypoints);
 	//! Signal to check if the way-point is in valid IK solution.
 	void onUpdatePosCheckIkValidity(const std::vector<tf::Transform> waypoints_pos, const int point_number);
-
-
+	// Marker points signals
+	void ModifyPointsMarkerPose_signal();
 protected:
 	//! The class that GUI RQT User Interactions.
     QWidget *widget_;
@@ -186,8 +218,11 @@ private:
 
 	geometry_msgs::Vector3 WAY_POINT_SCALE_CONTROL;
 	geometry_msgs::Vector3 ARROW_INTER_SCALE_CONTROL;
+	geometry_msgs::Vector3 MESH_SCALE_CONTROL;
+	geometry_msgs::Pose CONTROL_MARKER_POSE;
 	geometry_msgs::Pose parent_home_;
-
+	geometry_msgs::Pose points_parent_home_;
+	
 	float INTERACTIVE_MARKER_SCALE;
 	float ARROW_INTERACTIVE_SCALE;
 };

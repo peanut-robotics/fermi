@@ -40,8 +40,24 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   ARROW_INTER_SCALE_CONTROL.y = 0.1;
   ARROW_INTER_SCALE_CONTROL.z = 0.1;
 
-  ARROW_INTERACTIVE_SCALE = 0.2;
+  MESH_SCALE_CONTROL.x = 1;
+  MESH_SCALE_CONTROL.y = 1;
+  MESH_SCALE_CONTROL.z = 1;
+  
+  CONTROL_MARKER_POSE.position.x = 0;
+  CONTROL_MARKER_POSE.position.y = 0;
+  CONTROL_MARKER_POSE.position.z = 0;
+  CONTROL_MARKER_POSE.orientation.w = 1;
+  CONTROL_MARKER_POSE.orientation.x = 0;
+  CONTROL_MARKER_POSE.orientation.y = 0;
+  CONTROL_MARKER_POSE.orientation.z = 0;
+
+  ARROW_INTERACTIVE_SCALE = 0.4;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
+  get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
+  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
+
+  marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
   ROS_INFO("Constructor created");
 }
@@ -81,21 +97,23 @@ void AddWayPoint::onInitialize()
   // menu_handler.insert( "duplicate_at_end", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
 
   menu_handler_inter.insert("Set home", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
-  menu_handler_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Attach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  menu_handler_inter.insert("Detach Points", boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+
+  menu_handler_points_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Select all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Deselect all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Recenter", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
-
-  connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), widget_, SLOT(setAddPointUIStartPos(const std::string, const tf::Transform)));
 
   connect(widget_, SIGNAL(addPoint(tf::Transform)), this, SLOT(addPointFromUI(tf::Transform)));
   connect(widget_, SIGNAL(pointDelUI_signal(std::string)), this, SLOT(pointDeleted(std::string)));
   connect(widget_, SIGNAL(duplicateWaypoint_signal(std::string)), this, SLOT(duplicateWaypoint(std::string)));
-  connect(this, SIGNAL(addPointRViz(const tf::Transform &, const int)), widget_, SLOT(insertRow(const tf::Transform &, const int)));
-  connect(this, SIGNAL(pointPoseUpdatedRViz(const tf::Transform &, const char *)), widget_, SLOT(pointPosUpdated_slot(const tf::Transform &, const char *)));
   connect(widget_, SIGNAL(pointPosUpdated_signal(const tf::Transform &, const char *)), this, SLOT(pointPoseUpdated(const tf::Transform &, const char *)));
-  connect(this, SIGNAL(pointDeleteRviz(int)), widget_, SLOT(removeRow(int)));
 
   connect(widget_, SIGNAL(cartesianPathParamsFromUI_signal(double, double, double, bool, bool, std::string, bool)), path_generate, SLOT(setCartParams(double, double, double, bool, bool, std::string, bool)));
 
@@ -107,9 +125,10 @@ void AddWayPoint::onInitialize()
   connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
-  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath)));
+  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)));
   connect(widget_, SIGNAL(saveToolBtn_press()), this, SLOT(saveToolPath()));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
+  connect(widget_, SIGNAL(modifyMarkerControl_signal(std::string, geometry_msgs::Pose)), this, SLOT(modifyMarkerControl(std::string, geometry_msgs::Pose)));
   connect(widget_, SIGNAL(transformPointsViz(std::string)), this, SLOT(transformPointsViz(std::string)));
   connect(widget_, SIGNAL(clearAllInteractiveBoxes_signal()), this, SLOT(clearAllInteractiveBoxes()));
 
@@ -127,10 +146,27 @@ void AddWayPoint::onInitialize()
 
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
+  connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
+  connect(widget_, SIGNAL(RobotIKPlanning_signal(const double, const double, const double, const double, const double, const double, const double, const double, const double)),
+          this, SLOT(RobotIKPlanning(const double, const double, const double, const double, const double, const double, const double, const double, const double)));
+
+  connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
+
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
 
     */
+
+  // Init poses
+  box_pos.setIdentity();
+  parent_home_.position.x = 0;
+  parent_home_.position.y = 0;
+  parent_home_.position.z = 0;
+  parent_home_.orientation.x = 0;
+  parent_home_.orientation.y = 0;
+  parent_home_.orientation.z = 0;
+  parent_home_.orientation.w = 1;
+
   Q_EMIT initRviz();
   ROS_INFO("ready.");
 
@@ -164,7 +200,6 @@ void AddWayPoint::addPointFromUI(const tf::Transform point_pos)
 {
   /*! Function for handling the signal of the RQT to add a new Way-Point in the RViz enviroment.
   */
-  ROS_INFO("Point Added");
   makeArrow(point_pos, count);
   server->applyChanges();
 }
@@ -178,138 +213,303 @@ void AddWayPoint::processFeedbackInter(const visualization_msgs::InteractiveMark
 {
   switch (feedback->event_type)
   {
-  case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
-  {
-    //get the menu item which is pressed
-    interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
-    std::string marker_name = feedback->marker_name;
-    InteractiveMarker interaction_marker;
-    server->get(feedback->marker_name.c_str(), interaction_marker);
-
-    if (menu_item == 1)
+    case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
     {
-      // Cache home position
+      //get the menu item which is pressed
+      interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
+      std::string marker_name = feedback->marker_name;
+      InteractiveMarker interaction_marker;
+      if (!server->get(feedback->marker_name.c_str(), interaction_marker)){
+        ROS_ERROR_STREAM("Could not get marker with ID: "<<feedback->marker_name.c_str());
+        return;
+      }
+
+      if (menu_item == 1)
+      {
+        // Cache home position
+        parent_home_ = feedback->pose;
+      }
+      else if (menu_item == 2){
+        ROS_INFO("Attaching points to object");
+        points_attached_to_object = true;
+      }
+      else if (menu_item == 3){
+        ROS_INFO("Detaching points from object");
+        points_attached_to_object = false;
+      }
+      break;
+    }
+    
+    case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
+    { 
+      if (points_attached_to_object){
+        // Get markers 
+        std::vector<InteractiveMarker> markers;
+        InteractiveMarker cur_marker;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          if (!server->get(std::to_string(i), cur_marker)){
+            ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+            return;
+          }
+          markers.push_back(cur_marker);
+        }
+
+        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv;
+        geometry_msgs::Pose T_o2_w_msg, T_o1_w_msg;
+
+        T_o2_w_msg = feedback->pose; // Transformation of frame O2 wrt world
+        T_o1_w_msg = parent_home_; // Transformation of frame O1 wrt world
+        tf::poseMsgToTF(T_o2_w_msg, T_o2_w);
+        tf::poseMsgToTF(T_o1_w_msg, T_o1_w);
+        T_o1_w_inv = T_o1_w.inverse();
+
+        // Apply delta to all markers    
+        tf::Pose p1, p2;
+        geometry_msgs::Pose current_marker_pose_msg;
+        for (InteractiveMarker cur_marker : markers)
+        {
+          current_marker_pose_msg =  cur_marker.pose;
+          tf::poseMsgToTF(current_marker_pose_msg, p1);
+
+          // Apply transform
+          p2 = T_o2_w * T_o1_w_inv * p1;
+
+          pointPoseUpdated(p2, cur_marker.name.c_str());
+          Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
+        }
+      }
+
+      // Update home markers
       parent_home_ = feedback->pose;
+      tf::poseMsgToTF(feedback->pose, box_pos);
+
     }
-    else if (menu_item == 2)
-    { // Duplicate all selected in place
-      // (1) find all selected markers
-      std::vector<tf::Transform> selected;
-      InteractiveMarker cur_marker;
-      int last_marker_index = 1;
-      for (int i = 1; i <= waypoints_pos.size(); i++)
-      {
-        server->get(std::to_string(i), cur_marker);
-        if (cur_marker.controls.size() > 2)
-        {
-          geometry_msgs::Pose cur_pos = cur_marker.pose;
-          tf::Transform point_pos;
-          cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
-          tf::poseMsgToTF(cur_pos, point_pos);
-          selected.push_back(point_pos);
-          last_marker_index = stoi(cur_marker.name);
-        }
-      }
-
-      std::vector<std::string> duplicated_names;
-      // (2) Duplicate in place
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
-      advance(insertion_point, last_marker_index);
-      insert(insertion_point, selected);
-      // (4) set selected to the duplicated points
-      for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
-      {
-        changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
-      }
-    }
-    else if (menu_item == 3)
-    { // duplicate and flip
-      // (1) find all selected markers
-      std::vector<tf::Transform> selected;
-      InteractiveMarker cur_marker;
-      int last_marker_index = 1;
-      for (int i = 1; i <= waypoints_pos.size(); i++)
-      {
-        server->get(std::to_string(i), cur_marker);
-        if (cur_marker.controls.size() > 2)
-        {
-          geometry_msgs::Pose cur_pos = cur_marker.pose;
-          tf::Transform point_pos;
-          cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
-          tf::poseMsgToTF(cur_pos, point_pos);
-          selected.push_back(point_pos);
-          last_marker_index = stoi(cur_marker.name);
-        }
-      }
-
-      std::reverse(selected.begin(), selected.end()); // This is the only different line
-
-      // (2) Duplicate in place
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
-      advance(insertion_point, last_marker_index);
-      insert(insertion_point, selected);
-      // (4) set selected to the duplicated points
-      for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
-      {
-        changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
-      }
-    }
-    else if (menu_item == 4)
-    {
-      std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
-      // int marker_index = stoi(feedback->marker_name);
-      // advance(insertion_point, marker_index);
-
-      tf::Transform point_pos;
-      geometry_msgs::Pose cur_pos = feedback->pose;
-      tf::poseMsgToTF(cur_pos, point_pos);
-      std::vector<tf::Transform> pos_vec = {point_pos};
-      insert(insertion_point, pos_vec);
-    } 
-    break;
   }
-  case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
-  {
+}
 
-    // (1) Find all markers with controls length greater than 2 (These are the selected ones)
-    // InteractiveMarker
-    std::vector<InteractiveMarker> selected;
-    InteractiveMarker cur_marker;
-    for (int i = 1; i <= waypoints_pos.size(); i++)
-    {
-      server->get(std::to_string(i), cur_marker);
-      if (cur_marker.controls.size() > 2)
-      {
-        selected.push_back(cur_marker);
-      }
-    }
-    // (2) Find the delta of the current pose from the home pose
+void AddWayPoint::ModifyPointsMarkerPose(){
+  
+  InteractiveMarker interaction_marker;
+  InteractiveMarkerControl control_button;
 
-    geometry_msgs::Point delta;
-    delta.x = feedback->pose.position.x - parent_home_.position.x;
-    delta.y = feedback->pose.position.y - parent_home_.position.y;
-    delta.z = feedback->pose.position.z - parent_home_.position.z;
-
-    // (3) apply this delta to all the selected ones
-    for (InteractiveMarker cur_marker : selected)
-    {
-      tf::Transform point_pos;
-      cur_marker.pose.position.x += delta.x;
-      cur_marker.pose.position.y += delta.y;
-      cur_marker.pose.position.z += delta.z;
-      tf::poseMsgToTF(cur_marker.pose, point_pos);
-
-      // std::string marker_name = cur_marker.name;
-      pointPoseUpdated(point_pos, cur_marker.name.c_str());
-      Q_EMIT pointPoseUpdatedRViz(point_pos, cur_marker.name.c_str());
-    }
-
-    // (4) set the home position to the current pose
-    parent_home_ = feedback->pose;
-    tf::poseMsgToTF(feedback->pose, box_pos);
-
-    break;
+  // Get markers
+  if (!server->get("move_points_button", interaction_marker)){
+    ROS_ERROR("Could not get marker move_points_button");
+    return;
   }
+  if (interaction_marker.controls.size() == 0){
+    ROS_ERROR("Points marker does not have control");
+    return;
+  }
+  control_button = interaction_marker.controls.at(0);
+  
+  // Check for nan 
+  // if(std::isnan(parent_home_.position.x) || std::isnan(parent_home_.position.y) || std::isnan(parent_home_.position.z) ||
+  //    std::isnan(parent_home_.orientation.x) || std::isnan(parent_home_.orientation.y) || std::isnan(parent_home_.orientation.z) ||
+  //    std::isnan(parent_home_.orientation.w)){
+  //      ROS_ERROR("parent_home_ has an invalid pose");
+  //      return;
+  //   }
+  // if(std::isinf(parent_home_.position.x) || std::isinf(parent_home_.position.y) || std::isinf(parent_home_.position.z) ||
+  //    std::isinf(parent_home_.orientation.x) || std::isinf(parent_home_.orientation.y) || std::isinf(parent_home_.orientation.z) ||
+  //    std::isinf(parent_home_.orientation.w)){
+  //      ROS_ERROR("parent_home_ has an invalid pose: infinity");
+  //      return;
+  //   }
+    
+    // Update marker pose 
+  addPoseOffset(parent_home_, interaction_marker.pose);
+  points_parent_home_ = interaction_marker.pose;
+
+  // Update control button
+  if (control_button.markers.size() == 0){
+    ROS_ERROR("Points marker control button does not have marker");
+    return;
+  }
+  control_button.markers.at(0) = makeInterArrow(interaction_marker, 1);
+
+  // Update server
+  interaction_marker.controls.at(0) = control_button;
+  server->insert(interaction_marker);
+  if (!server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1))){
+    ROS_ERROR("Could not insert marker");
+  }
+  server->applyChanges();
+
+}
+
+void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback){
+  
+  switch (feedback -> event_type){
+    case visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT:
+    {
+      interactive_markers::MenuHandler::EntryHandle menu_item = feedback->menu_entry_id;
+      std::string marker_name = feedback->marker_name;
+
+      if (menu_item == 1)
+        { 
+          // Duplicate all selected in place
+          // (1) find all selected markers
+          std::vector<tf::Transform> selected;
+          InteractiveMarker cur_marker;
+          int last_marker_index = 1;
+          for (int i = 1; i <= waypoints_pos.size(); i++)
+          {
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
+            if (cur_marker.controls.size() > 2)
+            {
+              geometry_msgs::Pose cur_pos = cur_marker.pose;
+              tf::Transform point_pos;
+              cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+              tf::poseMsgToTF(cur_pos, point_pos);
+              selected.push_back(point_pos);
+              last_marker_index = stoi(cur_marker.name);
+            }
+          }
+
+          std::vector<std::string> duplicated_names;
+          // (2) Duplicate in place
+          std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+          advance(insertion_point, last_marker_index);
+          insert(insertion_point, selected);
+          // (4) set selected to the duplicated points
+          for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
+          {
+            changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+          }
+
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
+        }
+        else if (menu_item == 2)
+        { // duplicate and flip
+          // (1) find all selected markers
+          std::vector<tf::Transform> selected;
+          InteractiveMarker cur_marker;
+          int last_marker_index = 1;
+          for (int i = 1; i <= waypoints_pos.size(); i++)
+          {
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
+            if (cur_marker.controls.size() > 2)
+            {
+              geometry_msgs::Pose cur_pos = cur_marker.pose;
+              tf::Transform point_pos;
+              cur_pos.position.z += 0.01; // move it up a centimeter in z because no two points can be in identically the same spot
+              tf::poseMsgToTF(cur_pos, point_pos);
+              selected.push_back(point_pos);
+              last_marker_index = stoi(cur_marker.name);
+            }
+          }
+
+          std::reverse(selected.begin(), selected.end()); // This is the only different line
+
+          // (2) Duplicate in place
+          std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.begin();
+          advance(insertion_point, last_marker_index);
+          insert(insertion_point, selected);
+          // (4) set selected to the duplicated points
+          for (int i = last_marker_index + 1; i <= last_marker_index + selected.size(); i++)
+          {
+            changeMarkerControlAndPose(std::to_string(i), "adjust_frame");
+          }
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
+        }
+        else if (menu_item == 3)
+        {
+          std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
+          tf::Transform point_pos;
+          geometry_msgs::Pose cur_pos = feedback->pose;
+          tf::poseMsgToTF(cur_pos, point_pos);
+          std::vector<tf::Transform> pos_vec = {point_pos};
+          insert(insertion_point, pos_vec);
+          
+          // Update marker
+          modifyMarkerControl(mesh_name_, parent_home_);
+        } 
+        else if (menu_item == 4){
+          // Select all points
+          InteractiveMarker cur_marker;
+          ROS_DEBUG("Selecting all points");
+          for (int i = 1; i <= waypoints_pos.size(); i++)
+          {
+            if (!server->get(std::to_string(i), cur_marker)){
+              ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+              return;
+            }
+            changeMarkerControlAndPose(cur_marker.name.c_str(), "adjust_frame");
+            server->applyChanges();
+          }
+        }
+        else if (menu_item == 5){
+          // Deselect all points
+          ROS_DEBUG("Deselecting all points");
+          for (int i = 1; i <= waypoints_pos.size(); i++)
+          {
+            changeMarkerControlAndPose(std::to_string(i), "adjust_hide");
+            server->applyChanges();
+          }
+        }
+        else if (menu_item == 6){
+          ModifyPointsMarkerPose();
+        }
+        else{
+          ROS_ERROR("Menu button not implemented");
+          break;
+        }
+    }
+    case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
+    { 
+        // Get markers 
+        std::vector<InteractiveMarker> markers;
+        InteractiveMarker cur_marker;
+        for (int i = 1; i <= waypoints_pos.size(); i++)
+        {
+          if (!server->get(std::to_string(i), cur_marker)){
+            ROS_ERROR_STREAM("Could not get marker with ID: "<<i);
+            return;
+          }
+          if (cur_marker.controls.size() > 2){
+            // Only move selected points
+            markers.push_back(cur_marker);
+          }
+        }
+
+        tf::Pose T_o2_w, T_o1_w, T_o1_w_inv, T;
+        geometry_msgs::Pose T_o2_w_msg, T_o1_w_msg;
+
+        T_o2_w_msg = feedback->pose; // Transformation of frame O2 wrt world
+        T_o1_w_msg = points_parent_home_; // Transformation of frame O1 wrt world
+        tf::poseMsgToTF(T_o2_w_msg, T_o2_w);
+        tf::poseMsgToTF(T_o1_w_msg, T_o1_w);
+        T_o1_w_inv = T_o1_w.inverse();
+        T =  T_o2_w * T_o1_w_inv; // Final transformation matrix
+
+        // Apply delta to all markers    
+        tf::Pose p1, p2;
+        geometry_msgs::Pose current_marker_pose_msg;
+        for (InteractiveMarker cur_marker : markers)
+        {
+          current_marker_pose_msg =  cur_marker.pose;
+          tf::poseMsgToTF(current_marker_pose_msg, p1);
+
+          // Apply transform
+          p2 = T * p1;
+
+          pointPoseUpdated(p2, cur_marker.name.c_str());
+          Q_EMIT pointPoseUpdatedRViz(p2, cur_marker.name.c_str());
+        }
+
+      // Save pose
+      points_parent_home_ = feedback -> pose;
+    }
   }
 }
 
@@ -343,8 +543,6 @@ void AddWayPoint::processFeedback(const visualization_msgs::InteractiveMarkerFee
 
     if (menu_item == 1)
     {
-      int marker_nr = atoi(marker_name.c_str());
-      Q_EMIT pointDeleteRviz(marker_nr);
       pointDeleted(marker_name);
     }
     else if (menu_item == 2)
@@ -411,12 +609,13 @@ void AddWayPoint::pointPoseUpdated(const tf::Transform &point_pos, const char *m
   {
     int index = atoi(marker_name);
 
-    if (index > waypoints_pos.size())
+    if ((index > waypoints_pos.size()) || (index < 1) )
     {
+      ROS_ERROR_STREAM("Trying to access incorrect index: "<< index);
       return;
     }
 
-    waypoints_pos[index - 1] = point_pos;
+    waypoints_pos.at(index - 1) = point_pos;
 
     s << index;
     Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, index);
@@ -470,9 +669,11 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
     control_view_details.orientation_mode = InteractiveMarkerControl::FIXED;
   }
 
+  double q_norm = sqrt(2);
+
   //*************rotate and move around the x-axis********************
-  control_view_details.orientation.w = 1;
-  control_view_details.orientation.x = 1;
+  control_view_details.orientation.w = 1/q_norm;
+  control_view_details.orientation.x = 1/q_norm;
   control_view_details.orientation.y = 0;
   control_view_details.orientation.z = 0;
 
@@ -486,9 +687,9 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
   //*****************************************************************
 
   //*************rotate and move around the z-axis********************
-  control_view_details.orientation.w = 1;
+  control_view_details.orientation.w = 1/q_norm;
   control_view_details.orientation.x = 0;
-  control_view_details.orientation.y = 1;
+  control_view_details.orientation.y = 1/q_norm;
   control_view_details.orientation.z = 0;
 
   control_view_details.name = "rotate_z";
@@ -501,10 +702,10 @@ void AddWayPoint::makeArrowControlDetails(InteractiveMarker &msg, bool is_fixed_
   //*****************************************************************
 
   //*************rotate and move around the y-axis********************
-  control_view_details.orientation.w = 1;
+  control_view_details.orientation.w = 1/q_norm;
   control_view_details.orientation.x = 0;
   control_view_details.orientation.y = 0;
-  control_view_details.orientation.z = 1;
+  control_view_details.orientation.z = 1/q_norm;
 
   control_view_details.name = "rotate_y";
   control_view_details.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
@@ -531,8 +732,8 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
   /*! Function for adding a new Way-Point in the RViz scene and here we send the signal to notify the RQT Widget that a new Way-Point has been added.
         */
   InteractiveMarker int_marker;
-  ROS_WARN_STREAM("Adding point! " << std::to_string(count_arrow));
-  ROS_INFO_STREAM("Markers intractive frame is: " << target_frame_);
+  ROS_DEBUG_STREAM("Adding point! " << std::to_string(count_arrow));
+  ROS_DEBUG_STREAM("Markers intractive frame is: " << target_frame_);
 
   int_marker.header.frame_id = target_frame_;
 
@@ -548,12 +749,11 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
         */
   if (waypoints_pos.empty())
   {
-    ROS_INFO("Adding first arrow!");
+    ROS_DEBUG("Adding first arrow!");
     count_arrow++;
     count = count_arrow;
 
     waypoints_pos.push_back(point_pos);
-    Q_EMIT addPointRViz(point_pos, count);
   }
   /*! Check if we have points in the same position in the scene. If we do, do not add one and notify the RQT Widget so it can also add it to the TreeView.
         */
@@ -564,8 +764,7 @@ void AddWayPoint::makeArrow(const tf::Transform &point_pos, int count_arrow) //
 
     waypoints_pos.push_back(point_pos);
 
-      ROS_INFO_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
-      Q_EMIT addPointRViz(point_pos,count);
+      ROS_DEBUG_STREAM("Adding new arrow! with point_pos " << int_marker.pose);
     }
     else
     {
@@ -594,7 +793,7 @@ void AddWayPoint::clearAllInteractiveBoxes()
   std::string default_string = "adjust_hide";
   for (int i = 1; i <= waypoints_pos.size(); i++)
   {
-    ROS_INFO_STREAM("clearing box for " << std::to_string(i));
+    ROS_DEBUG_STREAM("clearing box for " << std::to_string(i));
     changeMarkerControlAndPose(std::to_string(i), default_string);
     server->applyChanges();
   }
@@ -607,7 +806,10 @@ void AddWayPoint::changeMarkerControlAndPose(std::string marker_name, std::strin
        Here the user can change the control either to freely move the Way-Point or get the 6DOF pose control option.
    */
   InteractiveMarker int_marker;
-  server->get(marker_name, int_marker);
+  if (!server->get(marker_name, int_marker)){
+    ROS_ERROR_STREAM("Could not get marker with ID: "<<marker_name);
+    return;
+  }
   int_marker.controls.clear();
 
   if (control_mode == "adjust_eef")
@@ -682,7 +884,29 @@ void AddWayPoint::insert(std::vector<tf::Transform>::iterator insert_it, std::ve
   server->applyChanges();
 }
 
-Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
+Marker AddWayPoint::makeMeshResourceMarker(std::string mesh_name, geometry_msgs::Pose object_pose){
+  // Define the Marker Mesh which the user can add new Way-Points with
+  if(mesh_name == ""){
+    ROS_INFO("Not loading mesh since mesh_name is empty");
+    InteractiveMarker dummy_marker;
+    return makeInterArrow(dummy_marker, 0);
+  }
+  else{
+  Marker marker;
+  marker.type = Marker::MESH_RESOURCE;
+  marker.scale = MESH_SCALE_CONTROL;
+  marker.mesh_resource = "package://peanut_datasets_pkg/meshes/" + mesh_name; 
+
+  marker.pose = CONTROL_MARKER_POSE;
+  //make the markers with interesting color
+  marker.color = ARROW_INTER_COLOR;
+
+  return marker;
+  }
+
+}
+
+Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg, const int type)
 {
   /*! Define the Marker Arrow which the user can add new Way-Points with.
 
@@ -690,7 +914,12 @@ Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
   //define a marker
   Marker marker;
 
+  if (type == 0){
   marker.type = Marker::CUBE;
+  }
+  else{
+    marker.type = Marker::SPHERE;
+  }
   marker.scale = ARROW_INTER_SCALE_CONTROL;
 
   //make the markers with interesting color
@@ -699,7 +928,7 @@ Marker AddWayPoint::makeInterArrow(InteractiveMarker &msg)
   return marker;
 }
 
-InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveMarker &msg)
+InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveMarker &msg, const int type)
 {
   /*! Set the User Interactive Marker with 6DOF control.
   */
@@ -708,15 +937,18 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   control_button.always_visible = true;
   control_button.interaction_mode = InteractiveMarkerControl::BUTTON;
   control_button.name = "button_interaction";
-  control_button.markers.push_back(makeInterArrow(msg));
+  control_button.markers.push_back(makeInterArrow(msg, type));
 
   msg.controls.push_back(control_button);
   //server.reset( new interactive_markers::InteractiveMarkerServer("moveit_cartesian_plan_plugin","",false));
   InteractiveMarkerControl control_inter_arrow;
   control_inter_arrow.always_visible = true;
+
+  double q_norm = sqrt(2);
+
   //*************rotate and move around the x-axis********************
-  control_inter_arrow.orientation.w = 1;
-  control_inter_arrow.orientation.x = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
+  control_inter_arrow.orientation.x = 1/q_norm;
   control_inter_arrow.orientation.y = 0;
   control_inter_arrow.orientation.z = 0;
 
@@ -730,9 +962,9 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   //*****************************************************************
 
   //*************rotate and move around the z-axis********************
-  control_inter_arrow.orientation.w = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
   control_inter_arrow.orientation.x = 0;
-  control_inter_arrow.orientation.y = 1;
+  control_inter_arrow.orientation.y = 1/q_norm;
   control_inter_arrow.orientation.z = 0;
 
   control_inter_arrow.name = "rotate_z";
@@ -745,10 +977,10 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
   //*****************************************************************
 
   //*************rotate and move around the y-axis********************
-  control_inter_arrow.orientation.w = 1;
+  control_inter_arrow.orientation.w = 1/q_norm;
   control_inter_arrow.orientation.x = 0;
   control_inter_arrow.orientation.y = 0;
-  control_inter_arrow.orientation.z = 1;
+  control_inter_arrow.orientation.z = 1/q_norm;
 
   control_inter_arrow.name = "rotate_y";
   control_inter_arrow.interaction_mode = InteractiveMarkerControl::ROTATE_AXIS;
@@ -770,13 +1002,12 @@ InteractiveMarkerControl &AddWayPoint::makeInteractiveMarkerControl(InteractiveM
 void AddWayPoint::makeInteractiveMarker()
 {
   /*! Create the User Interactive Marker and update the RViz enviroment.
-
    */
   InteractiveMarker inter_arrow_marker_;
   inter_arrow_marker_.header.frame_id = target_frame_;
   inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
 
-  ROS_INFO_STREAM("Marker Frame is:" << target_frame_);
+  ROS_DEBUG_STREAM("Marker Frame is: " << target_frame_);
 
   geometry_msgs::Pose pose;
   tf::poseTFToMsg(box_pos, inter_arrow_marker_.pose);
@@ -792,6 +1023,35 @@ void AddWayPoint::makeInteractiveMarker()
   //add interaction feedback to the markers
   server->setCallback(inter_arrow_marker_.name, boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
 }
+
+void AddWayPoint::makePointsInteractiveMarker()
+{
+  //Create the Points Interactive Marker and update the RViz enviroment.
+  
+  InteractiveMarker inter_arrow_marker_;
+  inter_arrow_marker_.header.frame_id = target_frame_;
+  inter_arrow_marker_.scale = ARROW_INTERACTIVE_SCALE;
+
+  geometry_msgs::Pose pose;
+  tf::poseTFToMsg(box_pos, inter_arrow_marker_.pose);
+
+  // Offset pose
+  inter_arrow_marker_.pose.position.x += 0.2;
+  inter_arrow_marker_.pose.position.y += 0.2;
+  inter_arrow_marker_.pose.position.z -= 0.2;
+  inter_arrow_marker_.description = "Interaction Marker";
+
+  //button like interactive marker. Detect when we have left click with the mouse and add new arrow then
+  inter_arrow_marker_.name = "move_points_button";
+
+  makeInteractiveMarkerControl(inter_arrow_marker_, 1);
+  server->insert(inter_arrow_marker_);
+  menu_handler_points_inter.apply(*server, inter_arrow_marker_.name);
+ 
+  server->setCallback(inter_arrow_marker_.name, boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+}
+
+
 void AddWayPoint::parseWayPoints()
 {
   /*! Get the vector of all Way-Points and convert it to geometry_msgs::Pose and send Qt signal when ready.
@@ -818,7 +1078,7 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
   {
     for (int i = min_index; i < max_index; i++)
     {
-      tf::poseTFToMsg(waypoints_pos[i], target_pose);
+      tf::poseTFToMsg(waypoints_pos.at(i), target_pose);
       waypoints.push_back(target_pose);
     }
   }
@@ -900,102 +1160,166 @@ void AddWayPoint::saveToolPath(){
   }
 }
 
-void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path)
+bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+  // Get objects
+  peanut_cotyledon::GetObjects srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  if (get_objects_proxy_.call(srv)){
+    for(auto& obj : srv.response.objects){
+      if(obj.id == object_id){
+        desired_obj = obj;
+        return true;
+      }
+    }
+  }
+  else{
+    ROS_ERROR("Could not call get objects service");
+    return false;
+  }
+  return false;  
+}
+
+void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name)
 {
-  try{
   /*! Function for saving all the Way-Points into yaml file.
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
-    */
-    ROS_INFO("begin save waypoints to file");
-    ROS_INFO_STREAM("The frame the poses are being saved in is" << target_frame_);
+  */
+  ROS_INFO("Saving clean path...");
+  
+  // Transforms and poses
+  geometry_msgs::Transform target_map_tfmsg, object_world_tfmsg;
+  tf::Transform target_map_tf, object_world_tf, target_object_tf;
+  std::vector<geometry_msgs::Pose> waypoints_map_frame, waypoints_object_frame;
+  Eigen::Affine3d object_world_eigen;
 
-    geometry_msgs::TransformStamped transformStamped;
-    try
-    {
-      transformStamped = tfBuffer.lookupTransform("base_link", target_frame_, ros::Time(0));
+  // Used for temp storing transforms
+  tf::Transform waypoint_tf;
+  geometry_msgs::Pose waypoint_pose;
+
+  // Empty cached path and joint trajectory
+  std::vector<peanut_cotyledon::CachedPath> one_cached_path_vec;
+  trajectory_msgs::JointTrajectory empty_joint_traj;
+  peanut_cotyledon::CachedPath one_cached_path;
+  one_cached_path_vec.push_back(one_cached_path);
+  
+  // Objects
+  peanut_cotyledon::Object desired_object;
+
+  // Get tf transforms
+  try
+  {
+    target_map_tfmsg = tfBuffer.lookupTransform("map", target_frame_, ros::Time(0)).transform;
+    tf::transformMsgToTF(target_map_tfmsg, target_map_tf);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ROS_ERROR("Unable to save because not able to transform");
+    return;
+  }
+
+  // Get object transform
+  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    return;
+  }
+
+  // Update object info
+  // Update mesh name
+  mesh_name_ = mesh_name;
+  if(desired_object.geometry_path.size() == 0){
+    desired_object.geometry_path.push_back(mesh_name);  
+  }
+  else{
+    desired_object.geometry_path.at(0) = mesh_name;
+  }
+
+  // Assuming that the object pose has remained constant
+  desired_object.origin.translation.x = parent_home_.position.x;
+  desired_object.origin.translation.y = parent_home_.position.y;
+  desired_object.origin.translation.z = parent_home_.position.z;
+  desired_object.origin.rotation = parent_home_.orientation;
+
+  object_world_tfmsg = desired_object.origin;
+  tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
+  target_object_tf = object_world_tf.inverse() * target_map_tf;
+
+  // Transform points    
+  ROS_INFO_STREAM("Saving "<<waypoints_pos.size()<< " points");
+  for (auto const waypoint_pos_i : waypoints_pos)
+  { 
+    // Poses are in map frame
+    waypoint_tf = target_map_tf * waypoint_pos_i;
+    tf::poseTFToMsg (waypoint_tf, waypoint_pose);
+    waypoints_map_frame.push_back(waypoint_pose);
+
+    // Poses in object frame
+    waypoint_tf = target_object_tf * waypoint_pos_i;
+    tf::poseTFToMsg (waypoint_tf, waypoint_pose);
+    waypoints_object_frame.push_back(waypoint_pose); 
+  }
+
+  /* 
+  Save cached path and robot poses in clean path
+  Cached path poses are in map frame
+  Clean path poses are in object frame
+  When saving, cached paths are intialized to empty joint trajectories
+  */
+  if (clean_path.cached_paths.empty()){
+    clean_path.cached_paths = one_cached_path_vec;
+  }
+  clean_path.object_poses = waypoints_object_frame;
+  clean_path.cached_paths.at(0).robot_poses = waypoints_map_frame;
+  clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  srv.request.clean_path = clean_path;
+
+  if(set_clean_path_proxy_.call(srv))
+  {
+    if(srv.response.success){
+      ROS_INFO("Clean path successfully saved");
     }
-    catch (tf2::TransformException &ex)
-    {
-      ROS_ERROR("%s", ex.what());
-      ROS_ERROR("Unable to save because not able to transform");
-      return;
-    }
-    std::vector<geometry_msgs::Pose> waypoints_pose_robot_frame, waypoints_pose_object_frame;
-
-    const geometry_msgs::Transform constTransform = transformStamped.transform;
-    ROS_INFO_STREAM("transform: " << transformStamped);
-    tf::Transform transform_old_new;
-    tf::transformMsgToTF(constTransform, transform_old_new);
-    tf::Transform waypoint_tf;
-    geometry_msgs::Pose waypoint_pose;
-
-    ROS_INFO_STREAM("At beginning of for loop");
-    for (auto const waypoint_pos_i : waypoints_pos)
-    {
-      ROS_INFO("At loop ");
-      tf::poseTFToMsg (waypoint_pos_i, waypoint_pose);
-      waypoints_pose_robot_frame.push_back(waypoint_pose);
-
-      waypoint_tf = transform_old_new * waypoint_pos_i;
-      tf::poseTFToMsg (waypoint_tf, waypoint_pose);
-      waypoints_pose_object_frame.push_back(waypoint_pose); 
-    }
-
-    ROS_INFO_STREAM("just before setting things");
-    if (clean_path.cached_paths.empty()){
-      std::vector<peanut_cotyledon::CachedPath> one_cached_path_vec;
-      peanut_cotyledon::CachedPath one_cached_path;
-      one_cached_path_vec.push_back(one_cached_path);
-      clean_path.cached_paths = one_cached_path_vec;
-    }
-    clean_path.cached_paths.at(0).robot_poses = waypoints_pose_robot_frame;
-    clean_path.object_poses = waypoints_pose_object_frame;
-    trajectory_msgs::JointTrajectory empty_joint_traj;
-    clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
-
-    try
-    {
-      peanut_cotyledon::SetCleanPath srv;
-      srv.request.floor_name = floor_name;
-      srv.request.area_name = area_name;
-      srv.request.object_id = object_id;
-      srv.request.task_name = task_name;
-      srv.request.clean_path = clean_path;
-    // ROS_INFO_STREAM("sending request to get clean path" << srv);
-    if(set_clean_path_proxy_.call(srv))
-    {
-      if(srv.response.success == true){
-        ROS_INFO("Successfully saved");
-      }
-      else {
-        ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
-        return;
-      }
-    }
-    else
-    {
+    else {
       ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
       return;
     }
   }
-  catch (...)
+  else
   {
     ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
     return;
   }
+
+  // Set objects 
+  peanut_cotyledon::SetObjects set_srv;
+  set_srv.request.floor_name = floor_name;
+  set_srv.request.area_name = area_name;
+  set_srv.request.objects.push_back(desired_object);
+
+  if (set_objects_proxy_.call(set_srv)){
+    if (!set_srv.response.success){
+      ROS_ERROR("Could not set object");
+    }
   }
-  catch (...)
-  {
-    ROS_ERROR("some unkown error happened during saving, the file did not properly save");
+  else{
+    ROS_ERROR("Could not call set objects service");
     return;
   }
-  ROS_INFO("Saving finishd successfully");
+
+  ROS_INFO("Saving clean path finished successfully");
 }
 
 void AddWayPoint::transformPointsViz(std::string frame)
 {
-  ROS_INFO_STREAM("The frame we want the points in is " << frame << " the frame we are currently in is" << target_frame_);
+  ROS_DEBUG_STREAM("The frame we want the points in is " << frame << " the frame we are currently in is " << target_frame_);
   geometry_msgs::TransformStamped transformStamped;
   try
   {
@@ -1011,18 +1335,18 @@ void AddWayPoint::transformPointsViz(std::string frame)
   std::vector<tf::Transform> waypoints_pos_copy;
 
   const geometry_msgs::Transform constTransform = transformStamped.transform;
-  ROS_INFO_STREAM("transform: " << transformStamped);
+  ROS_DEBUG_STREAM("transform: " << transformStamped);
   tf::Transform transform_old_new;
   tf::transformMsgToTF(constTransform, transform_old_new);
 
   for (int i = 0; i < waypoints_pos.size(); i++)
   {
-    waypoints_pos_copy.push_back(waypoints_pos[i]);
-    waypoints_pos_copy[i] = transform_old_new * waypoints_pos_copy[i];
+    waypoints_pos_copy.push_back(waypoints_pos.at(i));
+    waypoints_pos_copy.at(i) = transform_old_new * waypoints_pos_copy.at(i);
   }
   clearAllPointsRViz();
   for (int i = 0; i < waypoints_pos_copy.size(); i++)
-    makeArrow(waypoints_pos_copy[i], i);
+    makeArrow(waypoints_pos_copy.at(i), i);
 
   waypoints_pos = waypoints_pos_copy;
   //delete the waypoints_pos vector
@@ -1036,15 +1360,50 @@ void AddWayPoint::clearAllPointsRViz()
   //delete the waypoints_pos vector
   count = 0;
   makeInteractiveMarker();
+  makePointsInteractiveMarker();
   server->applyChanges();
 }
+
+void AddWayPoint::modifyMarkerControl(std::string mesh_name, geometry_msgs::Pose object_pose){
+
+  InteractiveMarker interaction_marker;
+  InteractiveMarkerControl control_button;
+
+  // Get markers
+  if (!server->get("add_point_button", interaction_marker)){
+    ROS_ERROR("Could not get marker add_points_button");
+    return;
+  }
+  control_button = interaction_marker.controls.at(0);
+  
+  // Update control button
+  mesh_name_ = mesh_name;
+  control_button.markers[0] = makeMeshResourceMarker(mesh_name, object_pose);
+
+  // Update marker pose 
+  interaction_marker.pose = object_pose;
+  
+
+  // Update parent_home
+  parent_home_ = object_pose;
+
+  // Update server
+  interaction_marker.controls.at(0) = control_button;
+  server->insert(interaction_marker);
+  server->setCallback(interaction_marker.name, boost::bind(&AddWayPoint::processFeedbackInter, this, _1));
+  server->applyChanges();
+}
+
 void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geometry_msgs::Pose> out_of_bounds_poses)
 {
   InteractiveMarker int_marker;
   visualization_msgs::Marker point_marker;
   std::stringstream marker_name;
   marker_name << point_number;
-  server->get(marker_name.str(), int_marker);
+  if (!server->get(marker_name.str(), int_marker)){
+    ROS_ERROR_STREAM("Could not get marker with ID: "<<marker_name.str());
+    return;
+  }
 
   int control_size = int_marker.controls.size();
   ROS_DEBUG_STREAM("size of controls for marker: " << control_size);
@@ -1070,7 +1429,6 @@ void AddWayPoint::wayPointOutOfIK_slot(int point_number,int out, std::vector<geo
   {
     int_marker.controls.at(control_size).markers.at(0).color = WAY_POINT_COLOR;
   }
-  ROS_INFO_STREAM("length of markers: " << std::to_string(int_marker.controls.at(control_size).markers.size()) );
   if (control_size > 2){ 
     // Only do additional step if its selected
     int oob_marker_count = 0;
@@ -1124,7 +1482,229 @@ void AddWayPoint::getRobotModelFrame_slot(const std::string robot_model_frame, c
 
   count = 0;
   makeInteractiveMarker();
+  makePointsInteractiveMarker();
   server->applyChanges();
+}
+
+void AddWayPoint::addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msgs::Pose& pose_offset){
+  pose_offset.orientation = pose_in.orientation;
+  pose_offset.position.x = pose_in.position.x + 0.2;
+  pose_offset.position.y = pose_in.position.y + 0.2;
+  pose_offset.position.z = pose_in.position.z - 0.2;
+}
+
+void AddWayPoint::CheckAllPointsIK(){
+  ROS_INFO("Checking IK for all points");
+  for(int i = 1; i <= waypoints_pos.size(); i++){
+    Q_EMIT onUpdatePosCheckIkValidity(waypoints_pos, i);
+  }
+  ROS_INFO("IK check complete");
+}
+
+void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_limit, const double step_size, const double h_current,
+                                  const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step){
+  ROS_INFO("Checking IK for robot states");
+
+  // Elevator parameters
+  double h_lower_limit = lower_limit;
+  double h_upper_limit = upper_limit;
+  double h_step = step_size;
+  double h = h_current;
+
+  // IK checking
+  std::vector<bool> ik_result;
+  std::vector<double> delta_hs;
+  std::vector<std::vector<double>> delta_xy;
+
+  // Transforms
+  geometry_msgs::Transform base_link_world_tfmsg;
+  tf::Transform T, base_link_world_tf, transformed_waypoint;
+  std::vector<tf::Transform> transformed_waypoints;
+  tf::Vector3 translation = tf::Vector3(0,0,0);
+  Eigen::Affine3d check_ik_point;
+
+  // Get heights
+  GetDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
+
+  // Get position increments
+  GetDeltaXY(radius, radius_step, max_angle, min_angle, angle_step, delta_xy);
+
+  // Get baselink transform
+  try{
+    base_link_world_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
+  }
+  catch (tf2::TransformException &ex){
+    ROS_ERROR("%s",ex.what());
+    return;
+  }
+  tf::transformMsgToTF(base_link_world_tfmsg, base_link_world_tf);
+
+  //Initialize vectors
+  tf::Transform empty_tf;
+  for(int i = 0; i < waypoints_pos.size(); i++){
+    transformed_waypoints.push_back(empty_tf);
+    ik_result.push_back(false);
+  }
+  
+  // Loop through states
+  ROS_INFO("IK Results");
+  ROS_INFO("Deviations are with respect to base_link frame");
+  ROS_INFO("Dx = Right movement. Dy = Forward movement");
+  ROS_INFO_STREAM(std::setw(15)<<std::left<<"Height(m)"<<std::setw(15)<<std::left<<"Dx(m)"<<std::setw(15)<<std::left<<"Dy(m)"<<std::setw(15)<<std::left<<"Success"<<std::setw(15)<<std::left<<"Rate(%)");
+  for(const double& delta_h : delta_hs){
+    for(const std::vector<double>& dxdy : delta_xy){
+      /*
+      Apply transformation to all waypoints
+      At the end, transformed_waypoint is in base_link frame
+      */
+      for(int i = 0; i < waypoints_pos.size(); i++){
+        // Apply elevator height transform
+        addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
+        transformed_waypoint = base_link_world_tf * transformed_waypoint;
+
+        // Apply dxdy transform
+        AddDxdy(dxdy, transformed_waypoint);
+
+        // Check IK
+        tf::transformTFToEigen(transformed_waypoint, check_ik_point);
+        ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+        addIKValidityMarker(transformed_waypoint, ik_result[i], i);
+      }
+      printIKInformation(delta_h, h, dxdy, ik_result);
+    }
+  } 
+  
+}
+
+void AddWayPoint::AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint){
+  /*
+  Dxdy increments are applied to the waypoint that is in the base_link frame
+  From a top down view of the arm with the arm extending forward,
+  the base_link_x axis points to the right and base_link_z axis points forward along the arm
+  x = x - dx 
+  z = z - dy
+  
+  Note the negative sign. This is because we want to check if the points are feasible if the robot moves by dxdy.
+  Therefore the points must move the other direction
+  */
+
+  tf::Vector3 origin = waypoint.getOrigin();
+  origin[0] -= dxdy[0];
+  origin[2] -= dxdy[1];
+  waypoint.setOrigin(origin);
+}
+
+void AddWayPoint::GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals){
+  double n = (max_val - min_val)/step + 1;
+  double val;
+  delta_vals.clear();
+
+  for(int i = 0 ; i < n; i++){
+    val = min_val + i*step;
+    delta_vals.push_back(double(val));
+  }
+}
+
+void AddWayPoint::GetDeltaXY(const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step, std::vector<std::vector<double>>& delta_xy){
+  // radius_step is in degrees
+  std::vector<double> theta_steps, radius_steps;
+  delta_xy.clear();
+
+  // Get deltas
+  GetDelta(DEG2RAD(min_angle), DEG2RAD(max_angle), DEG2RAD(angle_step), theta_steps);
+  GetDelta(radius_step, radius, radius_step, radius_steps);
+  
+  // Find dx and dy
+  std::vector<double> dxdy;
+  for(const auto& t : theta_steps){
+    for(const auto& r : radius_steps){
+      dxdy = {r*cos(t), r*sin(t)};
+      delta_xy.push_back(dxdy);
+    }
+  }
+
+}
+
+void AddWayPoint::GetDeltaH(const double h1, const double h2, const double h_step, const double h, std::vector<double> & delta_hs){
+  double n = (h2 - h1)/h_step + 1;
+  double abs_h;
+  delta_hs.clear();
+
+  for(int i = 0 ; i < n; i++){
+    abs_h = h1 + i*h_step;
+    delta_hs.push_back(double(abs_h - h));
+  }
+}
+
+void AddWayPoint::addHeight(const tf::Transform start, const double delta_h, tf::Transform& end){
+  end = start;
+  tf::Vector3 origin = end.getOrigin();
+  origin[2] += delta_h;
+  end.setOrigin(origin);
+}
+
+void AddWayPoint::printIKInformation(const double delta_h, const double h, const std::vector<double> dxdy, const std::vector<bool> ik_result){
+  using namespace std;
+
+  int n = ik_result.size();
+  int success_count = 0;
+  bool success = true;
+  
+  for(const auto& ik : ik_result){
+    if(ik){
+      success_count += 1;
+    }
+    else{
+      success = false;
+    }
+  }
+  ROS_INFO_STREAM(left<<setw(15)<<setprecision(2)<<(delta_h + h)<<
+                  left<<setw(15)<<setprecision(2)<<dxdy[0]<<
+                  left<<setw(15)<<setprecision(2)<<dxdy[1]<<
+                  left<<setw(15)<<left<<success<<
+                  left<<setw(15)<<left<<100.0*success_count/(n*1.0));
+}
+
+void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const bool is_valid_ik, const int index){
+  visualization_msgs::Marker marker;
+
+  //ROS_INFO_STREAM( marker_pose.getOrigin()[0] << " "<< marker_pose.getOrigin()[1]<<" "<< marker_pose.getOrigin()[2]);
+  marker.header.frame_id = "/base_link";
+  marker.header.stamp = ros::Time::now();
+
+  marker.ns = "ik_checking";
+  marker.id = index;
+
+  marker.type = visualization_msgs::Marker::CYLINDER;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.pose.position.x = marker_pose.getOrigin()[0];
+  marker.pose.position.y = marker_pose.getOrigin()[1];
+  marker.pose.position.z = marker_pose.getOrigin()[2];
+  marker.pose.orientation.x = 0;//marker_pose.getRotation().getAxis()[0];
+  marker.pose.orientation.y = 0;//marker_pose.getRotation().getAxis()[1];
+  marker.pose.orientation.z = 0;//marker_pose.getRotation().getAxis()[2];
+  marker.pose.orientation.w = 1;//marker_pose.getRotation().getW();
+
+  marker.scale.x = 0.05;
+  marker.scale.y = 0.05;
+  marker.scale.z = 0.05;
+
+  if(is_valid_ik){
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 1.0;
+  }
+  else{
+    marker.color.r = 1.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 0.8;
+  }
+
+  marker.lifetime = ros::Duration(20);
+  marker_pub_.publish(marker);
 }
 
 } // namespace moveit_cartesian_plan_plugin
