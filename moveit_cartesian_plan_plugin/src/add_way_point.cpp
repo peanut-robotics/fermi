@@ -1201,8 +1201,8 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   ROS_INFO("Saving clean path...");
   
   // Transforms and poses
-  geometry_msgs::Transform target_map_tfmsg, object_world_tfmsg;
-  tf::Transform target_map_tf, object_world_tf, target_object_tf;
+  geometry_msgs::Transform map_target_tfmsg, map_object_tfmsg;
+  tf::Transform map_target_tf, map_object_tf, object_target_tf;
   std::vector<geometry_msgs::Pose> waypoints_map_frame, waypoints_object_frame;
   Eigen::Affine3d object_world_eigen;
 
@@ -1222,8 +1222,8 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   // Get tf transforms
   try
   {
-    target_map_tfmsg = tfBuffer.lookupTransform("map", target_frame_, ros::Time(0)).transform;
-    tf::transformMsgToTF(target_map_tfmsg, target_map_tf);
+    map_target_tfmsg = tfBuffer.lookupTransform("map", target_frame_, ros::Time(0)).transform;
+    tf::transformMsgToTF(map_target_tfmsg, map_target_tf);
   }
   catch (tf2::TransformException &ex)
   {
@@ -1254,21 +1254,21 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   desired_object.origin.translation.z = parent_home_.position.z;
   desired_object.origin.rotation = parent_home_.orientation;
 
-  object_world_tfmsg = desired_object.origin;
-  tf::transformMsgToTF(object_world_tfmsg, object_world_tf);
-  target_object_tf = object_world_tf.inverse() * target_map_tf;
+  map_object_tfmsg = desired_object.origin;
+  tf::transformMsgToTF(map_object_tfmsg, map_object_tf);
+  object_target_tf = map_object_tf.inverse() * map_target_tf;
 
   // Transform points    
   ROS_INFO_STREAM("Saving "<<waypoints_pos.size()<< " points");
   for (auto const waypoint_pos_i : waypoints_pos)
   { 
     // Poses are in map frame
-    waypoint_tf = target_map_tf * waypoint_pos_i;
+    waypoint_tf = map_target_tf * waypoint_pos_i;
     tf::poseTFToMsg (waypoint_tf, waypoint_pose);
     waypoints_map_frame.push_back(waypoint_pose);
 
     // Poses in object frame
-    waypoint_tf = target_object_tf * waypoint_pos_i;
+    waypoint_tf = object_target_tf * waypoint_pos_i;
     tf::poseTFToMsg (waypoint_tf, waypoint_pose);
     waypoints_object_frame.push_back(waypoint_pose); 
   }
@@ -1717,6 +1717,21 @@ void AddWayPoint::addIKValidityMarker(const tf::Transform marker_pose, const boo
 
   marker.lifetime = ros::Duration(20);
   marker_pub_.publish(marker);
+}
+
+bool AddWayPoint::getEFFPose(tf::Transform& eff_pose){
+  geometry_msgs::Transform eff_pose_tfmsg;
+  try
+  {
+    eff_pose_tfmsg = tfBuffer.lookupTransform("base_link","end_effector_link", ros::Time(0)).transform;
+    tf::transformMsgToTF(eff_pose_tfmsg, eff_pose);
+    return true;
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    return false;
+  }
 }
 
 } // namespace moveit_cartesian_plan_plugin
