@@ -103,10 +103,10 @@ void AddWayPoint::onInitialize()
   menu_handler_points_inter.insert("Duplicate selected at end in order", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Duplicate selected at end and reverse", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Add point here", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
+  menu_handler_points_inter.insert("Add point at EFF", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Select all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Deselect all points", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
   menu_handler_points_inter.insert("Recenter", boost::bind(&AddWayPoint::processFeedbackPointsInter, this, _1));
-
 
   connect(path_generate, SIGNAL(getRobotModelFrame_signal(const std::string, const tf::Transform)), this, SLOT(getRobotModelFrame_slot(const std::string, const tf::Transform)));
 
@@ -434,7 +434,19 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
           // Update marker
           modifyMarkerControl(mesh_name_, parent_home_);
         } 
-        else if (menu_item == 4){
+        else if(menu_item == 4){
+          std::vector<tf::Transform>::iterator insertion_point = waypoints_pos.end();
+          tf::Transform eff_pose;
+          // Get EFF pose
+          if(!getEFFPose(eff_pose)){
+            ROS_ERROR("Could not get eff transform");
+            return;
+          }
+          // Add point
+          std::vector<tf::Transform> pos_vec = {eff_pose};
+          insert(insertion_point, pos_vec);
+        }
+        else if (menu_item == 5){
           // Select all points
           InteractiveMarker cur_marker;
           ROS_DEBUG("Selecting all points");
@@ -448,7 +460,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
             server->applyChanges();
           }
         }
-        else if (menu_item == 5){
+        else if (menu_item == 6){
           // Deselect all points
           ROS_DEBUG("Deselecting all points");
           for (int i = 1; i <= waypoints_pos.size(); i++)
@@ -457,7 +469,7 @@ void AddWayPoint::processFeedbackPointsInter(const visualization_msgs::Interacti
             server->applyChanges();
           }
         }
-        else if (menu_item == 6){
+        else if (menu_item == 7){
           ModifyPointsMarkerPose();
         }
         else{
