@@ -1529,8 +1529,8 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   std::vector<std::vector<double>> delta_xy;
 
   // Transforms
-  geometry_msgs::Transform base_link_world_tfmsg;
-  tf::Transform T, base_link_world_tf, transformed_waypoint;
+  geometry_msgs::Transform baselink_map_tfmsg;
+  tf::Transform T, baselink_map_tf, transformed_waypoint;
   std::vector<tf::Transform> transformed_waypoints;
   tf::Vector3 translation = tf::Vector3(0,0,0);
   Eigen::Affine3d check_ik_point;
@@ -1541,15 +1541,15 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   // Get position increments
   GetDeltaXY(radius, radius_step, max_angle, min_angle, angle_step, delta_xy);
 
-  // Get baselink transform
+  // Get baselink transform. Waypoints are stored in map frame
   try{
-    base_link_world_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
+    baselink_map_tfmsg = tfBuffer.lookupTransform("base_link", "map" , ros::Time(0)).transform;
   }
   catch (tf2::TransformException &ex){
     ROS_ERROR("%s",ex.what());
     return;
   }
-  tf::transformMsgToTF(base_link_world_tfmsg, base_link_world_tf);
+  tf::transformMsgToTF(baselink_map_tfmsg, baselink_map_tf);
 
   //Initialize vectors
   tf::Transform empty_tf;
@@ -1572,14 +1572,14 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
       for(int i = 0; i < waypoints_pos.size(); i++){
         // Apply elevator height transform
         addHeight(waypoints_pos[i],delta_h, transformed_waypoint);
-        transformed_waypoint = base_link_world_tf * transformed_waypoint;
+        transformed_waypoint = baselink_map_tf * transformed_waypoint;
 
         // Apply dxdy transform
         AddDxdy(dxdy, transformed_waypoint);
 
         // Check IK
         tf::transformTFToEigen(transformed_waypoint, check_ik_point);
-        ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 150);
+        ik_result[i] = jaco3_kinematics::ik_exists(check_ik_point, 200);
         addIKValidityMarker(transformed_waypoint, ik_result[i], i);
       }
       printIKInformation(delta_h, h, dxdy, ik_result);
@@ -1723,7 +1723,8 @@ bool AddWayPoint::getEFFPose(tf::Transform& eff_pose){
   geometry_msgs::Transform eff_pose_tfmsg;
   try
   {
-    eff_pose_tfmsg = tfBuffer.lookupTransform("base_link","end_effector_link", ros::Time(0)).transform;
+    ROS_INFO_STREAM("Target frame is "<<target_frame_);
+    eff_pose_tfmsg = tfBuffer.lookupTransform(target_frame_,"end_effector_link", ros::Time(0)).transform;
     tf::transformMsgToTF(eff_pose_tfmsg, eff_pose);
     return true;
   }
