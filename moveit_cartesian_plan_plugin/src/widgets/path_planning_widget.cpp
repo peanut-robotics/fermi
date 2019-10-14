@@ -111,6 +111,7 @@ void PathPlanningWidget::init()
   connect(ui_.set_mesh_btn, SIGNAL(clicked()), this, SLOT(SetMesh()));
 
   connect(ui_.show_trigger_data, SIGNAL(clicked()), this, SLOT(showDeviceTriggerPoints()));
+  connect(ui_.update_trigger_point, SIGNAL(clicked()), this, SLOT(UpdateTriggerPoint()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1293,7 +1294,43 @@ void PathPlanningWidget::showDeviceTriggerPoint(const visualization_msgs::Intera
   ui_.trigger_speed->setText(QString::number(trigger_point.speed));
   ui_.trigger_direction->setText(QString::fromStdString(trigger_point.direction));
   ui_.trigger_points_idx->setEnabled(false);
+}
 
+void PathPlanningWidget::UpdateTriggerPoint(){
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::DeviceTriggerPoint trigger_point;
+  bool found = false;
+
+  if(!GetCleanPath(clean_path)){
+    return;
+  }
+
+  // Device actuation data
+  trigger_point.device_name = ui_.trigger_device_name->text().toStdString();
+  trigger_point.action = ui_.trigger_device_action->text().toStdString();
+  trigger_point.idx = ui_.trigger_points_idx->text().toInt();
+  trigger_point.speed = ui_.trigger_speed->text().toDouble();
+  trigger_point.direction = ui_.trigger_direction->text().toStdString();
+
+  for(unsigned int i = 0; i < clean_path.device_trigger_points.size(); i++){
+    if(clean_path.device_trigger_points[i].idx == trigger_point.idx){
+      clean_path.device_trigger_points[i] = trigger_point;
+      found = true;
+      break;
+    }
+  }
+
+  if(!found){
+    clean_path.device_trigger_points.push_back(trigger_point);
+  }
+
+  // Set clean path
+  if(SetCleanPath(clean_path)){
+    ROS_INFO("Trigger point updated");
+  }
+  else{
+    ROS_ERROR("Could not update trigger point");
+  }
 }
 
 bool PathPlanningWidget::GetCleanPath(peanut_cotyledon::CleanPath& clean_path){

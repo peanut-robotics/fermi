@@ -205,7 +205,8 @@ namespace moveit_cartesian_plan_plugin
 			// Print trigger information
 			void showDeviceTriggerPoints();
 			void showDeviceTriggerPoint(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
-
+			void UpdateTriggerPoint();
+			
 			// Get clean path
 			bool GetCleanPath(peanut_cotyledon::CleanPath& clean_path);
 			bool SetCleanPath(const peanut_cotyledon::CleanPath& clean_path);
