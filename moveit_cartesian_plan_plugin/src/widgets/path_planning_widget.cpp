@@ -109,6 +109,8 @@ void PathPlanningWidget::init()
 
   connect(ui_.set_tool_btn, SIGNAL(clicked()), this, SLOT(SetTool()));
   connect(ui_.set_mesh_btn, SIGNAL(clicked()), this, SLOT(SetMesh()));
+
+  connect(ui_.show_trigger_data, SIGNAL(clicked()), this, SLOT(showDeviceTriggerPoints()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1228,6 +1230,128 @@ void PathPlanningWidget::SetMesh(){
   setObjectHelper(floor_name, area_name, object_id, desired_object);
 }
 
+void PathPlanningWidget::showDeviceTriggerPoints(){
+
+  peanut_cotyledon::CleanPath clean_path;
+  if(!GetCleanPath(clean_path)){
+    return;
+  }
+  
+  using namespace std;
+  peanut_cotyledon::DeviceTriggerPoint trigger_point;
+  int spacing = 20;
+  ROS_INFO_STREAM(setw(spacing)<<left<<"Point index"<<
+                  setw(spacing)<<left<<"Device Name"<<
+                  setw(spacing)<<left<<"Device Action"<<
+                  setw(spacing)<<left<<"Speed"<<
+                  setw(spacing)<<left<<"Direction");
+  for(unsigned int i = 0; i < clean_path.device_trigger_points.size(); i++){
+      trigger_point = clean_path.device_trigger_points[i];
+      ROS_INFO_STREAM(setw(spacing)<<left<<trigger_point.idx<<
+                      setw(spacing)<<left<<trigger_point.device_name<<
+                      setw(spacing)<<left<<trigger_point.action<<
+                      setw(spacing)<<left<<setprecision(2)<<trigger_point.speed<<
+                      setw(spacing)<<left<<trigger_point.direction);
+  }
+}
+
+void PathPlanningWidget::showDeviceTriggerPoint(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback){
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::DeviceTriggerPoint trigger_point;
+  bool found = false;
+  int index;
+
+  if(!GetCleanPath(clean_path)){
+    return;
+  }
+  
+  index = stoi(feedback->marker_name) -1 ;
+
+  for(unsigned int i = 0; i < clean_path.device_trigger_points.size(); i++){
+    if(clean_path.device_trigger_points[i].idx == index){
+      ROS_INFO("Found device trigger point");
+      trigger_point = clean_path.device_trigger_points[i];
+      found = true;
+      break;
+    }
+  }
+  if(!found){
+    ROS_ERROR_STREAM("Could not find device trigger point with index "<<index);
+    ui_.trigger_points_idx->setText(QString::number(index));
+    ui_.trigger_device_name->setText("");
+    ui_.trigger_device_action->setText("");
+    ui_.trigger_speed->setText("");
+    ui_.trigger_direction->setText("");
+    ui_.trigger_points_idx->setEnabled(false);
+    return;
+  }
+
+  // Update ui
+  ui_.trigger_points_idx->setText(QString::number(index));
+  ui_.trigger_device_name->setText(QString::fromStdString(trigger_point.device_name));
+  ui_.trigger_device_action->setText(QString::fromStdString(trigger_point.action));
+  ui_.trigger_speed->setText(QString::number(trigger_point.speed));
+  ui_.trigger_direction->setText(QString::fromStdString(trigger_point.direction));
+  ui_.trigger_points_idx->setEnabled(false);
+
+}
+
+bool PathPlanningWidget::GetCleanPath(peanut_cotyledon::CleanPath& clean_path){
+  // Clean path data
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+
+  // Get clean path
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+    return true;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call clean path service");
+    return false;
+  }
+}
+
+bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_path){
+  // Clean path data
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+
+  // Set clean path
+  peanut_cotyledon::SetCleanPath set_path_srv;
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(set_path_srv.response.success){
+      ROS_INFO("Clean path set");
+      return true;
+    }
+    else{
+      ROS_ERROR_STREAM("Could not set clean path. Error: "<<set_path_srv.response.message);
+      return false;
+    }
+  } 
+  else{
+    ROS_ERROR("Could not call set_clean_path service");
+    return false;
+  }
+}
 
 } // namespace widgets
 } // namespace moveit_cartesian_plan_plugin

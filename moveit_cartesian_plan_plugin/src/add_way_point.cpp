@@ -88,11 +88,12 @@ void AddWayPoint::onInitialize()
   //! Inform the user that the RViz is initializing
   ROS_INFO("initializing..");
 
-  menu_handler.insert("delete", boost::bind(&AddWayPoint::processFeedback, this, _1));
-  menu_handler.insert("adjust_frame", boost::bind(&AddWayPoint::processFeedback, this, _1));
-  menu_handler.insert("adjust_eef", boost::bind(&AddWayPoint::processFeedback, this, _1));
-  menu_handler.insert("adjust_hide", boost::bind(&AddWayPoint::processFeedback, this, _1));
-  menu_handler.insert("duplicate_in_place", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Delete", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Adjust frame", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Adjust eef", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Hide", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Duplicate in place", boost::bind(&AddWayPoint::processFeedback, this, _1));
+  menu_handler.insert("Show device trigger", boost::bind(&AddWayPoint::processFeedback, this, _1));
 
   // menu_handler.insert( "duplicate_at_end", boost::bind( &AddWayPoint::processFeedback, this, _1 ) );
 
@@ -151,6 +152,8 @@ void AddWayPoint::onInitialize()
           this, SLOT(RobotIKPlanning(const double, const double, const double, const double, const double, const double, const double, const double, const double)));
 
   connect(widget_, SIGNAL(ModifyPointsMarkerPose_signal()), this, SLOT(ModifyPointsMarkerPose()));
+
+  connect(this, SIGNAL(showDeviceTriggerPoint_signal(const visualization_msgs::InteractiveMarkerFeedbackConstPtr)), widget_, SLOT(showDeviceTriggerPoint(const visualization_msgs::InteractiveMarkerFeedbackConstPtr)));
 
   connect(this, SIGNAL(initRviz()), path_generate, SLOT(initRvizDone()));
   /*!  With the signal initRviz() we call a function GenerateCartesianPath::initRvizDone() which sets the initial parameters of the MoveIt enviroment.
@@ -587,6 +590,10 @@ void AddWayPoint::processFeedback(const visualization_msgs::InteractiveMarkerFee
       tf::poseMsgToTF(cur_pos, point_pos);
       std::vector<tf::Transform> pos_vec = {point_pos};
       insert(insertion_point, pos_vec);
+    }
+    else if(menu_item == 6){
+      // Show device triggers
+      showDeviceTriggerPoint(feedback);
     }
     else
     {
@@ -1733,6 +1740,11 @@ bool AddWayPoint::getEFFPose(tf::Transform& eff_pose){
     ROS_ERROR("%s", ex.what());
     return false;
   }
+}
+
+void AddWayPoint::showDeviceTriggerPoint(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback){
+  // Print device trigger information for selected marker
+  Q_EMIT showDeviceTriggerPoint_signal(feedback);
 }
 
 } // namespace moveit_cartesian_plan_plugin

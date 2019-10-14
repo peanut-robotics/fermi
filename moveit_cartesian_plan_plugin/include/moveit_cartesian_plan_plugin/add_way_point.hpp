@@ -30,6 +30,7 @@
 #include <peanut_cotyledon/SetObjects.h>
 #include <peanut_cotyledon/GetObjects.h>
 #include <peanut_cotyledon/Object.h>
+#include <peanut_cotyledon/DeviceTriggerPoint.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <peanut_kinematics/jaco3_ik.h>
 #include <rviz/properties/bool_property.h>
@@ -131,7 +132,8 @@ private:
 	void GetDelta(const double min_val, const double max_val, const double step, std::vector<double> & delta_vals);
 	void GetDeltaXY( const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step, std::vector<std::vector<double>>& delta_xy);
 	void AddDxdy(const std::vector<double> dxdy, tf::Transform& waypoint);
-	
+	void showDeviceTriggerPoint(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
+
 	//! Define a server for the Interactive Markers.
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 	interactive_markers::MenuHandler menu_handler;
@@ -206,6 +208,9 @@ Q_SIGNALS:
 	void onUpdatePosCheckIkValidity(const std::vector<tf::Transform> waypoints_pos, const int point_number);
 	// Marker points signals
 	void ModifyPointsMarkerPose_signal();
+	// Print device trigger information
+	void showDeviceTriggerPoint_signal(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
+
 protected:
 	//! The class that GUI RQT User Interactions.
     QWidget *widget_;
