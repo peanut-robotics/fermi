@@ -1543,10 +1543,20 @@ void AddWayPoint::RobotIKPlanning(const double upper_limit, const double lower_l
   Eigen::Affine3d check_ik_point;
 
   // Get heights
-  GetDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
+  if(h_step == 0){
+    delta_hs = {0};
+  }
+  else{
+    GetDeltaH(h_lower_limit, h_upper_limit, h_step, h, delta_hs);
+  }
 
   // Get position increments
-  GetDeltaXY(radius, radius_step, max_angle, min_angle, angle_step, delta_xy);
+  if(radius_step == 0){
+    delta_xy = {{0,0}};
+  }
+  else{
+    GetDeltaXY(radius, radius_step, max_angle, min_angle, angle_step, delta_xy);
+  }
 
   // Get baselink transform. Waypoints are stored in map frame
   try{
