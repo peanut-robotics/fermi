@@ -1540,12 +1540,12 @@
         <rect>
          <x>200</x>
          <y>190</y>
-         <width>251</width>
+         <width>120</width>
          <height>31</height>
         </rect>
        </property>
        <property name="text">
-        <string>Update Device Trigger Point</string>
+        <string>Update Trigger</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_25">
@@ -1728,6 +1728,19 @@
        </property>
        <property name="text">
         <string>Show Device Trigger Information</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="delete_trigger_point">
+       <property name="geometry">
+        <rect>
+         <x>330</x>
+         <y>190</y>
+         <width>120</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Delete Trigger</string>
        </property>
       </widget>
      </widget>

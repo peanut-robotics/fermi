@@ -112,6 +112,7 @@ void PathPlanningWidget::init()
 
   connect(ui_.show_trigger_data, SIGNAL(clicked()), this, SLOT(showDeviceTriggerPoints()));
   connect(ui_.update_trigger_point, SIGNAL(clicked()), this, SLOT(UpdateTriggerPoint()));
+  connect(ui_.delete_trigger_point, SIGNAL(clicked()), this, SLOT(DeleteTriggerPoint()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1331,6 +1332,33 @@ void PathPlanningWidget::UpdateTriggerPoint(){
   else{
     ROS_ERROR("Could not update trigger point");
   }
+}
+
+void PathPlanningWidget::DeleteTriggerPoint(){
+  peanut_cotyledon::CleanPath clean_path;
+  if(!GetCleanPath(clean_path)){
+    return;
+  }
+
+  // Device actuation data
+  int idx = ui_.trigger_points_idx->text().toInt();
+  for(unsigned int i = 0; i < clean_path.device_trigger_points.size(); i++){
+    if(clean_path.device_trigger_points[i].idx == idx){
+      clean_path.device_trigger_points.erase(clean_path.device_trigger_points.begin() + idx);
+      ROS_INFO_STREAM("Deleted trigger at index: "<<idx);
+      
+      // Set clean path
+      if(SetCleanPath(clean_path)){
+        ROS_INFO("Trigger point updated");
+      }
+      else{
+        ROS_ERROR("Could not update trigger point");
+      }
+      return;
+    }
+  }
+
+  ROS_INFO_STREAM("Could not find trigger with index: "<<idx);
 }
 
 bool PathPlanningWidget::GetCleanPath(peanut_cotyledon::CleanPath& clean_path){
