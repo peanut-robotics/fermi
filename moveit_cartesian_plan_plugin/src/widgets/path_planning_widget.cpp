@@ -1322,7 +1322,8 @@ void PathPlanningWidget::UpdateTriggerPoint(){
   }
 
   if(!found){
-    clean_path.device_trigger_points.push_back(trigger_point);
+    const int iterator_delta = GetInsertIdx(clean_path, trigger_point.idx);
+    clean_path.device_trigger_points.insert(clean_path.device_trigger_points.begin() + iterator_delta, trigger_point);
   }
 
   // Set clean path
@@ -1332,6 +1333,26 @@ void PathPlanningWidget::UpdateTriggerPoint(){
   else{
     ROS_ERROR("Could not update trigger point");
   }
+}
+
+int PathPlanningWidget::GetInsertIdx(peanut_cotyledon::CleanPath& clean_path, const int& idx){
+  // Returns iterator delta for inserting a new point to device_trigger_points
+
+  // Insert point at vector.begin()
+  if(clean_path.device_trigger_points.size() == 0){
+    return 0;
+  }
+
+  // Insert point at vector.begin() + i
+  for(unsigned int i = 0; i < clean_path.device_trigger_points.size(); i++){
+    if(clean_path.device_trigger_points[i].idx > idx){
+      return i;
+    }
+  }
+
+  // Idx to insert is larger than all idx in vector
+  // Insert point at vector.end()
+  return clean_path.device_trigger_points.size();
 }
 
 void PathPlanningWidget::DeleteTriggerPoint(){
