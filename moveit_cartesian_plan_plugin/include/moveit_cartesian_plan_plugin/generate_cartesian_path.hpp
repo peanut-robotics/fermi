@@ -51,7 +51,7 @@ public:
 	void interpolate(Eigen::Affine3d start_pos, Eigen::Affine3d end_pos, float step_size, std::vector<Eigen::Affine3d>& interpolated);
 public Q_SLOTS:
 	//! Get the Way-Points from the RViz enviroment and use them to generate Cartesian Path.
-  void moveToPose(std::vector<geometry_msgs::Pose> waypoints);
+  void moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only);
 
 	void moveToConfig(std::vector<double> config, bool plan_only);
 
@@ -60,7 +60,7 @@ public Q_SLOTS:
 	//! Slot for letting the Cartesian Path planning class that the RViz has finished with its initialization.
 	void initRvizDone();
 	//! Function for setting time consuming Cartesian Path Execution function to a separate thread.
-	void cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints);
+	void cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only);
 
 	void freespacePathHandler(std::vector<double> config, bool plan_only);
 	//! Get the User entered MoveIt and Cartesian Path parameters and pass them to the corresponding private variables.

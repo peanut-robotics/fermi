@@ -68,6 +68,8 @@ void PathPlanningWidget::init()
 
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
   connect(ui_.targetPoint, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_slot()));
+  connect(ui_.plan_cartesian_path, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
+  connect(ui_.plan_cartesian_path, SIGNAL(clicked()), this, SLOT(parseWayPointBtn_planonly_slot()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(playUntilPointBtn()));
   connect(ui_.playSubset_btn, SIGNAL(clicked()), this, SLOT(sendCartTrajectoryParamsFromUI()));
 
@@ -152,10 +154,20 @@ void PathPlanningWidget::sendCartTrajectoryParamsFromUI()
 
 void PathPlanningWidget::parseWayPointBtn_slot()
 {
-  /*! Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
-      */
-  Q_EMIT parseWayPointBtn_signal();
+  // Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
+  ROS_INFO("Executing Cartesian Path...");
+  bool plan_only = false;
+  Q_EMIT parseWayPointBtn_signal(plan_only);
 }
+
+void PathPlanningWidget::parseWayPointBtn_planonly_slot()
+{
+  // Letting know the Cartesian Path Planner Class that the user has pressed the Execute Cartesian Path button.
+  ROS_INFO("Only planning Cartesian Path...");
+  bool plan_only = true;
+  Q_EMIT parseWayPointBtn_signal(plan_only);
+}
+
 void PathPlanningWidget::goToPrev(){
   int start_idx = ui_.start_idx->text().toInt();
   int stop_idx = ui_.stop_idx->text().toInt();

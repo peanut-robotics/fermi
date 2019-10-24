@@ -137,6 +137,7 @@ namespace moveit_cartesian_plan_plugin
 			void goToNext();
 			//! Slot for parsing the Way-Points and notifying the MoveIt.
 			void parseWayPointBtn_slot();
+			void parseWayPointBtn_planonly_slot();
 			
 			void visualizeGoalConfig();
 
@@ -224,7 +225,7 @@ namespace moveit_cartesian_plan_plugin
 		    void pointPosUpdated_signal( const tf::Transform& position, const char* marker_name);
 			void parseWayPointBtnGoto_signal(int start_index, int stop_index);
 		    //! Signal to notify the Cartesian Path Planning Class that an Execute Cartesian Plan button has been pressed.
-		    void parseWayPointBtn_signal();
+		    void parseWayPointBtn_signal(bool plan_only);
 
 			void configEdited_signal(std::vector<double> config);
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);

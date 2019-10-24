@@ -121,9 +121,9 @@ void AddWayPoint::onInitialize()
   connect(path_generate,SIGNAL(wayPointOutOfIK(int,int, std::vector<geometry_msgs::Pose>)),this,SLOT(wayPointOutOfIK_slot(int,int, std::vector<geometry_msgs::Pose>)));
   connect(this,SIGNAL(onUpdatePosCheckIkValidity(const std::vector<tf::Transform>, const int)),path_generate,SLOT(checkWayPointValidity(const std::vector<tf::Transform>, const int)));
 
-  connect(widget_, SIGNAL(parseWayPointBtn_signal()), this, SLOT(parseWayPoints()));
+  connect(widget_, SIGNAL(parseWayPointBtn_signal(bool)), this, SLOT(parseWayPoints(bool)));
   connect(widget_, SIGNAL(parseWayPointBtnGoto_signal(int, int)), this, SLOT(parseWayPointsGoto(int, int)));
-  connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>)));
+  connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>, bool)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>, bool)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
   connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)));
@@ -1071,7 +1071,7 @@ void AddWayPoint::makePointsInteractiveMarker()
 }
 
 
-void AddWayPoint::parseWayPoints()
+void AddWayPoint::parseWayPoints(const bool plan_only)
 {
   /*! Get the vector of all Way-Points and convert it to geometry_msgs::Pose and send Qt signal when ready.
    */
@@ -1086,7 +1086,7 @@ void AddWayPoint::parseWayPoints()
     waypoints.push_back(target_pose);
   }
 
-  Q_EMIT wayPoints_signal(waypoints);
+  Q_EMIT wayPoints_signal(waypoints, plan_only);
 }
 void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
 {
@@ -1106,7 +1106,7 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
     ROS_ERROR("Unknown error when slicing points to go to a specific point, check your min and max indicies");
   }
   ROS_INFO_STREAM("Playing subset of waypoints from start index (inclusive, zero indexed)" << std::to_string(min_index) << " to ending index (exclusive)" << std::to_string(max_index));
-  Q_EMIT wayPoints_signal(waypoints);
+  Q_EMIT wayPoints_signal(waypoints, false);
 }
 void AddWayPoint::saveToolPath(){
   /*! Function for saving all the Way-Points into yaml file.

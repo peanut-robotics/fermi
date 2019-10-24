@@ -158,7 +158,7 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
 
 }
 
-void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints)
+void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
 {
     /*!
 
@@ -279,6 +279,11 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       Q_EMIT cartesianPathExecuteFinished();
       return;
     }
+
+    if (plan_only){
+      Q_EMIT cartesianPathExecuteFinished();
+      return;
+    }
     // // //
     // 2. compute and execute freespace plan
     // // //
@@ -319,13 +324,13 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
 
 }
 
-void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints)
+void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
 {
   /*! Since the execution of the Cartesian path is time consuming and can lead to locking up of the Plugin and the RViz enviroment the function for executing the Cartesian Path Plan has been placed in a separtate thread.
       This prevents the RViz and the Plugin to lock.
   */
   ROS_INFO("Starting concurrent process for Cartesian Path");
-  QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToPose, waypoints);
+  QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToPose, waypoints, plan_only);
 }
 
 void GenerateCartesianPath::freespacePathHandler(std::vector<double> config, bool plan_only)
@@ -506,7 +511,7 @@ void GenerateCartesianPath::moveToHome()
   std::vector<geometry_msgs::Pose> waypoints;
   waypoints.push_back(home_pose);
 
-  cartesianPathHandler(waypoints);
+  cartesianPathHandler(waypoints, false);
 
 }
 

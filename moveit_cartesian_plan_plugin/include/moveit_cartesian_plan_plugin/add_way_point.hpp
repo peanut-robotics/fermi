@@ -174,7 +174,7 @@ public Q_SLOTS:
 	//! add slot for playing a path from a minimum to maximum index
 	void parseWayPointsGoto(int min_index, int max_index);
 	//! Slot for parsing the Way-Points before sending them to the MoveIt class.
-	void parseWayPoints();
+	void parseWayPoints(const bool plan_only);
 	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
 	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
@@ -203,7 +203,7 @@ Q_SIGNALS:
 	//! Signal that the way-point position has been updated by the user from the RViz enviroment.
 	void pointPoseUpdatedRViz(const tf::Transform& point_pos, const char* marker_name);
 	//! Signal for sending all the Way-Points.
-	void wayPoints_signal(std::vector<geometry_msgs::Pose> waypoints);
+	void wayPoints_signal(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only);
 	//! Signal to check if the way-point is in valid IK solution.
 	void onUpdatePosCheckIkValidity(const std::vector<tf::Transform> waypoints_pos, const int point_number);
 	// Marker points signals
