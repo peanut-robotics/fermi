@@ -174,23 +174,24 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     moveit_group_->setStartStateToCurrentState();
 
     if (waypoints.size() == 1 && !FIX_START_STATE_){ // if the start state is not fixed and waypoints size is 1, freespace plan and end
+      ROS_INFO("Path contains just 1 waypoint.");
+      ROS_INFO("Freespace planning to waypoint ...");
       moveit_group_->setStartState(*start_state);
       moveit::planning_interface::MoveGroupInterface::Plan my_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
       moveit_group_->allowReplanning (MOVEIT_REPLAN_);
       moveit_group_->setPoseTarget(waypoints.at(0), "end_effector_link");
       bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-      ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
       
       if (success){
         freespace_error_code = moveit_group_->execute(my_plan);
         Q_EMIT cartesianPathCompleted(69);
-        ROS_INFO_STREAM("computed freespace plan to start position with single point");
+        ROS_INFO_STREAM("Computed freespace path.");
         Q_EMIT cartesianPathExecuteFinished();
         return;
       }
       else {
-        ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
+        ROS_ERROR_STREAM("Could not compute freespace path.");
         Q_EMIT cartesianPathCompleted(-100);
         Q_EMIT cartesianPathExecuteFinished();
         return;
