@@ -539,7 +539,7 @@
        <property name="geometry">
         <rect>
          <x>40</x>
-         <y>320</y>
+         <y>370</y>
          <width>251</width>
          <height>31</height>
         </rect>
@@ -637,7 +637,7 @@
        <property name="geometry">
         <rect>
          <x>40</x>
-         <y>360</y>
+         <y>410</y>
          <width>251</width>
          <height>31</height>
         </rect>
@@ -847,7 +847,7 @@
        <property name="geometry">
         <rect>
          <x>100</x>
-         <y>290</y>
+         <y>300</y>
          <width>151</width>
          <height>17</height>
         </rect>
@@ -874,6 +874,32 @@
        </property>
        <property name="text">
         <string>Plan Path</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="select_point_btn">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>330</y>
+         <width>191</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select Point</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="select_point_val">
+       <property name="geometry">
+        <rect>
+         <x>250</x>
+         <y>330</y>
+         <width>41</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
        </property>
       </widget>
      </widget>

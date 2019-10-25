@@ -196,6 +196,7 @@ public Q_SLOTS:
 	void CheckAllPointsIK();
 	void RobotIKPlanning(	const double upper_limit, const double lower_limit, const double step_size, const double h,
 							const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step);
+	void SelectPoint(const int idx);
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.

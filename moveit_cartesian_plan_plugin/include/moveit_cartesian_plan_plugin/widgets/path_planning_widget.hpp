@@ -214,6 +214,8 @@ namespace moveit_cartesian_plan_plugin
 			bool GetCleanPath(peanut_cotyledon::CleanPath& clean_path);
 			bool SetCleanPath(const peanut_cotyledon::CleanPath& clean_path);
 
+			// Point selectin
+			void SelectPoint();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
@@ -246,6 +248,8 @@ namespace moveit_cartesian_plan_plugin
 		    void moveToHomeFromUI_signal();
 
 			void sendSendSelectedPlanGroup(int index);
+
+			void SelectPoint_signal(int idx);
 
 			void ChangeCheckIK_signal();
 			void CheckAllPointsIK_signal();

@@ -115,6 +115,8 @@ void PathPlanningWidget::init()
   connect(ui_.show_trigger_data, SIGNAL(clicked()), this, SLOT(showDeviceTriggerPoints()));
   connect(ui_.update_trigger_point, SIGNAL(clicked()), this, SLOT(UpdateTriggerPoint()));
   connect(ui_.delete_trigger_point, SIGNAL(clicked()), this, SLOT(DeleteTriggerPoint()));
+
+  connect(ui_.select_point_btn, SIGNAL(clicked()), this, SLOT(SelectPoint()));
 }
 
 void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
@@ -1392,6 +1394,12 @@ void PathPlanningWidget::DeleteTriggerPoint(){
   }
 
   ROS_INFO_STREAM("Could not find trigger with index: "<<idx);
+}
+
+void PathPlanningWidget::SelectPoint(){
+  ROS_INFO("Selecting a point from UI");
+  int idx = ui_.select_point_val->text().toInt();
+  Q_EMIT SelectPoint_signal(idx);
 }
 
 bool PathPlanningWidget::GetCleanPath(peanut_cotyledon::CleanPath& clean_path){

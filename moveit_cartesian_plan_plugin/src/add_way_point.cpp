@@ -148,6 +148,7 @@ void AddWayPoint::onInitialize()
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
 
   connect(widget_, SIGNAL(CheckAllPointsIK_signal()), this, SLOT(CheckAllPointsIK()));
+  connect(widget_, SIGNAL(SelectPoint_signal(int)), this, SLOT(SelectPoint(int)));
   connect(widget_, SIGNAL(RobotIKPlanning_signal(const double, const double, const double, const double, const double, const double, const double, const double, const double)),
           this, SLOT(RobotIKPlanning(const double, const double, const double, const double, const double, const double, const double, const double, const double)));
 
@@ -1510,6 +1511,23 @@ void AddWayPoint::addPoseOffset(const geometry_msgs::Pose& pose_in, geometry_msg
   pose_offset.position.x = pose_in.position.x + 0.2;
   pose_offset.position.y = pose_in.position.y + 0.2;
   pose_offset.position.z = pose_in.position.z - 0.2;
+}
+
+void AddWayPoint::SelectPoint(const int idx){
+  InteractiveMarker cur_marker;
+  ROS_INFO_STREAM("Selecting point: "<<idx);
+
+  if((idx < 1) || (idx > waypoints_pos.size())){
+    ROS_ERROR_STREAM("Cannot select point: "<<idx<<" .Number of waypoints are: "<<waypoints_pos.size());
+    return;
+  }
+
+  if (!server->get(std::to_string(idx), cur_marker)){
+    ROS_ERROR_STREAM("Could not get marker with ID: "<<idx);
+    return;
+  }
+  changeMarkerControlAndPose(cur_marker.name.c_str(), "adjust_frame");
+  server->applyChanges();
 }
 
 void AddWayPoint::CheckAllPointsIK(){
