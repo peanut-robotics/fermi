@@ -57,6 +57,7 @@
 #include <peanut_cotyledon/GetTasks.h>
 #include <peanut_cotyledon/SetTasks.h>
 #include <peanut_cotyledon/CachedPath.h>
+#include <peanut_cotyledon/AddTask.h>
 
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
@@ -107,6 +108,7 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient set_objects_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
 			ros::ServiceClient set_tasks_proxy_;
+			ros::ServiceClient add_task_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
@@ -183,7 +185,9 @@ namespace moveit_cartesian_plan_plugin
 			void addNavPoseHelper();
 			void goToNavPose();
 			void goToNavPoseHelper();
-			
+			void addTask();
+			void addTaskHelper();
+
 			// Slots for faults
 			void clearFaults();
 			void stopAll();

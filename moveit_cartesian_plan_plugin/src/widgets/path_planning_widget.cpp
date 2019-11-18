@@ -18,6 +18,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
   get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
   set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
+  add_task_proxy_ = nh_.serviceClient<peanut_cotyledon::AddTask>("/oil/cotyledon/add_task", 20);
 
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
@@ -99,6 +100,7 @@ void PathPlanningWidget::init()
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
   connect(ui_.save_pose, SIGNAL(clicked()), this, SLOT(addNavPose()));
   connect(ui_.move_to_pose, SIGNAL(clicked()), this, SLOT(goToNavPose()));
+  connect(ui_.add_new_task, SIGNAL(clicked()), this, SLOT(addTask()));
 
   connect(ui_.clear_faults_btn, SIGNAL(clicked()), this, SLOT(clearFaults()));
   connect(ui_.stop_all_btn, SIGNAL(clicked()), this, SLOT(stopAll()));
@@ -926,6 +928,11 @@ void PathPlanningWidget::addNavPoseHelper()
   robot_object_pose.position.y = robot_object_eigen.translation()[1];
   robot_object_pose.position.z = robot_object_eigen.translation()[2];
   robot_object_pose.orientation = quat_msg;
+
+  if(clean_path.cached_paths.size() == 0){
+    ROS_ERROR("No cached path present");
+    return;
+  }
   clean_path.cached_paths.at(0).nav_pose = robot_object_pose;
 
   // Set clean path
@@ -946,6 +953,39 @@ void PathPlanningWidget::addNavPoseHelper()
     }
   }  
   
+}
+
+void PathPlanningWidget::addTask(){
+  QFuture<void> future = QtConcurrent::run(this, &PathPlanningWidget::addTaskHelper);
+}
+
+void PathPlanningWidget::addTaskHelper(){
+  // Get data
+  std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
+  std::string area_name = ui_.area_name_line_edit->text().toStdString();
+  int object_id = ui_.object_id_line_edit->text().toInt();
+  std::string task_name = ui_.task_name_line_edit->text().toStdString();
+  int task_type = ui_.task_type->text().toInt();
+
+  peanut_cotyledon::AddTask srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+  srv.request.task_type = task_type;
+
+  if(add_task_proxy_.call(srv)){
+    if(srv.response.success){
+      ROS_INFO_STREAM("Added new task: "<<task_name);
+    }
+    else{
+      ROS_ERROR_STREAM("Could not add new task");
+      return;
+    }
+  }
+  else{
+    ROS_ERROR("Could not call service add_task");
+  }  
 }
 
 void PathPlanningWidget::goToNavPose(){
