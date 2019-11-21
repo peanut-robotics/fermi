@@ -57,7 +57,6 @@
 #include <peanut_cotyledon/GetTasks.h>
 #include <peanut_cotyledon/SetTasks.h>
 #include <peanut_cotyledon/CachedPath.h>
-#include <peanut_cotyledon/AddTask.h>
 
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>

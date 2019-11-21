@@ -18,7 +18,6 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
   get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
   set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
-  add_task_proxy_ = nh_.serviceClient<peanut_cotyledon::AddTask>("/oil/cotyledon/add_task", 20);
 
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
@@ -469,7 +468,7 @@ void PathPlanningWidget::loadPointsObject()
   {
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
-    ROS_ERROR("No object poses or cache paths in clean_path");
+    ROS_ERROR("No object poses or cached paths in clean_path");
     return;
   }
   
@@ -975,6 +974,8 @@ void PathPlanningWidget::addTask(){
 }
 
 void PathPlanningWidget::addTaskHelper(){
+  ROS_INFO("Adding new task...");
+
   // Get data
   std::string floor_name = ui_.floor_name_line_edit->text().toStdString();
   std::string area_name = ui_.area_name_line_edit->text().toStdString();
@@ -982,25 +983,74 @@ void PathPlanningWidget::addTaskHelper(){
   std::string task_name = ui_.task_name_line_edit->text().toStdString();
   int task_type = ui_.task_type->text().toInt();
 
-  peanut_cotyledon::AddTask srv;
-  srv.request.floor_name = floor_name;
-  srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
-  srv.request.task_name = task_name;
-  srv.request.task_type = task_type;
+  // Check if task exists
+  peanut_cotyledon::GetTasks tasks_srv;
+  tasks_srv.request.floor_name = floor_name;
+  tasks_srv.request.area_name = area_name;
+  tasks_srv.request.object_id = object_id;
+  if (!get_tasks_proxy_.call(tasks_srv)){
+    ROS_ERROR("Could not call get_tasks service");
+    return;
+  }
 
-  if(add_task_proxy_.call(srv)){
-    if(srv.response.success){
-      ROS_INFO_STREAM("Added new task: "<<task_name);
+  // Find task
+  bool found_task = false;
+  for(auto& task: tasks_srv.response.tasks){
+    if (task.name == task_name){
+      found_task = true;
+      break;
     }
-    else{
-      ROS_ERROR_STREAM("Could not add new task");
+  }
+
+  if(found_task){
+    ROS_ERROR_STREAM("Task "<<task_name<<" already exists");
+    return;
+  }
+  
+  // Add new task
+  peanut_cotyledon::SetTasks set_tasks_srv;
+  peanut_cotyledon::Task new_task;
+  
+  set_tasks_srv.request.floor_name = floor_name;
+  set_tasks_srv.request.area_name = area_name;
+  set_tasks_srv.request.object_id = object_id;
+  new_task.name = task_name;
+  set_tasks_srv.request.tasks.push_back(new_task);
+
+  if (set_tasks_proxy_.call(set_tasks_srv)){
+    if (!set_tasks_srv.response.success){
+      ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
       return;
     }
   }
   else{
-    ROS_ERROR("Could not call service add_task");
+    ROS_ERROR("Could not call set_tasks service");
+    return;
+  }
+  
+  // Add empty clean path 
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::CachedPath cached_path;
+  peanut_cotyledon::SetCleanPath set_path_srv;
+
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  clean_path.cached_paths.push_back(cached_path);
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(!set_path_srv.response.success){
+      ROS_ERROR_STREAM("Unable to update clean path");
+      return; 
+    }
   }  
+  else{
+    ROS_INFO("Could not call set_clean_path service");
+  }
+
+  ROS_INFO_STREAM("Added new task "<<task_name);
 }
 
 void PathPlanningWidget::goToNavPose(){
