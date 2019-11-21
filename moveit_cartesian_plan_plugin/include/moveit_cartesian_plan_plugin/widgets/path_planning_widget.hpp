@@ -156,6 +156,7 @@ namespace moveit_cartesian_plan_plugin
 			void clearAllInteractiveBoxes_slot();
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
+			void clearAllPoints_button_slot();
 			void transformPointsToFrame();
 			//! Slot for disabling the TabWidged while Cartesian Path is executed.
 			void cartesianPathStartedHandler();

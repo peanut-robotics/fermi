@@ -90,7 +90,7 @@ void PathPlanningWidget::init()
 
   connect(ui_.btn_LoadPath, SIGNAL(clicked()), this, SLOT(loadPoints()));
   connect(ui_.btn_SavePath, SIGNAL(clicked()), this, SLOT(savePoints()));
-  connect(ui_.btn_ClearAllPoints, SIGNAL(clicked()), this, SLOT(clearAllPoints_slot()));
+  connect(ui_.btn_ClearAllPoints, SIGNAL(clicked()), this, SLOT(clearAllPoints_button_slot()));
   connect(ui_.btn_ClearAllBoxes, SIGNAL(clicked()), this, SLOT(clearAllInteractiveBoxes_slot()));
 
   //connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
@@ -757,6 +757,21 @@ void PathPlanningWidget::clearAllPoints_slot()
 {
   /*! Clear all the Way-Points from the RViz enviroment
       */
+  tf::Transform t;
+  t.setIdentity();
+
+  Q_EMIT clearAllPoints_signal();
+}
+
+void PathPlanningWidget::clearAllPoints_button_slot()
+{
+  // Clear all the Way-Points from the RViz enviroment
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Clear Points", "Clear all points?", QMessageBox::Yes|QMessageBox::No);
+  if (reply != QMessageBox::Yes){
+    return;
+  }
+
   tf::Transform t;
   t.setIdentity();
 
