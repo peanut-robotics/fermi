@@ -43,8 +43,13 @@
 #include <map>
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
+#include <QInputDialog>
 
 // Cotyledon
+#include <peanut_cotyledon/GetFloors.h>
+#include <peanut_cotyledon/SetFloors.h>
+#include <peanut_cotyledon/GetAreas.h>
+#include <peanut_cotyledon/SetAreas.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
@@ -57,6 +62,7 @@
 #include <peanut_cotyledon/GetTasks.h>
 #include <peanut_cotyledon/SetTasks.h>
 #include <peanut_cotyledon/CachedPath.h>
+#include <peanut_cotyledon/Floor.h>
 
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
@@ -101,6 +107,10 @@ namespace moveit_cartesian_plan_plugin
 				return "RobotPathPlanner";
 			}
 			ros::NodeHandle nh_;
+			ros::ServiceClient get_floors_proxy_;
+			ros::ServiceClient set_floors_proxy_;
+			ros::ServiceClient get_areas_proxy_;
+			ros::ServiceClient set_areas_proxy_;
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
