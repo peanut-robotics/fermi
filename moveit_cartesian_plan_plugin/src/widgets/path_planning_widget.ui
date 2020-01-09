@@ -468,6 +468,46 @@
         <string notr="true"/>
        </property>
       </widget>
+      <widget class="QComboBox" name="floor_combo_box">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>480</y>
+         <width>121</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="area_combo_box">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>510</y>
+         <width>121</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="object_id_combo_box">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>550</y>
+         <width>121</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="task_combo_box">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>580</y>
+         <width>121</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
      <widget class="QWidget" name="PlanExec">
       <attribute name="title">
