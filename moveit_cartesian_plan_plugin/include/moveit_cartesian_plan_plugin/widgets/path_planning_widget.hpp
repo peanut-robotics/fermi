@@ -195,7 +195,6 @@ namespace moveit_cartesian_plan_plugin
 			void addNavPoseHelper();
 			void goToNavPose();
 			void goToNavPoseHelper();
-			void addTask();
 			void addTaskHelper();
 
 			// Slots for faults
