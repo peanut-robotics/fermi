@@ -231,10 +231,17 @@ namespace moveit_cartesian_plan_plugin
 			// Point selectin
 			void SelectPoint();
 
-			// Test
+			// Drop down menu
 			void updateAreaMenu(const QString& string);
 			void updateObjectIDMenu(const QString& string);
 			void updateTaskMenu(const QString& string);
+			void ResetMenu();
+
+			// Add data buttons
+			void addFloorCb();
+			void addAreaCb();
+			void addObjectCb();
+			void addTaskCb();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.

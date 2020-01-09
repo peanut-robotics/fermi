@@ -127,8 +127,241 @@ void PathPlanningWidget::init()
   connect(ui_.floor_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateAreaMenu(const QString&)));
   connect(ui_.area_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateObjectIDMenu(const QString&)));
   connect(ui_.object_id_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateTaskMenu(const QString&)));
+  connect(ui_.reset_menu, SIGNAL(clicked()), this, SLOT(ResetMenu()));
+
+  // Add data buttons
+  connect(ui_.add_floor, SIGNAL(clicked()), this, SLOT(addFloorCb()));
+  connect(ui_.add_area, SIGNAL(clicked()), this, SLOT(addAreaCb()));
+  connect(ui_.add_object, SIGNAL(clicked()), this, SLOT(addObjectCb()));
+  connect(ui_.add_task, SIGNAL(clicked()), this, SLOT(addTaskCb()));
+
 
   // Init cotyledon information
+  peanut_cotyledon::GetFloors floors_srv;
+  if (!get_floors_proxy_.call(floors_srv)){
+    ROS_ERROR("Could not call get_floors_proxy_ service");
+  }
+  else{
+    for(const auto& floor : floors_srv.response.floors){
+      ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
+    }
+  }
+}
+
+void PathPlanningWidget::addFloorCb(){
+  QString text;
+  bool ok;
+  std::string floor_name;
+
+  text = QInputDialog::getText(this, "Add new floor","Floor Name", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  floor_name = text.toStdString();
+
+  // Check if floor exists
+  peanut_cotyledon::GetFloors floors_srv;
+  if (!get_floors_proxy_.call(floors_srv)){
+    ROS_ERROR("Could not call get_floors_proxy_ service");
+    return;
+  }
+  for(const auto& floor : floors_srv.response.floors){
+    if (floor.name == floor_name){
+      ROS_ERROR_STREAM("Floor: "<<floor_name<<" already exists");
+      return;
+    }
+  }
+
+  peanut_cotyledon::SetFloors set_floors_srv;
+  peanut_cotyledon::Floor new_floor;
+
+  new_floor.name = floor_name;
+  set_floors_srv.request.floors.push_back(new_floor);
+
+  if (!set_floors_proxy_.call(set_floors_srv)){
+    ROS_ERROR("Could not call set_floors_srv service");
+    return;
+  }
+}
+
+void PathPlanningWidget::addAreaCb(){
+  QString text;
+  bool ok;
+  std::string area_name;
+  
+  text = QInputDialog::getText(this, "Add new area","Area Name", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  area_name = text.toStdString();
+
+  // Check if area exists 
+  peanut_cotyledon::GetAreas get_areas_srv;
+  get_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
+  if (!get_areas_proxy_.call(get_areas_srv)){
+    ROS_ERROR("Could not call get_areas_srv service");
+    return;
+  }
+  for(const auto& area : get_areas_srv.response.areas){
+    if (area.name == area_name){
+      ROS_ERROR_STREAM("Area: "<<area_name<<" already exists");
+      return;
+    }
+  }
+
+  peanut_cotyledon::SetAreas set_areas_srv;
+  peanut_cotyledon::Area new_area;
+
+  new_area.name = area_name;
+  set_areas_srv.request.areas.push_back(new_area);
+  set_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
+  if (!set_areas_proxy_.call(set_areas_srv)){
+    ROS_ERROR("Could not call set_areas_srv service");
+    return;
+  }
+}
+
+void PathPlanningWidget::addObjectCb(){
+  QString text;
+  bool ok;
+  std::string object_name, object_type, object_model;
+  int object_id;
+  peanut_cotyledon::Object desired_object;
+
+  text = QInputDialog::getText(this, "Object Name","Object name:", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+
+  text = QInputDialog::getText(this, "Object ID","Object ID:", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  object_id = text.toInt();
+
+  object_name = text.toStdString();
+  text = QInputDialog::getText(this, "Object Type","Object type:", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  object_type = text.toStdString();
+  text = QInputDialog::getText(this, "Object Model","Object model:", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  object_model = text.toStdString();
+
+  // Check if object exists
+  if (getObjectWithID(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_id, desired_object)){
+    ROS_ERROR_STREAM("Object with ID: "<<object_id<<" already exists");
+    return;
+  }
+
+  // Add object
+  peanut_cotyledon::Object new_obj;
+  new_obj.name = object_name;
+  new_obj.type = object_type;
+  new_obj.id = object_id;
+  new_obj.model = object_model;
+  if(!setObjectHelper(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_id, new_obj)){
+    ROS_ERROR("Could not add object");
+    return;
+  }
+}
+
+
+void PathPlanningWidget::addTaskCb(){
+  QString text;
+  bool ok;
+  std::string task_name;
+  int task_type;
+
+  std::string floor_name = ui_.floor_combo_box->currentText().toStdString();
+  std::string area_name = ui_.area_combo_box->currentText().toStdString();
+  int object_id = ui_.object_id_combo_box->currentText().toInt();
+
+  text = QInputDialog::getText(this, "Task Name","Task Name", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  task_name = text.toStdString();
+
+  text = QInputDialog::getText(this, "Task Type","Task Type", QLineEdit::Normal,"", &ok);
+  if(!ok){
+    return;
+  }
+  task_type = text.toInt();
+
+  // Check if task exists
+  peanut_cotyledon::GetTasks tasks_srv;
+  tasks_srv.request.floor_name = floor_name;
+  tasks_srv.request.area_name = area_name;
+  tasks_srv.request.object_id = object_id;
+  if (!get_tasks_proxy_.call(tasks_srv)){
+    ROS_ERROR("Could not call get_tasks service");
+    return;
+  }
+
+  for(auto& task: tasks_srv.response.tasks){
+    if (task.name == task_name){
+      ROS_ERROR_STREAM("Task: "<<task_name<<" already exists");
+      return;
+    }
+  }
+  
+  // Add new task
+  peanut_cotyledon::SetTasks set_tasks_srv;
+  peanut_cotyledon::Task new_task;
+  
+  set_tasks_srv.request.floor_name = floor_name;
+  set_tasks_srv.request.area_name = area_name;
+  set_tasks_srv.request.object_id = object_id;
+  new_task.name = task_name;
+  new_task.task_type = task_type;
+  set_tasks_srv.request.tasks.push_back(new_task);
+
+  if (set_tasks_proxy_.call(set_tasks_srv)){
+    if (!set_tasks_srv.response.success){
+      ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
+      return;
+    }
+  }
+  else{
+    ROS_ERROR("Could not call set_tasks service");
+    return;
+  }
+  
+  // Add empty clean path 
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::CachedPath cached_path;
+  peanut_cotyledon::SetCleanPath set_path_srv;
+
+  set_path_srv.request.floor_name = floor_name;
+  set_path_srv.request.area_name = area_name;
+  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.task_name = task_name;
+  clean_path.cached_paths.push_back(cached_path);
+  set_path_srv.request.clean_path = clean_path;
+  
+  if(set_clean_path_proxy_.call(set_path_srv)){
+    if(!set_path_srv.response.success){
+      ROS_ERROR_STREAM("Unable to update clean path");
+      return; 
+    }
+  }  
+  else{
+    ROS_INFO("Could not call set_clean_path service");
+  }
+
+  ROS_INFO_STREAM("Added new task "<<task_name);
+}
+
+void PathPlanningWidget::ResetMenu(){
+  ui_.floor_combo_box->clear();
+  ui_.area_combo_box->clear();
+  ui_.object_id_combo_box->clear();
+  ui_.task_combo_box->clear();
+
   peanut_cotyledon::GetFloors floors_srv;
   if (!get_floors_proxy_.call(floors_srv)){
     ROS_ERROR("Could not call get_floors_proxy_ service");
@@ -1069,21 +1302,21 @@ void PathPlanningWidget::addTask(){
   }
   if (!found_floor){
     ROS_WARN_STREAM("Could not find floor: "<<floor_name<<". Creating a new floor...");
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "New Floor", "Create new floor?", QMessageBox::Yes|QMessageBox::No);
-    if (reply == QMessageBox::No){
-      return;
-    }
-    peanut_cotyledon::SetFloors set_floors_srv;
-    peanut_cotyledon::Floor new_floor;
+    // QMessageBox::StandardButton reply;
+    // reply = QMessageBox::question(this, "New Floor", "Create new floor?", QMessageBox::Yes|QMessageBox::No);
+    // if (reply == QMessageBox::No){
+    //   return;
+    // }
+    // peanut_cotyledon::SetFloors set_floors_srv;
+    // peanut_cotyledon::Floor new_floor;
 
-    new_floor.name = floor_name;
-    set_floors_srv.request.floors.push_back(new_floor);
+    // new_floor.name = floor_name;
+    // set_floors_srv.request.floors.push_back(new_floor);
 
-    if (!set_floors_proxy_.call(set_floors_srv)){
-      ROS_ERROR("Could not call set_floors_srv service");
-      return;
-    }
+    // if (!set_floors_proxy_.call(set_floors_srv)){
+    //   ROS_ERROR("Could not call set_floors_srv service");
+    //   return;
+    // }
   }
   
   // Check if area exists
@@ -1102,21 +1335,21 @@ void PathPlanningWidget::addTask(){
   }
   if (!found_area){
     ROS_WARN_STREAM("Could not find area: "<<area_name<<". Creating a new area...");
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "New Area", "Create new area?", QMessageBox::Yes|QMessageBox::No);
-    if (reply == QMessageBox::No){
-      return;
-    }
-    peanut_cotyledon::SetAreas set_areas_srv;
-    peanut_cotyledon::Area new_area;
+    // QMessageBox::StandardButton reply;
+    // reply = QMessageBox::question(this, "New Area", "Create new area?", QMessageBox::Yes|QMessageBox::No);
+    // if (reply == QMessageBox::No){
+    //   return;
+    // }
+    // peanut_cotyledon::SetAreas set_areas_srv;
+    // peanut_cotyledon::Area new_area;
 
-    new_area.name = area_name;
-    set_areas_srv.request.areas.push_back(new_area);
-    set_areas_srv.request.floor_name = floor_name;
-    if (!set_areas_proxy_.call(set_areas_srv)){
-      ROS_ERROR("Could not call set_areas_srv service");
-      return;
-    }
+    // new_area.name = area_name;
+    // set_areas_srv.request.areas.push_back(new_area);
+    // set_areas_srv.request.floor_name = floor_name;
+    // if (!set_areas_proxy_.call(set_areas_srv)){
+    //   ROS_ERROR("Could not call set_areas_srv service");
+    //   return;
+    // }
   }
 
   // Check if object exists
@@ -1127,33 +1360,36 @@ void PathPlanningWidget::addTask(){
 
   if (!getObjectWithID(floor_name, area_name, object_id,desired_obj)){
     ROS_WARN_STREAM("Could not find object with ID: "<<object_id<<". Adding new object...");
-    // Get object information
-    text = QInputDialog::getText(this, "Object Name","Object name:", QLineEdit::Normal,"", &ok);
-    if(!ok){
-      return;
-    }
-    object_name = text.toStdString();
-    text = QInputDialog::getText(this, "Object Type","Object type:", QLineEdit::Normal,"", &ok);
-    if(!ok){
-      return;
-    }
-    object_type = text.toStdString();
-    text = QInputDialog::getText(this, "Object Model","Object model:", QLineEdit::Normal,"", &ok);
-    if(!ok){
-      return;
-    }
-    object_model = text.toStdString();
+    // // Get object information
+    // text = QInputDialog::getText(this, "Object Name","Object name:", QLineEdit::Normal,"", &ok);
+    // if(!ok){
+    //   return;
+    // }
+    // object_name = text.toStdString();
+    // text = QInputDialog::getText(this, "Object Type","Object type:", QLineEdit::Normal,"", &ok);
+    // if(!ok){
+    //   return;
+    // }
+    // object_type = text.toStdString();
+    // text = QInputDialog::getText(this, "Object Model","Object model:", QLineEdit::Normal,"", &ok);
+    // if(!ok){
+    //   return;
+    // }
+    // object_model = text.toStdString();
 
-    // Add object
-    peanut_cotyledon::Object new_obj;
-    new_obj.name = object_name;
-    new_obj.type = object_type;
-    new_obj.id = object_id;
-    new_obj.model = object_model;
-    if(!setObjectHelper(floor_name, area_name, object_id, new_obj)){
-      ROS_ERROR("Could not add object");
-      return;
-    }
+    // // Add object
+    // peanut_cotyledon::Object new_obj;
+    // new_obj.name = object_name;
+    // new_obj.type = object_type;
+    // new_obj.id = object_id;
+    // new_obj.model = object_model;
+    // if(!setObjectHelper(floor_name, area_name, object_id, new_obj)){
+    //   ROS_ERROR("Could not add object");
+    //   return;
+    // }
+  }
+  else{
+    ROS_ERROR("Could not find object with requested ID");
   }
 
   // Check if task exists
