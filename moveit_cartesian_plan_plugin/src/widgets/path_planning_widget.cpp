@@ -179,6 +179,10 @@ void PathPlanningWidget::addFloorCb(){
     ROS_ERROR("Could not call set_floors_srv service");
     return;
   }
+
+  ROS_DEBUG_STREAM("Added new floor: "<< floor_name);
+  ui_.floor_combo_box->addItem(QString::fromStdString(floor_name));
+  ui_.floor_combo_box->setCurrentText(QString::fromStdString(floor_name));
 }
 
 void PathPlanningWidget::addAreaCb(){
@@ -216,6 +220,10 @@ void PathPlanningWidget::addAreaCb(){
     ROS_ERROR("Could not call set_areas_srv service");
     return;
   }
+  
+  ROS_DEBUG_STREAM("Added new area: "<< area_name);
+  ui_.area_combo_box->addItem(QString::fromStdString(area_name));
+  ui_.area_combo_box->setCurrentText(QString::fromStdString(area_name));
 }
 
 void PathPlanningWidget::addObjectCb(){
@@ -264,6 +272,10 @@ void PathPlanningWidget::addObjectCb(){
     ROS_ERROR("Could not add object");
     return;
   }
+
+  ROS_DEBUG_STREAM("Added new object with ID: "<< object_id);
+  ui_.object_id_combo_box->addItem(QString::number(object_id));
+  ui_.object_id_combo_box->setCurrentText(QString::number(object_id));
 }
 
 
@@ -350,7 +362,9 @@ void PathPlanningWidget::addTaskCb(){
     ROS_INFO("Could not call set_clean_path service");
   }
 
-  ROS_INFO_STREAM("Added new task "<<task_name);
+  ROS_DEBUG_STREAM("Added new task "<<task_name);
+  ui_.task_combo_box->addItem(QString::fromStdString(task_name));
+  ui_.task_combo_box->setCurrentText(QString::fromStdString(task_name));
 }
 
 void PathPlanningWidget::ResetMenu(){
