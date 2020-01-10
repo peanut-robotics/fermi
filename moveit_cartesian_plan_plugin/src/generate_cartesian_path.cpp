@@ -499,9 +499,6 @@ void GenerateCartesianPath::initRvizDone()
     Q_EMIT getRobotModelFrame_signal(ROBOT_MODEL_FRAME_,end_effector);
   }
 
-    Q_EMIT sendCartPlanGroup(group_names);
-
-
 }
 void GenerateCartesianPath::moveToHome()
 {

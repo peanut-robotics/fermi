@@ -98,8 +98,6 @@ void PathPlanningWidget::init()
 
   //connect(ui_.transform_robot_model_frame, SIGNAL(clicked()), this, SLOT(transformPointsToFrame()));
 
-  connect(ui_.combo_planGroup, SIGNAL(currentIndexChanged(int)), this, SLOT(selectedPlanGroup(int)));
-
   connect(ui_.mv_el, SIGNAL(clicked()), this, SLOT(moveElevator()));
   connect(ui_.save_pose, SIGNAL(clicked()), this, SLOT(addNavPose()));
   connect(ui_.move_to_pose, SIGNAL(clicked()), this, SLOT(goToNavPose()));
@@ -425,18 +423,6 @@ void PathPlanningWidget::updateTaskMenu(const QString& object_id){
   else{
      ROS_ERROR("Could not call get_tasks service");
     return;
-  }
-}
-
-
-void PathPlanningWidget::getCartPlanGroup(std::vector<std::string> group_names)
-{
-  ROS_INFO("setting the name of the planning group in combo box");
-  int lenght_group = group_names.size();
-
-  for (int i = 0; i < lenght_group; i++)
-  {
-    ui_.combo_planGroup->addItem(QString::fromStdString(group_names[i]));
   }
 }
 

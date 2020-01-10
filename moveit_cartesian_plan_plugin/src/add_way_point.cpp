@@ -141,8 +141,6 @@ void AddWayPoint::onInitialize()
 
   connect(path_generate, SIGNAL(cartesianPathCompleted(double)), widget_, SLOT(cartPathCompleted_slot(double)));
 
-  connect(path_generate, SIGNAL(sendCartPlanGroup(std::vector<std::string>)), widget_, SLOT(getCartPlanGroup(std::vector<std::string>)));
-
   connect(widget_, SIGNAL(sendSendSelectedPlanGroup(int)), path_generate, SLOT(getSelectedGroupIndex(int)));
 
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));

@@ -177,10 +177,7 @@ namespace moveit_cartesian_plan_plugin
 			void cartPathCompleted_slot(double fraction);
 			//update the point in the RQT by using separate thread
 			// void pointPosUpdatedHandler_slot(const tf::Transform& point_pos, const char* marker_name);
-
-			//! Set the planning group ComboBox
-			void getCartPlanGroup(std::vector< std::string > group_names);
-
+			
 			void selectedPlanGroup(int index);
 
 			//! Create a slot to call a signal on which the Move the robot to home position function is called
