@@ -103,6 +103,13 @@ void GenerateCartesianPath::init()
         group_names.push_back(parent_group_name.first);
     }
   }
+
+  // Cartesian planning and execution
+  cart_plan_action_client = new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true);
+  cart_plan_action_client->waitForServer(ros::Duration(2.0));
+
+  cart_exec_action_client = new actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>("/execute_trajectory", true);
+  cart_exec_action_client->waitForServer(ros::Duration(2.0));
 }
 
   ROS_INFO_STREAM("Group name:"<< group_names[selected_plan_group]);
@@ -124,7 +131,8 @@ void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_siz
                   <<"\n Jump Threshold:"<<cart_jump_thresh_
                   <<"\n Replanning:"<<moveit_replan_
                   <<"\n Avoid Collisions:"<<avoid_collisions_
-                  <<"\n Robot model frame: "<<robot_model_frame_);
+                  <<"\n Robot model frame: "<<robot_model_frame_
+                  <<"\n Start state is fixed: "<<fix_start_state_);
 
   PLAN_TIME_        = plan_time_;
   MOVEIT_REPLAN_    = moveit_replan_;
@@ -160,9 +168,6 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
 
 void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
 {
-    /*!
-
-    */
     Q_EMIT cartesianPathExecuteStarted();
     moveit::planning_interface::MoveItErrorCode freespace_error_code;
 
@@ -173,7 +178,8 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     ROS_INFO_STREAM("the start state of the robot is " << start_state);
     moveit_group_->setStartStateToCurrentState();
 
-    if (waypoints.size() == 1 && !FIX_START_STATE_){ // if the start state is not fixed and waypoints size is 1, freespace plan and end
+    // If the start state is not fixed and waypoints size is 1, freespace plan and end
+    if (waypoints.size() == 1 && !FIX_START_STATE_){ 
       ROS_INFO("Path contains just 1 waypoint.");
       ROS_INFO("Freespace planning to waypoint ...");
       moveit_group_->setStartState(*start_state);
@@ -197,8 +203,7 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
         return;
       }
     }
-
-
+    
     ROS_INFO_STREAM("The frame planning occurs in is base_link the frame we are currently in is " << ROBOT_MODEL_FRAME_ << " transforming");
     geometry_msgs::TransformStamped transformStamped;
     try{
@@ -236,7 +241,8 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       path_constraints.orientation_constraints.push_back(orientation_constraint);
     }
 
-    if (FIX_START_STATE_){ // If the start state is fixed then append the current pose to the list of poses for cartesian planning
+    // If the start state is fixed then append the current pose to the list of poses for cartesian planning
+    if (FIX_START_STATE_){ 
       geometry_msgs::TransformStamped eef_pos;
       try{
         eef_pos = tfBuffer.lookupTransform("base_link", "end_effector_link" , ros::Time(0));
@@ -261,45 +267,64 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 1. compute cartesian path
     // // //
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-
-    moveit_msgs::RobotTrajectory trajectory_;
-    double fraction = moveit_group_->computeCartesianPath(waypoints_pose_copy,CART_STEP_SIZE_,CART_JUMP_THRESH_,trajectory_, path_constraints, AVOID_COLLISIONS_);
-    robot_trajectory::RobotTrajectory rt(kmodel_, group_names[selected_plan_group]);
-
-    ROS_INFO_STREAM("Frame which moveit requests plans in (it transforms to this frame before sending plan): " << moveit_group_->getPoseReferenceFrame());
     ROS_INFO_STREAM("Frame which poses are represented in " << ROBOT_MODEL_FRAME_);
 
+    peanut_descartes::GetCartesianPathGoal cart_plan_goal;
+    moveit_msgs::RobotState robot_state_msg;
+
+    cart_plan_goal.header.frame_id = "base_link";
+    cart_plan_goal.header.stamp = ros::Time::now();
+    cart_plan_goal.group_name = "arm";
+
+    cart_plan_goal.waypoints = waypoints_pose_copy;
+    cart_plan_goal.max_step = CART_STEP_SIZE_;
+    cart_plan_goal.jump_threshold = CART_JUMP_THRESH_;
+    cart_plan_goal.avoid_collisions = AVOID_COLLISIONS_;
+    cart_plan_goal.path_constraints = path_constraints;
+    if(FIX_START_STATE_){
+      std::vector<double> arm_states;
+      start_state->copyJointGroupPositions("arm", arm_states);
+      robot_state_msg.joint_state.position = arm_states;
+      robot_state_msg.joint_state.name = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6", "joint_7"};
+      cart_plan_goal.start_state = robot_state_msg;
+    }
+
+    cart_plan_action_client->sendGoal(cart_plan_goal);
+    cart_plan_action_client->waitForResult();
+    peanut_descartes::GetCartesianPathResultConstPtr cart_plan_result = cart_plan_action_client->getResult();
+
     // Finally plan and execute the trajectory
-    plan.trajectory_ = trajectory_;
-    ROS_INFO("Visualizing plan (cartesian path) (%.2f%% acheived)",fraction * 100.0);
-    bool success = fraction>0.50;
-    Q_EMIT cartesianPathCompleted(fraction);
-    if (!success || trajectory_.joint_trajectory.points.empty()){
+    if(cart_plan_result->error_code.val != 1){
       ROS_ERROR("cartesian planning was not successful, returning");
+      Q_EMIT cartesianPathCompleted(0);
       Q_EMIT cartesianPathExecuteFinished();
       return;
+    }
+    else{
+      Q_EMIT cartesianPathCompleted(100);
     }
 
     if (plan_only){
       Q_EMIT cartesianPathExecuteFinished();
       return;
     }
+
     // // //
     // 2. compute and execute freespace plan
     // // //
     if (!FIX_START_STATE_){
-      moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+      ROS_INFO_STREAM("Start state is not fixed. Plan and exec freespace plan");
+      moveit::planning_interface::MoveGroupInterface::Plan freespace_plan;
       moveit_group_->setPlanningTime(PLAN_TIME_);
       moveit_group_->allowReplanning (MOVEIT_REPLAN_);
-      std::vector<double> start_config = trajectory_.joint_trajectory.points.front().positions;
+      std::vector<double> start_config = cart_plan_result->solution.joint_trajectory.points.front().positions;
       moveit_group_->setJointValueTarget(start_config);
 
-      bool success = (moveit_group_->plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+      bool success = (moveit_group_->plan(freespace_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
       ROS_INFO("Visualizing plan 2 (joint space goal) %s", success ? "" : "FAILED");
       
       if (success){
-        freespace_error_code = moveit_group_->execute(my_plan);
+        freespace_error_code = moveit_group_->execute(freespace_plan);
       }
       else {
         ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
@@ -311,18 +336,18 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     // // //
     // 3. execute cartesian path
     // // //
-    // update the starting point to be the correct time
-    
+
+    // Update the starting point to be the correct time
     if (freespace_error_code==freespace_error_code.SUCCESS || FIX_START_STATE_){
-      plan.trajectory_.joint_trajectory.header.stamp = ros::Time::now();
-      plan.trajectory_.multi_dof_joint_trajectory.header.stamp = ros::Time::now();
-      plan.start_state_.multi_dof_joint_state.header.stamp = ros::Time::now();
-      moveit_group_->execute(plan);
+      moveit_msgs::ExecuteTrajectoryGoal cart_exec_goal;
+      cart_exec_goal.trajectory.joint_trajectory = cart_plan_result->solution.joint_trajectory;
+      cart_exec_goal.trajectory.joint_trajectory.header.stamp = ros::Time::now();
+      cart_exec_action_client->sendGoal(cart_exec_goal);
+      cart_exec_action_client->waitForResult();
+      moveit_msgs::ExecuteTrajectoryResultConstPtr cart_exec_result = cart_exec_action_client->getResult();
     }
-    kinematic_state_ = moveit_group_->getCurrentState();
 
     Q_EMIT cartesianPathExecuteFinished();
-
 }
 
 void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)

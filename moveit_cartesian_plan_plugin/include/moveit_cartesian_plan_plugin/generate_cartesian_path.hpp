@@ -9,6 +9,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <pluginlib/class_loader.h>
+#include <actionlib/client/simple_action_client.h>
 #include <std_msgs/String.h>
 
 #include <QObject>
@@ -17,6 +18,20 @@
 #include <QFuture>
 
 #include <peanut_kinematics/jaco3_ik.h>
+
+// Includes GetCartesian action messages
+#include <peanut_descartes/GetCartesianPathAction.h>
+#include <peanut_descartes/GetCartesianPathResult.h>
+#include <peanut_descartes/GetCartesianPathGoal.h>
+
+// Get constraints messags
+#include <moveit_msgs/Constraints.h>
+#include <moveit_msgs/PositionConstraint.h>
+#include <moveit_msgs/OrientationConstraint.h>
+
+// Includes execute trajectory messages
+#include <moveit_msgs/ExecuteTrajectoryAction.h>
+#include <moveit_msgs/ExecuteTrajectoryGoal.h>
 
 #ifndef GENERATE_CARTESIAN_PATH_H_
 #define GENERATE_CARTESIAN_PATH_H_
@@ -104,6 +119,9 @@ protected:
 	std::vector< const moveit::core::JointModelGroup * >  end_eff_joint_groups;
 
     //! MoveIt and Cartesian path parameters set by the user from the QT UI
+	actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>* cart_plan_action_client;
+	actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>* cart_exec_action_client;
+
     //! Parameter for setting the planning time of the MoveIt.
     double PLAN_TIME_;
     //! Parameter for setting the Cartesian Path step size.
