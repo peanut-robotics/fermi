@@ -1166,17 +1166,15 @@ void AddWayPoint::saveToolPath(){
           out << "joint_1" << "joint_2" << "joint_3" << "joint_4" << "joint_5" << "joint_6" << "joint_7";
           out << YAML::EndSeq; // End joint_names seq
           
-          out << YAML::Key << "points";
-          YAML::Emitter points_seq;
+          out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq; // Add points seq
           for (int i = 0; i < 2; i ++){
-            out << YAML::BeginSeq; // Add points seq
             out << YAML::BeginMap; // Add a map for a point
+
             out << YAML::Key << "accelerations" << YAML::Value << YAML::BeginSeq << YAML::EndSeq;
             out << YAML::Key << "effort" << YAML::Value << YAML::BeginSeq << YAML::EndSeq;
             out << YAML::Key << "velocities" << YAML::Value << YAML::BeginSeq << YAML::EndSeq;
             
-            out << YAML::Key << "positions";
-            out << YAML::BeginSeq;
+            out << YAML::Key << "positions" << YAML::Value << YAML::BeginSeq;
               out << "2"; // Add postion data
             out << YAML::EndSeq;
             
@@ -1185,27 +1183,32 @@ void AddWayPoint::saveToolPath(){
               out << YAML::Key << "nsecs" << YAML::Value << 0;
               out << YAML::Key << "secs" << YAML::Value << 0;
             out << YAML::EndMap; // End time stamp map
-            YAML::EndSeq; // End points seq
-          }
 
+            out << YAML::EndMap; // End a map for a point
+          }
+          YAML::EndSeq; // End points seq
 
         out << YAML::EndMap; // End input_height map
       out << YAML::EndMap; // End cached_paths map  
     
 
-      out << YAML::Key << "tool_path";
+      out << YAML::Key << "tool_path"<< YAML::Value << YAML::BeginSeq;; // Start pose seq
       for(int i = 0; i < 3; i ++){
-          out << YAML::BeginSeq; // Add pose seq
+          out << YAML::BeginMap;
+          out << YAML::Key << "header";
           out << YAML::BeginMap; // Add header map
             out << YAML::Key << "frame_id" << YAML::Value << "mobile_base_link";
             out << YAML::Key << "seq" << YAML::Value << 0;
+            out << YAML::Key << "stamp";
             out << YAML::BeginMap; // Add time stamp map
               out << YAML::Key << "nsecs" << YAML::Value << 0;
               out << YAML::Key << "secs" << YAML::Value << 0;
             out << YAML::EndMap; // End time stamp map
           out << YAML::EndMap; // End header map
 
+          out << YAML::Key << "pose";
           out << YAML::BeginMap; // Add pose information map
+            out << YAML::Key << "orientation";
             out << YAML::BeginMap; // Add orientation map
               out << YAML::Key << "w" << YAML::Value << 0;
               out << YAML::Key << "x" << YAML::Value << 0;
@@ -1213,70 +1216,22 @@ void AddWayPoint::saveToolPath(){
               out << YAML::Key << "z" << YAML::Value << 0;
             out << YAML::EndMap; // End orientation map  
 
+            out << YAML::Key << "position";
             out << YAML::BeginMap; // Add position map
               out << YAML::Key << "x" << YAML::Value << 0;
               out << YAML::Key << "y" << YAML::Value << 0;
               out << YAML::Key << "z" << YAML::Value << 0;
             out << YAML::EndMap; // End position map  
-          out << YAML::EndMap; // End pose informatio map
-          out << YAML::EndSeq; // End pose seq
+          out << YAML::EndMap; // End header map
+          out << YAML::EndMap;
       }
+      out << YAML::EndSeq; // End pose seq
     out << YAML::EndMap; // End main map
 
     std::ofstream myfile;
     myfile.open ("/home/mrunal/Documents/yaml_test.yaml");
     myfile << out.c_str();
     myfile.close();
-    /////////////
-
-    // YAML::Emitter out;
-    // out << YAML::BeginMap;
-    // out << YAML::Key << "frame_id";
-    // out << YAML::Value << target_frame_;
-
-    // //todo save the config here.
-    // out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq;
-
-    // for(int i=0;i<waypoints_pos.size();i++)
-    // {
-    //   out << YAML::BeginMap;
-
-    //   out << YAML::Key << "position";
-    //   out << YAML::Value;
-    //   out << YAML::BeginMap;
-    //   out << YAML::Key << "x" << YAML::Value << waypoints_pos[i].getOrigin().x();
-    //   out << YAML::Key << "y" << YAML::Value << waypoints_pos[i].getOrigin().y();
-    //   out << YAML::Key << "z" << YAML::Value << waypoints_pos[i].getOrigin().z();
-    //   out << YAML::EndMap;
-
-    //   out << YAML::Key << "orientation";
-    //   out << YAML::Value;
-
-    //   tf::Quaternion q;
-    //   tf::Matrix3x3 m(waypoints_pos[i].getRotation());
-    //   m.getRotation(q);
-    //   out << YAML::BeginMap;
-    //   out << YAML::Key << "x" << YAML::Value << q.x();
-    //   out << YAML::Key << "y" << YAML::Value << q.y();
-    //   out << YAML::Key << "z" << YAML::Value << q.z();
-    //   out << YAML::Key << "w" << YAML::Value << q.w();
-    //   out << YAML::EndMap;
-
-    //   out << YAML::EndMap;
-
-    // }
-    // out << YAML::EndSeq; // End list of points
-    // out << YAML::Key << "start_config" << YAML::Value << YAML::BeginSeq;
-    // out << config.at(0) << config.at(1) << config.at(2) << config.at(3) << config.at(4) << config.at(5) << config.at(6);
-    // out << YAML::EndSeq;// and configuration list
-    // out << YAML::EndMap;
-
-    // std::ofstream myfile;
-    // myfile.open (fileName.toStdString().c_str());
-    // myfile << out.c_str();
-    // myfile.close();
-
-  // }
 }
 
 bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
