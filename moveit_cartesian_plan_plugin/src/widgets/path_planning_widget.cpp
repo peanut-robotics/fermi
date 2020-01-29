@@ -906,7 +906,7 @@ void PathPlanningWidget::loadPoints(){
   }
 }
 void PathPlanningWidget::savePointsTool(){
-  ROS_INFO("Begin saving tool path to file");
+  ROS_INFO("Begin saving tool path to file...");
   Q_EMIT saveToolBtn_press();
 }
 

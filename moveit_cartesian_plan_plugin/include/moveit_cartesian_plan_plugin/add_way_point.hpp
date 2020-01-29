@@ -57,6 +57,7 @@
 #include <QHBoxLayout>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrent>
+#include <QFileDialog>
 // #include <QtConcurrentRun>
 #include <QFuture>
 #include <tf/transform_datatypes.h>
