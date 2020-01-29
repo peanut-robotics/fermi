@@ -658,6 +658,8 @@ void PathPlanningWidget::loadPointsTool(){
 
   //clear all the scene before loading all the new points from the file!!
   clearAllPoints_slot();
+  ui_.robot_model_frame->setText(QString::fromStdString("map"));
+  PathPlanningWidget::transformPointsToFrame();
 
   ROS_INFO_STREAM("Opening the file: " << fileName.toStdString());
   std::string fin(fileName.toStdString());
@@ -774,8 +776,6 @@ void PathPlanningWidget::loadPointsTool(){
   // TODO call same pathway as button
   ui_.tabWidget->setEnabled(true);
   ui_.progressBar->hide();
-  ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
-  PathPlanningWidget::transformPointsToFrame();
 
   ROS_INFO("Successfully loaded tool path");
 }
