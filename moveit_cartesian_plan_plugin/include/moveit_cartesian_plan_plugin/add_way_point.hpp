@@ -39,6 +39,17 @@
 
 #include <moveit_cartesian_plan_plugin/generate_cartesian_path.hpp>
 
+// Includes GetCartesian action messages
+#include <peanut_descartes/GetCartesianPathAction.h>
+#include <peanut_descartes/GetCartesianPathResult.h>
+#include <peanut_descartes/GetCartesianPathGoal.h>
+
+// Get constraints messags
+#include <moveit_msgs/Constraints.h>
+#include <moveit_msgs/PositionConstraint.h>
+#include <moveit_msgs/OrientationConstraint.h>
+
+
 #include <QWidget>
 #include <QCursor>
 #include <QObject>
@@ -157,6 +168,12 @@ private:
 	bool points_attached_to_object = true;
 	std::string mesh_name_;
 
+	// Cartesian action client
+	actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>* cart_plan_action_client;
+	
+	// Moveit
+	MoveGroupPtr moveit_group_;
+
 protected Q_SLOTS:
 	//! rviz::Panel virtual functions for loading Panel Configuration.
 	virtual void load(const rviz::Config& config);
@@ -197,6 +214,9 @@ public Q_SLOTS:
 	void RobotIKPlanning(	const double upper_limit, const double lower_limit, const double step_size, const double h,
 							const double radius, const double radius_step, const double max_angle, const double min_angle, const double angle_step);
 	void SelectPoint(const int idx);
+	
+	// Helper function for planning
+	peanut_descartes::GetCartesianPathResult getCartesianPath(const std::vector<tf::Transform>, const std::string input_frame, const std::vector<double> start_state);
 
 Q_SIGNALS:
 	//! Signal for notifying that RViz is done with initialization.
@@ -232,6 +252,9 @@ private:
 	
 	float INTERACTIVE_MARKER_SCALE;
 	float ARROW_INTERACTIVE_SCALE;
+
+	// Joint names
+	std::vector<std::string> joint_names_ = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6", "joint_7"};
 };
 } //end of namespace moveit_cartesian_plan_plugin
 

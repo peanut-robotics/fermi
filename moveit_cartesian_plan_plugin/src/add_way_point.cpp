@@ -171,6 +171,14 @@ void AddWayPoint::onInitialize()
 
   Q_EMIT initRviz();
   ROS_INFO("ready.");
+  
+  // Cartesian planning and execution
+  cart_plan_action_client = new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true);
+  cart_plan_action_client->waitForServer(ros::Duration(2.0));
+
+  // Init moveit
+  moveit_group_.reset();
+  moveit_group_ = MoveGroupPtr(new moveit::planning_interface::MoveGroupInterface("arm"));
 
   tfListener = new tf2_ros::TransformListener(tfBuffer);
 }
@@ -1108,27 +1116,87 @@ void AddWayPoint::parseWayPointsGoto(int min_index, int max_index)
   Q_EMIT wayPoints_signal(waypoints, false);
 }
 
-// void PathPlanningWidget::yamlTest(){
-//   YAML::Node config = YAML::LoadFile("/home/mrunal/Documents/yaml_test.yaml");
+peanut_descartes::GetCartesianPathResult AddWayPoint::getCartesianPath(const std::vector<tf::Transform> poses, const std::string input_frame,  const std::vector<double> start_state){
+  ROS_INFO("Planning save tool cartesian path");
+
+  geometry_msgs::Transform desired_target_tfmsg;
+  tf::Transform desired_target_tf; 
+  tf::Transform waypoint_tf;
+  geometry_msgs::Pose waypoint_tfmsg;
+  std::vector<tf::Transform> waypoints_desired_frame_tf;
+  std::vector<geometry_msgs::Pose> waypoints_desired_frame_tfmsg;
+  moveit_msgs::RobotState robot_state_msg;
+
+  // Get tf transforms
+  try
+  {
+    desired_target_tfmsg = tfBuffer.lookupTransform("base_link", input_frame, ros::Time(0)).transform;
+    tf::transformMsgToTF(desired_target_tfmsg, desired_target_tf);
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ROS_ERROR("Unable to save because not able to transform");
+    return peanut_descartes::GetCartesianPathResult();
+  }
+
+  // Transform points to desired frame
+  for (auto const waypoint_pos_i : poses)
+  { 
+    // Poses are in map frame
+    waypoint_tf = desired_target_tf * waypoint_pos_i;
+    waypoints_desired_frame_tf.push_back(waypoint_tf);
+    tf::poseTFToMsg (waypoint_tf, waypoint_tfmsg);
+    waypoints_desired_frame_tfmsg.push_back(waypoint_tfmsg);
+  }
+
+  // Build contraints 
+  moveit_msgs::Constraints path_constraints;
+  moveit_msgs::OrientationConstraint orientation_constraint;
+  orientation_constraint.absolute_x_axis_tolerance = 0.0;
+  orientation_constraint.weight = 0.0;
+
+  moveit_msgs::PositionConstraint position_constraint;
+  position_constraint.target_point_offset.x = 0.0;
+  position_constraint.weight = 0.0;
+
+  for (int i=0; i<waypoints_desired_frame_tfmsg.size(); i++){
+    path_constraints.position_constraints.push_back(position_constraint);
+    path_constraints.orientation_constraints.push_back(orientation_constraint);
+  }
   
-//   YAML::Emitter out;
+  // Build goal msg
+  peanut_descartes::GetCartesianPathGoal cart_plan_goal;
 
-//   // Add cached_paths
-//   out << YAML::BeginMap;
-//   out << YAML::Key << "cached_paths" << YAML::BeginMap;
+  cart_plan_goal.header.frame_id = "base_link";
+  cart_plan_goal.header.stamp = ros::Time::now();
+  cart_plan_goal.group_name = "arm";
 
-//   // Add elevator heights
-//   out << YAML::Key << "height_1" << YAML::Value << 2;
-//   out << YAML::Key << "height_2" << YAML::Value << 3;
-  
-//   out << YAML::EndMap;
-//   out << YAML::EndMap;
+  cart_plan_goal.waypoints = waypoints_desired_frame_tfmsg;
+  cart_plan_goal.max_step = 0.1;
+  cart_plan_goal.jump_threshold = 0.8;
+  cart_plan_goal.avoid_collisions = false;
+  cart_plan_goal.path_constraints = path_constraints;
 
-//   std::ofstream myfile;
-//   myfile.open ("/home/mrunal/Documents/yaml_test.yaml");
-//   myfile << out.c_str();
-//   myfile.close();
-// }
+  // Fixed start state
+  if(start_state.size() != 0){
+    robot_state_msg.joint_state.position = start_state;
+    robot_state_msg.joint_state.name = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6", "joint_7"};
+    cart_plan_goal.start_state = robot_state_msg;
+  }
+
+  // Plan path
+  cart_plan_action_client->sendGoal(cart_plan_goal);
+  cart_plan_action_client->waitForResult();
+  peanut_descartes::GetCartesianPathResultConstPtr cart_plan_result = cart_plan_action_client->getResult();
+
+  // Finally plan and execute the trajectory
+  if(cart_plan_result->error_code.val != 1){
+    ROS_ERROR("cartesian planning was not successful, returning");
+  }
+  ROS_INFO("Finished planning");
+  return *cart_plan_result;
+}
 
 
 void AddWayPoint::saveToolPath(){
@@ -1137,37 +1205,94 @@ void AddWayPoint::saveToolPath(){
         Furthermore, it parses the way-points into a format that could be also loaded into the Plugin.
     */
     ROS_INFO("Saving tool path");
+
+    geometry_msgs::Transform desired_target_tfmsg;
+    tf::Transform desired_target_tf; 
+    tf::Transform waypoint_tf;
+    geometry_msgs::Pose waypoint_tfmsg;  
+    std::vector<tf::Transform> waypoints_desired_frame_tf;
+    
+    tf::Quaternion quat;
+    tf::Matrix3x3 rotation_matrix;
+
     QString fileName = "/home/mrunal/Documents/yaml_test.yaml";
+    std::string input_pose_frame = target_frame_;
+    std::string desired_pose_frame = "mobile_base_link";
+
+    // Get tf transforms
+    try
+    {
+      desired_target_tfmsg = tfBuffer.lookupTransform(desired_pose_frame, target_frame_, ros::Time(0)).transform;
+      tf::transformMsgToTF(desired_target_tfmsg, desired_target_tf);
+    }
+    catch (tf2::TransformException &ex)
+    {
+      ROS_ERROR("%s", ex.what());
+      ROS_ERROR("Unable to save because not able to transform");
+      return;
+    }
+    
+    // Transform points to desired frame
+    for (auto const waypoint_pos_i : waypoints_pos)
+    { 
+      // Poses are in map frame
+      waypoint_tf = desired_target_tf * waypoint_pos_i;
+      waypoints_desired_frame_tf.push_back(waypoint_tf);
+    }
+    
+    // Get joint_states
+    sensor_msgs::JointStateConstPtr joint_state = ros::topic::waitForMessage<sensor_msgs::JointState>("/joint_states", ros::Duration(2));
+    std::map<std::string, double> joint_map;
+    for (size_t i = 0; i < joint_state->name.size(); i++){
+      joint_map[joint_state->name[i]] = joint_state->position[i];
+    }
+
+    // Get start state
+    std::vector<double> start_state;
+    double elevator_height;
+    try{
+      for(auto const joint_name : joint_names_){
+        start_state.push_back(joint_map.at(joint_name));
+      }
+      elevator_height = joint_map.at("elevator");
+    }
+    catch(std::out_of_range &ex){
+      ROS_ERROR_STREAM("Error while getting start state or elevator height. Error: " << ex.what());
+      return;
+    }
+
+    // Plan
+    peanut_descartes::GetCartesianPathResult cart_result = getCartesianPath(waypoints_pos, target_frame_, start_state);
+
+    if(cart_result.error_code.val != 1){
+      ROS_ERROR("Cartesian planning for tool path failed.");
+      return;
+    }
 
     //////
     // Init yaml and start main map
     YAML::Emitter out;
     out << YAML::BeginMap;
 
-      out << YAML::Key << "cached_paths";
-      out << YAML::BeginMap; // Add cached_paths map
+      out << YAML::Key << "cached_paths" << YAML::Value << YAML::BeginMap; // Add cached_paths map
 
-        out << YAML::Key << "height_1";
-        out << YAML::BeginMap; // End input_height map
+        out << YAML::Key << elevator_height << YAML::Value << YAML::BeginMap; // End input_height map
 
-          out << YAML::Key << "header"; // Add header key
-          out << YAML::BeginMap; // Add header map data
+          out << YAML::Key << "header" << YAML::Value << YAML::BeginMap; // Add header key
             out << YAML::Key << "frame_id" << YAML::Value << "base_link";
             out << YAML::Key << "seq" << YAML::Value << 0;  
-            out << YAML::Key << "stamp";
-            out << YAML::BeginMap; // Add stamp map data
+            out << YAML::Key << "stamp" << YAML::Value << YAML::BeginMap; // Add stamp map data
               out << YAML::Key << "nsecs" << YAML::Value << 0;
               out << YAML::Key << "secs" << YAML::Value << 0;
             out << YAML::EndMap; // End stamp map data
           out << YAML::EndMap; // End header map data
 
-          out << YAML::Key << "joint_names";
-          out << YAML::Value << YAML::BeginSeq; // Add joint_names seq
+          out << YAML::Key << "joint_names" << YAML::Value << YAML::BeginSeq; // Add joint_names seq
           out << "joint_1" << "joint_2" << "joint_3" << "joint_4" << "joint_5" << "joint_6" << "joint_7";
           out << YAML::EndSeq; // End joint_names seq
           
           out << YAML::Key << "points" << YAML::Value << YAML::BeginSeq; // Add points seq
-          for (int i = 0; i < 2; i ++){
+          for (auto const point : cart_result.solution.joint_trajectory.points){
             out << YAML::BeginMap; // Add a map for a point
 
             out << YAML::Key << "accelerations" << YAML::Value << YAML::BeginSeq << YAML::EndSeq;
@@ -1175,58 +1300,60 @@ void AddWayPoint::saveToolPath(){
             out << YAML::Key << "velocities" << YAML::Value << YAML::BeginSeq << YAML::EndSeq;
             
             out << YAML::Key << "positions" << YAML::Value << YAML::BeginSeq;
-              out << "2"; // Add postion data
+              for (auto const pos : point.positions){
+                out << pos; // Add postion data
+              }
             out << YAML::EndSeq;
             
-            out << YAML::Key << "time_from_start";
-            out << YAML::BeginMap; // Add time stamp map
+            out << YAML::Key << "time_from_start" << YAML::Value << YAML::BeginMap; // Add time stamp map
               out << YAML::Key << "nsecs" << YAML::Value << 0;
               out << YAML::Key << "secs" << YAML::Value << 0;
             out << YAML::EndMap; // End time stamp map
 
             out << YAML::EndMap; // End a map for a point
           }
-          YAML::EndSeq; // End points seq
+          out << YAML::EndSeq; // End points seq
 
         out << YAML::EndMap; // End input_height map
       out << YAML::EndMap; // End cached_paths map  
-    
 
-      out << YAML::Key << "tool_path"<< YAML::Value << YAML::BeginSeq;; // Start pose seq
-      for(int i = 0; i < 3; i ++){
+
+      out << YAML::Key << "tool_path"<< YAML::Value << YAML::BeginSeq; // Start pose seq
+      for(unsigned int i = 0; i < waypoints_desired_frame_tf.size(); i ++){
           out << YAML::BeginMap;
-          out << YAML::Key << "header";
-          out << YAML::BeginMap; // Add header map
-            out << YAML::Key << "frame_id" << YAML::Value << "mobile_base_link";
+          out << YAML::Key << "header" << YAML::Value << YAML::BeginMap; // Add header map
+            out << YAML::Key << "frame_id" << YAML::Value << desired_pose_frame;
             out << YAML::Key << "seq" << YAML::Value << 0;
-            out << YAML::Key << "stamp";
-            out << YAML::BeginMap; // Add time stamp map
+            out << YAML::Key << "stamp" << YAML::Value << YAML::BeginMap; // Add time stamp map
               out << YAML::Key << "nsecs" << YAML::Value << 0;
               out << YAML::Key << "secs" << YAML::Value << 0;
             out << YAML::EndMap; // End time stamp map
           out << YAML::EndMap; // End header map
 
-          out << YAML::Key << "pose";
-          out << YAML::BeginMap; // Add pose information map
-            out << YAML::Key << "orientation";
-            out << YAML::BeginMap; // Add orientation map
-              out << YAML::Key << "w" << YAML::Value << 0;
-              out << YAML::Key << "x" << YAML::Value << 0;
-              out << YAML::Key << "y" << YAML::Value << 0;
-              out << YAML::Key << "z" << YAML::Value << 0;
+          rotation_matrix = tf::Matrix3x3(waypoints_desired_frame_tf[i].getRotation());
+          rotation_matrix.getRotation(quat);
+          
+          out << YAML::Key << "pose" << YAML::Value << YAML::BeginMap; // Add pose information map
+            out << YAML::Key << "orientation" << YAML::Value << YAML::BeginMap; // Add orientation map
+              out << YAML::Key << "w" << YAML::Value << quat.w();
+              out << YAML::Key << "x" << YAML::Value << quat.x();
+              out << YAML::Key << "y" << YAML::Value << quat.y();
+              out << YAML::Key << "z" << YAML::Value << quat.z();
             out << YAML::EndMap; // End orientation map  
 
-            out << YAML::Key << "position";
-            out << YAML::BeginMap; // Add position map
-              out << YAML::Key << "x" << YAML::Value << 0;
-              out << YAML::Key << "y" << YAML::Value << 0;
-              out << YAML::Key << "z" << YAML::Value << 0;
+            out << YAML::Key << "position" << YAML::Value << YAML::BeginMap; // Add position map
+              out << YAML::Key << "x" << YAML::Value <<  waypoints_desired_frame_tf[i].getOrigin().x();
+              out << YAML::Key << "y" << YAML::Value <<  waypoints_desired_frame_tf[i].getOrigin().y();
+              out << YAML::Key << "z" << YAML::Value <<  waypoints_desired_frame_tf[i].getOrigin().z();
             out << YAML::EndMap; // End position map  
           out << YAML::EndMap; // End header map
           out << YAML::EndMap;
       }
       out << YAML::EndSeq; // End pose seq
     out << YAML::EndMap; // End main map
+
+    out.good();
+    std::cout << "Emitter error: " << out.GetLastError() << "\n";
 
     std::ofstream myfile;
     myfile.open ("/home/mrunal/Documents/yaml_test.yaml");
@@ -1293,7 +1420,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     ROS_ERROR("Unable to save because not able to transform");
     return;
   }
-
+//asdasd
   // Get object transform
   if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
     ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
