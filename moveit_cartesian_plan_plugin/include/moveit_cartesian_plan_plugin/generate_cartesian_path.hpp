@@ -119,8 +119,9 @@ protected:
 	std::vector< const moveit::core::JointModelGroup * >  end_eff_joint_groups;
 
     //! MoveIt and Cartesian path parameters set by the user from the QT UI
-	actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>* cart_plan_action_client;
-	actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>* cart_exec_action_client;
+	boost::shared_ptr<actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>> cart_plan_action_client;
+	boost::shared_ptr<actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>> cart_exec_action_client;
+
 
     //! Parameter for setting the planning time of the MoveIt.
     double PLAN_TIME_;
