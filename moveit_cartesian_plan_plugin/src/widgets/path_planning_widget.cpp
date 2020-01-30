@@ -132,6 +132,8 @@ void PathPlanningWidget::init()
   connect(ui_.add_object, SIGNAL(clicked()), this, SLOT(addObjectCb()));
   connect(ui_.add_task, SIGNAL(clicked()), this, SLOT(addTaskCb()));
 
+  // Start subscriber 
+  tfListener_ = boost::shared_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tfBuffer_));
 
   // Init cotyledon information
   peanut_cotyledon::GetFloors floors_srv;
@@ -583,12 +585,10 @@ void PathPlanningWidget::visualizeGoalConfig()
     rstate.state.joint_state.name = joint_names;
     rstate.state.joint_state.header.frame_id = "/odom";
 
-    tf2_ros::Buffer tfBuffer;
-    tf2_ros::TransformListener tfListener(tfBuffer);
     geometry_msgs::TransformStamped transformStamped;
     try
     {
-      transformStamped = tfBuffer.lookupTransform("map", "mobile_base_link", ros::Time(0), ros::Duration(3.0));
+      transformStamped = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0), ros::Duration(3.0));
     }
     catch (tf2::TransformException &ex)
     {
@@ -887,6 +887,7 @@ void PathPlanningWidget::savePoints(){
     return;
   }
 
+  
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
   }
@@ -1166,7 +1167,6 @@ void PathPlanningWidget::addNavPoseHelper()
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
-  tf2_ros::TransformListener tfListener(tfBuffer_);
   geometry_msgs::Transform robot_world_tf;
   geometry_msgs::Transform object_world_tf;
 
@@ -1291,7 +1291,6 @@ void PathPlanningWidget::goToNavPoseHelper(){
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
-  tf2_ros::TransformListener tfListener(tfBuffer_);
   geometry_msgs::Transform object_world_tf;
 
   Eigen::Affine3d object_world_eigen;
