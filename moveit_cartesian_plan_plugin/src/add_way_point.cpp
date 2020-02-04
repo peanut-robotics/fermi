@@ -1173,8 +1173,8 @@ peanut_descartes::GetCartesianPathResult AddWayPoint::getCartesianPath(const std
   cart_plan_goal.group_name = "arm";
 
   cart_plan_goal.waypoints = waypoints_desired_frame_tfmsg;
-  cart_plan_goal.max_step = 0.1;
-  cart_plan_goal.jump_threshold = 0.8;
+  cart_plan_goal.max_step = 0.03;
+  cart_plan_goal.jump_threshold = 0.3;
   cart_plan_goal.avoid_collisions = false;
   cart_plan_goal.path_constraints = path_constraints;
 
