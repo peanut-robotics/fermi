@@ -65,52 +65,35 @@ void GenerateCartesianPath::init()
   ROS_INFO_STREAM("size of the end effectors is: "<<end_eff_joint_groups.size());
   tfListener = new tf2_ros::TransformListener(tfBuffer);
 
-  if (end_eff_joint_groups.empty())
-  {
+  if (end_eff_joint_groups.empty()){
     std::vector< std::string > group_names_tmp_;
     const moveit::core::JointModelGroup *  end_eff_joint_groups_tmp_;
     group_names_tmp_ = kmodel_->getJointModelGroupNames();
 
-    for(int i=0;i<group_names_tmp_.size();i++)
-    {
-
-    end_eff_joint_groups_tmp_ = kmodel_->getJointModelGroup(group_names_tmp_.at(i));
-    if(end_eff_joint_groups_tmp_->isChain())
-    {
-      group_names.push_back(group_names_tmp_.at(i));
-    }
-    else
-    {
-      ROS_WARN_STREAM("The group:" << end_eff_joint_groups_tmp_->getName() <<" is not a Chain. Depreciate it!!");
-    }
+    for(int i=0;i<group_names_tmp_.size();i++){
+      end_eff_joint_groups_tmp_ = kmodel_->getJointModelGroup(group_names_tmp_.at(i));
+      if(end_eff_joint_groups_tmp_->isChain()){
+        group_names.push_back(group_names_tmp_.at(i));
+      }
+      else{
+        ROS_WARN_STREAM("The group:" << end_eff_joint_groups_tmp_->getName() <<" is not a Chain. Depreciate it!!");
+      }
     }
   }
-  else
-  {
-  for(int i=0;i<end_eff_joint_groups.size();i++)
-  {
-    if(end_eff_joint_groups.at(i)->isChain())
-    {
-    const std::string& parent_group_name = end_eff_joint_groups.at(i)->getName();
-    group_names.push_back(parent_group_name);
-
-    ROS_INFO_STREAM("Group name:"<< group_names.at(i));
-    }
-    else
-    {
-        ROS_INFO_STREAM("This group is not a chain. Find the parent of the group");
-        const std::pair< std::string, std::string > & parent_group_name = end_eff_joint_groups.at(i)->getEndEffectorParentGroup();
-        group_names.push_back(parent_group_name.first);
+  else{
+    for(int i=0;i<end_eff_joint_groups.size();i++){ 
+      if(end_eff_joint_groups.at(i)->isChain()){
+        const std::string& parent_group_name = end_eff_joint_groups.at(i)->getName();
+        group_names.push_back(parent_group_name);
+        ROS_INFO_STREAM("Group name:"<< group_names.at(i));
+      }
+      else{
+          ROS_INFO_STREAM("This group is not a chain. Find the parent of the group");
+          const std::pair< std::string, std::string > & parent_group_name = end_eff_joint_groups.at(i)->getEndEffectorParentGroup();
+          group_names.push_back(parent_group_name.first);
+      }
     }
   }
-
-  // Cartesian planning and execution
-  cart_plan_action_client = new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true);
-  cart_plan_action_client->waitForServer(ros::Duration(2.0));
-
-  cart_exec_action_client = new actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>("/execute_trajectory", true);
-  cart_exec_action_client->waitForServer(ros::Duration(2.0));
-}
 
   ROS_INFO_STREAM("Group name:"<< group_names[selected_plan_group]);
 
@@ -119,6 +102,14 @@ void GenerateCartesianPath::init()
   kinematic_state_->setToDefaultValues();
 
   joint_model_group_ = kmodel_->getJointModelGroup(group_names[selected_plan_group]);
+
+  // Cartesian planning and execution
+  cart_plan_action_client = boost::shared_ptr<actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>>(new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true));
+  cart_plan_action_client->waitForServer(ros::Duration(2.0));
+
+  cart_exec_action_client = boost::shared_ptr<actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>>(new actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>("/execute_trajectory", true));
+  cart_exec_action_client->waitForServer(ros::Duration(2.0));
+
 }
 
 void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_, bool fix_start_state_)
