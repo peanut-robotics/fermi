@@ -141,8 +141,6 @@ void AddWayPoint::onInitialize()
 
   connect(path_generate, SIGNAL(cartesianPathCompleted(double)), widget_, SLOT(cartPathCompleted_slot(double)));
 
-  connect(path_generate, SIGNAL(sendCartPlanGroup(std::vector<std::string>)), widget_, SLOT(getCartPlanGroup(std::vector<std::string>)));
-
   connect(widget_, SIGNAL(sendSendSelectedPlanGroup(int)), path_generate, SLOT(getSelectedGroupIndex(int)));
 
   connect(widget_, SIGNAL(ChangeCheckIK_signal()), path_generate, SLOT(ChangeCheckIk()));
@@ -1130,6 +1128,15 @@ void AddWayPoint::saveToolPath(){
           return;
         }
 
+    // Check for zero points
+    if (waypoints_pos.size() == 0){
+      QMessageBox::StandardButton reply;
+      reply = QMessageBox::question(this, "Save", "Save tool path with 0 waypoints?", QMessageBox::Yes|QMessageBox::No);
+      if (reply == QMessageBox::No){
+        return;
+      }
+    }
+    
     YAML::Emitter out;
     out << YAML::BeginMap;
     out << YAML::Key << "frame_id";
@@ -1265,6 +1272,15 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   map_object_tfmsg = desired_object.origin;
   tf::transformMsgToTF(map_object_tfmsg, map_object_tf);
   object_target_tf = map_object_tf.inverse() * map_target_tf;
+
+  // Check for zero points
+  if (waypoints_pos.size() == 0){
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Save", "Save path with 0 waypoints?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::No){
+      return;
+    }
+  }
 
   // Transform points    
   ROS_INFO_STREAM("Saving "<<waypoints_pos.size()<< " points");

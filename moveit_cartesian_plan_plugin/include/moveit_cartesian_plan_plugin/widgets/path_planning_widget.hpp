@@ -43,8 +43,13 @@
 #include <map>
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
+#include <QInputDialog>
 
 // Cotyledon
+#include <peanut_cotyledon/GetFloors.h>
+#include <peanut_cotyledon/SetFloors.h>
+#include <peanut_cotyledon/GetAreas.h>
+#include <peanut_cotyledon/SetAreas.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
@@ -57,6 +62,7 @@
 #include <peanut_cotyledon/GetTasks.h>
 #include <peanut_cotyledon/SetTasks.h>
 #include <peanut_cotyledon/CachedPath.h>
+#include <peanut_cotyledon/Floor.h>
 
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
@@ -101,12 +107,17 @@ namespace moveit_cartesian_plan_plugin
 				return "RobotPathPlanner";
 			}
 			ros::NodeHandle nh_;
+			ros::ServiceClient get_floors_proxy_;
+			ros::ServiceClient set_floors_proxy_;
+			ros::ServiceClient get_areas_proxy_;
+			ros::ServiceClient set_areas_proxy_;
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
 			ros::ServiceClient set_objects_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
 			ros::ServiceClient set_tasks_proxy_;
+			ros::ServiceClient add_task_proxy_;
   			ros::Publisher robot_goal_pub;
 			
 			// Elevator and navigation services
@@ -118,6 +129,8 @@ namespace moveit_cartesian_plan_plugin
 			// Transformations
 			tf2_ros::Buffer tfBuffer_;
 			tf2_ros::StaticTransformBroadcaster static_broadcaster_;
+			boost::shared_ptr<tf2_ros::TransformListener> tfListener_;
+
 		protected:
 			//! Widget Initialization.
 			void init();
@@ -154,6 +167,7 @@ namespace moveit_cartesian_plan_plugin
 			void clearAllInteractiveBoxes_slot();
 			//! Slot connected to a clear all points button click.
 			void clearAllPoints_slot();
+			void clearAllPoints_button_slot();
 			void transformPointsToFrame();
 			//! Slot for disabling the TabWidged while Cartesian Path is executed.
 			void cartesianPathStartedHandler();
@@ -165,10 +179,7 @@ namespace moveit_cartesian_plan_plugin
 			void cartPathCompleted_slot(double fraction);
 			//update the point in the RQT by using separate thread
 			// void pointPosUpdatedHandler_slot(const tf::Transform& point_pos, const char* marker_name);
-
-			//! Set the planning group ComboBox
-			void getCartPlanGroup(std::vector< std::string > group_names);
-
+			
 			void selectedPlanGroup(int index);
 
 			//! Create a slot to call a signal on which the Move the robot to home position function is called
@@ -183,7 +194,8 @@ namespace moveit_cartesian_plan_plugin
 			void addNavPoseHelper();
 			void goToNavPose();
 			void goToNavPoseHelper();
-			
+			void addTaskHelper();
+
 			// Slots for faults
 			void clearFaults();
 			void stopAll();
@@ -216,6 +228,18 @@ namespace moveit_cartesian_plan_plugin
 
 			// Point selectin
 			void SelectPoint();
+
+			// Drop down menu
+			void updateAreaMenu(const QString& string);
+			void updateObjectIDMenu(const QString& string);
+			void updateTaskMenu(const QString& string);
+			void ResetMenu();
+
+			// Add data buttons
+			void addFloorCb();
+			void addAreaCb();
+			void addObjectCb();
+			void addTaskCb();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
