@@ -50,6 +50,9 @@ void PathPlanningWidget::init()
       */
   ui_.setupUi(this);
 
+  // Register signal data types
+  qRegisterMetaType<trajectory_msgs::JointTrajectory>();
+
   //set up the default values for the MoveIt and Cartesian Path
   ui_.lnEdit_PlanTime->setText("5.0");
   ui_.lnEdit_StepSize->setText("0.03");
@@ -1792,6 +1795,9 @@ bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_p
     ROS_ERROR("Could not call set_clean_path service");
     return false;
   }
+}
+
+void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj){
 }
 
 } // namespace widgets

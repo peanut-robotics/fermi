@@ -53,7 +53,7 @@ class GenerateCartesianPath: public QObject
 Q_OBJECT
 
 public:
-
+	
 public:
 	//! Constructor for the MoveIt Cartesian Path Planner.
 	GenerateCartesianPath(QObject* parent = 0);
@@ -102,6 +102,9 @@ Q_SIGNALS:
 	void cartesianPathCompleted(double fraction);
 	//! Send the planning groups to the GUI
 	void sendCartPlanGroup(std::vector< std::string > group_names);
+	//! Save cartesian path
+	void saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
+
 protected:
     //! MoveIt protected variables.
 	moveit::core::RobotStatePtr kinematic_state_;
