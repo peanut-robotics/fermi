@@ -1798,6 +1798,56 @@ bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_p
 }
 
 void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj){
+  if(!ui_.save_path_checkbox->isChecked()){
+    return;
+  }
+
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save cached trajectory?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::Yes){
+    ROS_INFO("Saving cached trajectory...");
+  }
+  else{
+    ROS_INFO("Did not save cached trajectory.");
+    return;
+  }
+
+  std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
+  std::string area_name = ui_.area_combo_box->currentText().toStdString();;
+  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string task_name = ui_.task_combo_box->currentText().toStdString();
+
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call clean path service");
+    return;
+  }
+
+  // Update clean path cached trajectory 
+  if(clean_path.cached_paths.size() == 0){
+    peanut_cotyledon::CachedPath cached_path;
+    clean_path.cached_paths.push_back(cached_path);   
+  }
+  
+  clean_path.cached_paths[0].cached_path = traj;
+  if (SetCleanPath(clean_path)){
+    ROS_INFO("Cached trajectory saved");
+  }
+  else{
+    ROS_ERROR("Could not save cached trajectory");
+  }
 }
 
 } // namespace widgets

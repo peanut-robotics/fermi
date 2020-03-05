@@ -159,9 +159,6 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
 
 void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
 { 
-    trajectory_msgs::JointTrajectory msg;
-    Q_EMIT saveCachedCartesianTrajectory(msg);
-
     Q_EMIT cartesianPathExecuteStarted();
     moveit::planning_interface::MoveItErrorCode freespace_error_code;
 
@@ -297,6 +294,10 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
     else{
       Q_EMIT cartesianPathCompleted(100);
     }
+
+    trajectory_msgs::JointTrajectory traj;
+    traj =  cart_plan_result->solution.joint_trajectory;
+    Q_EMIT saveCachedCartesianTrajectory(traj);
 
     if (plan_only){
       Q_EMIT cartesianPathExecuteFinished();
