@@ -70,6 +70,7 @@
 #include <controller_manager_msgs/SwitchController.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <trajectory_msgs/JointTrajectory.h>
 #include <eigen_conversions/eigen_msg.h>
 
 // macros
@@ -80,6 +81,8 @@
 #ifndef RAD2DEG
 #define RAD2DEG(x) ((x)*57.29578)
 #endif
+
+Q_DECLARE_METATYPE(trajectory_msgs::JointTrajectory)
 
 namespace moveit_cartesian_plan_plugin
 {
@@ -240,6 +243,10 @@ namespace moveit_cartesian_plan_plugin
 			void addAreaCb();
 			void addObjectCb();
 			void addTaskCb();
+		
+			// Save cartesian cached trajectory
+			void saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
+			void executeCachedCartesianTrajectory();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
@@ -282,6 +289,8 @@ namespace moveit_cartesian_plan_plugin
 
 			// Signal to modify points control marker
 			void ModifyPointsMarkerPose_signal();
+
+			void executeCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
 		};
 	}
 

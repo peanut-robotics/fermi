@@ -53,7 +53,7 @@ class GenerateCartesianPath: public QObject
 Q_OBJECT
 
 public:
-
+	
 public:
 	//! Constructor for the MoveIt Cartesian Path Planner.
 	GenerateCartesianPath(QObject* parent = 0);
@@ -89,6 +89,9 @@ public Q_SLOTS:
 	// Set check_ik
 	void ChangeCheckIk();
 	
+	void executeCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
+	void executeCartesianTrajectoryHelper(const trajectory_msgs::JointTrajectory& traj);
+
 Q_SIGNALS:
 	//! Let the RViz that a Way-Point is outside the IK solution.
 	void wayPointOutOfIK(int point_number, int out_of_range, std::vector<geometry_msgs::Pose> out_of_bounds_poses);
@@ -102,6 +105,9 @@ Q_SIGNALS:
 	void cartesianPathCompleted(double fraction);
 	//! Send the planning groups to the GUI
 	void sendCartPlanGroup(std::vector< std::string > group_names);
+	//! Save cartesian path
+	void saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
+	
 protected:
     //! MoveIt protected variables.
 	moveit::core::RobotStatePtr kinematic_state_;

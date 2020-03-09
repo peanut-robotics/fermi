@@ -159,6 +159,10 @@ void AddWayPoint::onInitialize()
 
     */
 
+  // Save path signal
+  connect(path_generate, SIGNAL(saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory&)), widget_, SLOT(saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory&)));
+  connect(widget_, SIGNAL(executeCartesianTrajectory(const trajectory_msgs::JointTrajectory&)), path_generate, SLOT(executeCartesianTrajectory(const trajectory_msgs::JointTrajectory&)));
+  
   // Init poses
   box_pos.setIdentity();
   parent_home_.position.x = 0;

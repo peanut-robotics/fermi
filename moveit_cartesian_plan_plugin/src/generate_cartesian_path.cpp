@@ -158,7 +158,7 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
 }
 
 void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
-{
+{ 
     Q_EMIT cartesianPathExecuteStarted();
     moveit::planning_interface::MoveItErrorCode freespace_error_code;
 
@@ -295,6 +295,10 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       Q_EMIT cartesianPathCompleted(100);
     }
 
+    trajectory_msgs::JointTrajectory traj;
+    traj =  cart_plan_result->solution.joint_trajectory;
+    Q_EMIT saveCachedCartesianTrajectory(traj);
+
     if (plan_only){
       Q_EMIT cartesianPathExecuteFinished();
       return;
@@ -348,6 +352,46 @@ void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose
   */
   ROS_INFO("Starting concurrent process for Cartesian Path");
   QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToPose, waypoints, plan_only);
+}
+
+void GenerateCartesianPath::executeCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj){
+  QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::executeCartesianTrajectoryHelper, traj);
+}
+
+void GenerateCartesianPath::executeCartesianTrajectoryHelper(const trajectory_msgs::JointTrajectory& traj){
+  Q_EMIT cartesianPathExecuteStarted();
+  moveit::planning_interface::MoveItErrorCode freespace_error_code;
+  moveit::planning_interface::MoveGroupInterface::Plan freespace_plan;
+
+  moveit_group_->setPlanningTime(PLAN_TIME_);
+  moveit_group_->allowReplanning (MOVEIT_REPLAN_);
+  moveit_group_->setStartStateToCurrentState();
+ 
+  std::vector<double> start_config = traj.points.front().positions;
+  moveit_group_->setJointValueTarget(start_config);
+  bool success = (moveit_group_->plan(freespace_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+  
+  if (success){
+    freespace_error_code = moveit_group_->execute(freespace_plan);
+  }
+  else {
+    ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
+    Q_EMIT cartesianPathExecuteFinished();
+    return;
+  }
+
+  
+  // Update the starting point to be the correct time
+  if (freespace_error_code==freespace_error_code.SUCCESS){
+    moveit_msgs::ExecuteTrajectoryGoal cart_exec_goal;
+    cart_exec_goal.trajectory.joint_trajectory = traj;
+    cart_exec_goal.trajectory.joint_trajectory.header.stamp = ros::Time::now();
+    cart_exec_action_client->sendGoal(cart_exec_goal);
+    cart_exec_action_client->waitForResult();
+    moveit_msgs::ExecuteTrajectoryResultConstPtr cart_exec_result = cart_exec_action_client->getResult();
+  }
+
+  Q_EMIT cartesianPathExecuteFinished();
 }
 
 void GenerateCartesianPath::freespacePathHandler(std::vector<double> config, bool plan_only)
