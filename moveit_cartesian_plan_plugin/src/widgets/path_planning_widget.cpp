@@ -181,7 +181,7 @@ void PathPlanningWidget::executeCachedCartesianTrajectory(){
     return;
   }
   ROS_INFO("Sending emit signal");
-  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths[0].cached_path);
+  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).cached_path);
 }
 
 void PathPlanningWidget::addFloorCb(){
@@ -1875,7 +1875,7 @@ void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::Jo
     clean_path.cached_paths.push_back(cached_path);   
   }
   
-  clean_path.cached_paths[0].cached_path = traj;
+  clean_path.cached_paths.at(0).cached_path = traj;
   if (SetCleanPath(clean_path)){
     ROS_INFO("Cached trajectory saved");
   }
