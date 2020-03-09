@@ -246,6 +246,7 @@ namespace moveit_cartesian_plan_plugin
 		
 			// Save cartesian cached trajectory
 			void saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
+			void executeCachedCartesianTrajectory();
 
 		Q_SIGNALS:
 			//! Notify RViz enviroment that a new Way-Point has been added from RQT.
@@ -288,6 +289,8 @@ namespace moveit_cartesian_plan_plugin
 
 			// Signal to modify points control marker
 			void ModifyPointsMarkerPose_signal();
+
+			void executeCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj);
 		};
 	}
 

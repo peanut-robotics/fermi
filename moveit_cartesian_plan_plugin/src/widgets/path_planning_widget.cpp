@@ -123,6 +123,8 @@ void PathPlanningWidget::init()
 
   connect(ui_.select_point_btn, SIGNAL(clicked()), this, SLOT(SelectPoint()));
 
+  connect(ui_.execute_cached_traj, SIGNAL(clicked()), this, SLOT(executeCachedCartesianTrajectory()));
+
   // Cotyledon drop down menu updates
   connect(ui_.floor_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateAreaMenu(const QString&)));
   connect(ui_.area_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateObjectIDMenu(const QString&)));
@@ -148,6 +150,38 @@ void PathPlanningWidget::init()
       ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
     }
   }
+}
+
+void PathPlanningWidget::executeCachedCartesianTrajectory(){
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath srv;
+  std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
+  std::string area_name = ui_.area_combo_box->currentText().toStdString();;
+  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string task_name = ui_.task_combo_box->currentText().toStdString();
+
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call clean path service");
+    return;
+  }
+
+  if(clean_path.cached_paths.size() == 0){
+    ROS_ERROR("No cached path exists");
+    return;
+  }
+  ROS_INFO("Sending emit signal");
+  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths[0].cached_path);
 }
 
 void PathPlanningWidget::addFloorCb(){
