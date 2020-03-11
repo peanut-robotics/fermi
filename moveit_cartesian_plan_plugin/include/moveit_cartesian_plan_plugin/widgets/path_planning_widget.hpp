@@ -131,6 +131,7 @@ namespace moveit_cartesian_plan_plugin
 			
 			// Transformations
 			tf2_ros::Buffer tfBuffer_;
+			tf2_ros::TransformListener* tfListener_;
 			tf2_ros::StaticTransformBroadcaster static_broadcaster_;
 			boost::shared_ptr<tf2_ros::TransformListener> tfListener_;
 

@@ -140,6 +140,9 @@ void PathPlanningWidget::init()
   // Start subscriber 
   tfListener_ = boost::shared_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tfBuffer_));
 
+  // Start tf buffer
+  tfListener_ = new tf2_ros::TransformListener(tfBuffer_);
+
   // Init cotyledon information
   peanut_cotyledon::GetFloors floors_srv;
   if (!get_floors_proxy_.call(floors_srv)){
@@ -667,97 +670,151 @@ void PathPlanningWidget::loadPointsTool(){
               After reading and parsing the data from the file, the information regarding the pose of the Way-Points is send to the RQT and the RViz so they can update their enviroments.
           */
 
-  QString fileName = QFileDialog::getOpenFileName(this,
-                                                  tr("Open Way Points File"), "",
-                                                  tr("Way Points (*.yaml);;All Files (*)"));
+  QString fileName = QFileDialog::getOpenFileName(this, tr("Open tool paths"), "", tr("Tool paths (*.yaml);;All Files (*)"));
+  std::string teaching_tool_frame = "map";
+  geometry_msgs::Transform desired_target_tfmsg;
+  tf::Transform desired_target_tf; 
+  YAML::Node doc;
 
   if (fileName.isEmpty())
   {
     ui_.tabWidget->setEnabled(true);
-    ui_.progressBar->hide();
     return;
   }
-  else
-  {
-    ui_.tabWidget->setEnabled(false);
-    ui_.progressBar->show();
-    QFile file(fileName);
 
-    if (!file.open(QIODevice::ReadOnly))
-    {
-      QMessageBox::information(this, tr("Unable to open file"),
-                              file.errorString());
-      file.close();
+  ui_.tabWidget->setEnabled(false);
+  QFile file(fileName);
+
+  if (!file.open(QIODevice::ReadOnly))
+  {
+  QMessageBox::information(this, tr("Unable to open file"), file.errorString());
+    file.close();
+    ui_.tabWidget->setEnabled(true);
+    return;
+  }
+
+  //clear all the scene before loading all the new points from the file!!
+  clearAllPoints_slot();
+  ui_.robot_model_frame->setText(QString::fromStdString("map"));
+  PathPlanningWidget::transformPointsToFrame();
+
+  ROS_INFO_STREAM("Opening the file: " << fileName.toStdString());
+  std::string fin(fileName.toStdString());
+  std::string frame_id = "mobile_base_link";
+  std::vector<double> startConfig;
+
+  try{
+    doc = YAML::LoadFile(fin);
+    if(doc.size() == 0){
+      ROS_INFO("Tool path file file does not have any data");
       ui_.tabWidget->setEnabled(true);
-      ui_.progressBar->hide();
       return;
     }
-    //clear all the scene before loading all the new points from the file!!
-    clearAllPoints_slot();
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Could not open file" << fileName.toStdString());
+    ui_.tabWidget->setEnabled(true);
+    return;
+  }
 
-    ROS_INFO_STREAM("Opening the file: " << fileName.toStdString());
-    std::string fin(fileName.toStdString());
-    std::string frame_id;
-    try
-    {
-      YAML::Node doc;
-      doc = YAML::LoadFile(fin);
-      //define double for percent of completion
-      double percent_complete;
-      int end_of_points = doc["points"].size();
+  // Get frame id for poses
+  try{
+    frame_id = doc["tool_path"][0]["header"]["frame_id"].as<std::string>();
+  }
+  catch (char *excp){
+    ROS_INFO_STREAM("Unable to get frame_id in tool_path: " << excp);
+    ui_.tabWidget->setEnabled(true);
+    return;
+  }
+  catch (...){
+    ROS_ERROR("Unable to get frame_id in tool_path");
+    ui_.tabWidget->setEnabled(true);
+    return;
+  }
 
-      std::vector<double> startConfig = doc["start_config"].as<std::vector<double>>();
+  // Get tf
+  try{
+    ROS_INFO_STREAM("Find tf betweeen "<<teaching_tool_frame<<" and "<<frame_id);
+    desired_target_tfmsg = tfBuffer_.lookupTransform(teaching_tool_frame, frame_id, ros::Time(0)).transform;
+    tf::transformMsgToTF(desired_target_tfmsg, desired_target_tf);
+  }
+  catch (tf2::TransformException &ex){
+    ROS_ERROR("%s", ex.what());
+    ROS_ERROR("Unable to save because not able to transform");
+    ui_.tabWidget->setEnabled(true);
+    return;
+  }
 
-      ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
-      ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
-      ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
-      ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
-      ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
-      ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
-      ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
-      std::cout << end_of_points << "end of doc" << std::endl;
-      frame_id = doc["frame_id"].as<std::string>();
-      for (size_t i = 0; i < end_of_points; i++)
-      {
-        std::string name;
-        geometry_msgs::Pose pose;
-        tf::Transform pose_tf;
+  // Load path data
+  try{
+    // Set start state
+    if(doc["cached_paths"].size() > 0){
+      try{
+        // Get elevator keys
+        std::map<std::string, float> map_data;
+        std::vector<float> keys;
+        YAML::Node cached_paths = doc["cached_paths"];
+        
+        for(auto it = cached_paths.begin(); it != cached_paths.end(); it++){
+          keys.push_back(it->first.as<float>());
+        }
+        startConfig = doc["cached_paths"][keys[0]]["points"][0]["positions"].as<std::vector<double>>(); 
 
-        double x, y, z;
-        double qx, qy, qz, qw;
-
-        name = std::to_string(i);
-        x = doc["points"][i]["position"]["x"].as<double>();
-        y = doc["points"][i]["position"]["y"].as<double>();
-        z = doc["points"][i]["position"]["z"].as<double>();
-        qx = doc["points"][i]["orientation"]["x"].as<double>();
-        qy = doc["points"][i]["orientation"]["y"].as<double>();
-        qz = doc["points"][i]["orientation"]["z"].as<double>();
-        qw = doc["points"][i]["orientation"]["w"].as<double>();
-
-        pose_tf = tf::Transform(tf::Quaternion(qx, qy, qz, qw), tf::Vector3(x, y, z));
-
-        percent_complete = (i + 1) * 100 / end_of_points;
-        ui_.progressBar->setValue(percent_complete);
-        Q_EMIT addPoint(pose_tf);
+        ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
+        ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
+        ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
+        ui_.LineEdit_j4->setText(QString::number(startConfig.at(3)));
+        ui_.LineEdit_j5->setText(QString::number(startConfig.at(4)));
+        ui_.LineEdit_j6->setText(QString::number(startConfig.at(5)));
+        ui_.LineEdit_j7->setText(QString::number(startConfig.at(6)));
+        
         Q_EMIT configEdited_signal(startConfig);
+        ROS_DEBUG("Cache path loaded");
+        
+      }
+      catch(...){
+        ROS_ERROR("Could not load cached_path positions");
+        ui_.tabWidget->setEnabled(true);
+        return;
       }
     }
-    catch (char *excp)
-    {
+    else{
+      ROS_WARN("No cached path available");
+    }
+
+    // Transform poses to teaching tool frame
+    tf::Transform pose_tf;
+    tf::Transform pose_desired_frame;
+    double x, y, z;
+    double qx, qy, qz, qw;
+    for (size_t i = 0; i < doc["tool_path"].size(); i++){
+      x = doc["tool_path"][i]["pose"]["position"]["x"].as<double>();
+      y = doc["tool_path"][i]["pose"]["position"]["y"].as<double>();
+      z = doc["tool_path"][i]["pose"]["position"]["z"].as<double>();
+      qx = doc["tool_path"][i]["pose"]["orientation"]["x"].as<double>();
+      qy = doc["tool_path"][i]["pose"]["orientation"]["y"].as<double>();
+      qz = doc["tool_path"][i]["pose"]["orientation"]["z"].as<double>();
+      qw = doc["tool_path"][i]["pose"]["orientation"]["w"].as<double>();
+
+      pose_desired_frame = desired_target_tf * tf::Transform(tf::Quaternion(qx, qy, qz, qw), tf::Vector3(x, y, z));
+      Q_EMIT addPoint(pose_desired_frame);
+    }
+  }
+  catch (char *excp){
       ROS_INFO("bla de bla, first error");
       ROS_INFO_STREAM("Caught " << excp);
     }
-    catch (...)
-    {
+  catch (...){
       ROS_ERROR("Not able to load file yaml, might be incorrectly formatted");
-    }
-    // TODO call same pathway as button
-    ui_.tabWidget->setEnabled(true);
-    ui_.progressBar->hide();
-    ui_.robot_model_frame->setText(QString::fromStdString(frame_id));
-    PathPlanningWidget::transformPointsToFrame();
+      ui_.tabWidget->setEnabled(true);
+      return;
   }
+
+  // TODO call same pathway as button
+  ui_.tabWidget->setEnabled(true);
+  ui_.progressBar->hide();
+
+  ROS_INFO("Successfully loaded tool path");
 }
 
 void PathPlanningWidget::loadPointsObject()
@@ -944,7 +1001,7 @@ void PathPlanningWidget::loadPoints(){
   }
 }
 void PathPlanningWidget::savePointsTool(){
-  ROS_INFO("Begin saving tool path to file");
+  ROS_INFO("Begin saving tool path to file...");
   Q_EMIT saveToolBtn_press();
 }
 
