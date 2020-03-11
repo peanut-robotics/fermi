@@ -140,9 +140,6 @@ void PathPlanningWidget::init()
   // Start subscriber 
   tfListener_ = boost::shared_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tfBuffer_));
 
-  // Start tf buffer
-  tfListener_ = new tf2_ros::TransformListener(tfBuffer_);
-
   // Init cotyledon information
   peanut_cotyledon::GetFloors floors_srv;
   if (!get_floors_proxy_.call(floors_srv)){
