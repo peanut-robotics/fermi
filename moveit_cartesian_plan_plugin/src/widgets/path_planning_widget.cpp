@@ -27,7 +27,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   
   // Kortex services
-  clear_faults_ = nh_.serviceClient<kortex_driver::ClearFaults>("/resources/manipulation/control/ClearFaults", 20);
+  clear_faults_ = nh_.serviceClient<kortex_driver::Base_ClearFaults>("/resources/manipulation/control/base/clear_faults", 20);
   switch_controllers_ = nh_.serviceClient<controller_manager_msgs::SwitchController>("/resources/manipulation/control/controller_manager/switch_controller", 20);
   /*! Constructor which calls the init() function.
       */
@@ -1416,7 +1416,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
 }
 
 void PathPlanningWidget::clearFaults(){
-  kortex_driver::ClearFaults srv;
+  kortex_driver::Base_ClearFaults srv;
   
   if (clear_faults_.call(srv)){
     ROS_INFO_STREAM("Clearing faults");
