@@ -66,7 +66,7 @@
 
 #include <peanut_elevator_oil/MoveToHeightAction.h>
 #include <peanut_navplanning_oil/MoveBaseAction.h>
-#include <kortex_driver/ClearFaults.h>
+#include <kortex_driver/Base_ClearFaults.h>
 #include <controller_manager_msgs/SwitchController.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
