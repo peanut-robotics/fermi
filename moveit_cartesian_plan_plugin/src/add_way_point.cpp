@@ -159,6 +159,10 @@ void AddWayPoint::onInitialize()
 
     */
 
+  // Save path signal
+  connect(path_generate, SIGNAL(saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory&)), widget_, SLOT(saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory&)));
+  connect(widget_, SIGNAL(executeCartesianTrajectory(const trajectory_msgs::JointTrajectory&)), path_generate, SLOT(executeCartesianTrajectory(const trajectory_msgs::JointTrajectory&)));
+  
   // Init poses
   box_pos.setIdentity();
   parent_home_.position.x = 0;
@@ -1215,7 +1219,16 @@ void AddWayPoint::saveToolPath(){
 
   tf::Quaternion quat;
   tf::Matrix3x3 rotation_matrix;
-
+  
+  // Check for zero points
+  if (waypoints_pos.size() == 0){
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Save", "Save tool path with 0 waypoints?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::No){
+      return;
+    }
+  }
+  
   std::string input_pose_frame = target_frame_;
   std::string desired_pose_frame = "mobile_base_link";
 
@@ -1487,6 +1500,15 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   map_object_tfmsg = desired_object.origin;
   tf::transformMsgToTF(map_object_tfmsg, map_object_tf);
   object_target_tf = map_object_tf.inverse() * map_target_tf;
+
+  // Check for zero points
+  if (waypoints_pos.size() == 0){
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Save", "Save path with 0 waypoints?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::No){
+      return;
+    }
+  }
 
   // Transform points    
   ROS_INFO_STREAM("Saving "<<waypoints_pos.size()<< " points");

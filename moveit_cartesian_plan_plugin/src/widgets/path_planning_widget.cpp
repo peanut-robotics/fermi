@@ -27,7 +27,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
   
   // Kortex services
-  clear_faults_ = nh_.serviceClient<kortex_driver::ClearFaults>("/resources/manipulation/control/ClearFaults", 20);
+  clear_faults_ = nh_.serviceClient<kortex_driver::Base_ClearFaults>("/resources/manipulation/control/base/clear_faults", 20);
   switch_controllers_ = nh_.serviceClient<controller_manager_msgs::SwitchController>("/resources/manipulation/control/controller_manager/switch_controller", 20);
   /*! Constructor which calls the init() function.
       */
@@ -49,6 +49,9 @@ void PathPlanningWidget::init()
             .
       */
   ui_.setupUi(this);
+
+  // Register signal data types
+  qRegisterMetaType<trajectory_msgs::JointTrajectory>();
 
   //set up the default values for the MoveIt and Cartesian Path
   ui_.lnEdit_PlanTime->setText("5.0");
@@ -120,6 +123,8 @@ void PathPlanningWidget::init()
 
   connect(ui_.select_point_btn, SIGNAL(clicked()), this, SLOT(SelectPoint()));
 
+  connect(ui_.execute_cached_traj, SIGNAL(clicked()), this, SLOT(executeCachedCartesianTrajectory()));
+
   // Cotyledon drop down menu updates
   connect(ui_.floor_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateAreaMenu(const QString&)));
   connect(ui_.area_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateObjectIDMenu(const QString&)));
@@ -132,6 +137,8 @@ void PathPlanningWidget::init()
   connect(ui_.add_object, SIGNAL(clicked()), this, SLOT(addObjectCb()));
   connect(ui_.add_task, SIGNAL(clicked()), this, SLOT(addTaskCb()));
 
+  // Start subscriber 
+  tfListener_ = boost::shared_ptr<tf2_ros::TransformListener>(new tf2_ros::TransformListener(tfBuffer_));
 
   // Start tf buffer
   tfListener_ = new tf2_ros::TransformListener(tfBuffer_);
@@ -146,6 +153,38 @@ void PathPlanningWidget::init()
       ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
     }
   }
+}
+
+void PathPlanningWidget::executeCachedCartesianTrajectory(){
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath srv;
+  std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
+  std::string area_name = ui_.area_combo_box->currentText().toStdString();;
+  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string task_name = ui_.task_combo_box->currentText().toStdString();
+
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call clean path service");
+    return;
+  }
+
+  if(clean_path.cached_paths.size() == 0){
+    ROS_ERROR("No cached path exists");
+    return;
+  }
+  ROS_INFO("Sending emit signal");
+  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).cached_path);
 }
 
 void PathPlanningWidget::addFloorCb(){
@@ -586,12 +625,10 @@ void PathPlanningWidget::visualizeGoalConfig()
     rstate.state.joint_state.name = joint_names;
     rstate.state.joint_state.header.frame_id = "/odom";
 
-    tf2_ros::Buffer tfBuffer;
-    tf2_ros::TransformListener tfListener(tfBuffer);
     geometry_msgs::TransformStamped transformStamped;
     try
     {
-      transformStamped = tfBuffer.lookupTransform("map", "mobile_base_link", ros::Time(0), ros::Duration(3.0));
+      transformStamped = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0), ros::Duration(3.0));
     }
     catch (tf2::TransformException &ex)
     {
@@ -944,6 +981,7 @@ void PathPlanningWidget::savePoints(){
     return;
   }
 
+  
   if (ui_.chk_istoolpath->isChecked()){
     PathPlanningWidget::savePointsTool();
   }
@@ -1223,12 +1261,13 @@ void PathPlanningWidget::addNavPoseHelper()
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
-  geometry_msgs::Transform robot_world_tf;
-  geometry_msgs::Transform object_world_tf;
+  tf2_ros::TransformListener tfListener(tfBuffer_);
+  geometry_msgs::Transform map_mobilebaselink_tf;
+  geometry_msgs::Transform map_object_tf;
 
-  Eigen::Affine3d object_world_eigen;
-  Eigen::Affine3d robot_object_eigen;
-  Eigen::Affine3d robot_world_eigen;
+  Eigen::Affine3d map_object_eigen;
+  Eigen::Affine3d object_mobilebaselink_eigen;
+  Eigen::Affine3d map_mobilebaselink_eigen;
 
   geometry_msgs::Quaternion quat_msg;
 
@@ -1241,8 +1280,8 @@ void PathPlanningWidget::addNavPoseHelper()
   if (get_objects_proxy_.call(srv)){
     for(auto& obj : srv.response.objects){
       if(obj.id == object_id){
-        object_world_tf = obj.origin;
-        tf::transformMsgToEigen (object_world_tf, object_world_eigen);
+        map_object_tf = obj.origin;
+        tf::transformMsgToEigen (map_object_tf, map_object_eigen);
         found_tf = true;
         break;
       }
@@ -1262,8 +1301,8 @@ void PathPlanningWidget::addNavPoseHelper()
   int count = 0;
   while(true){
     try{
-      robot_world_tf = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0)).transform;
-      tf::transformMsgToEigen (robot_world_tf, robot_world_eigen);
+      map_mobilebaselink_tf = tfBuffer_.lookupTransform("map", "mobile_base_link", ros::Time(0)).transform;
+      tf::transformMsgToEigen (map_mobilebaselink_tf, map_mobilebaselink_eigen);
       break;
     }
     catch (tf2::TransformException &ex/*tf::TransformException ex*/) {
@@ -1277,7 +1316,7 @@ void PathPlanningWidget::addNavPoseHelper()
   }
 
   // Robot wrt object 
-  robot_object_eigen = object_world_eigen.inverse() * robot_world_eigen;
+  object_mobilebaselink_eigen = map_object_eigen.inverse() * map_mobilebaselink_eigen;
 
   // Get clean path
   peanut_cotyledon::CleanPath clean_path;
@@ -1298,21 +1337,22 @@ void PathPlanningWidget::addNavPoseHelper()
   }
 
   // Convert Transform to pose and update cached path
-  Eigen::Matrix3d rot = robot_object_eigen.linear();
+  Eigen::Matrix3d rot = object_mobilebaselink_eigen.linear();
   Eigen::Quaterniond quat(rot);
   tf::quaternionEigenToMsg(quat, quat_msg);
 
-  geometry_msgs::Pose robot_object_pose;
-  robot_object_pose.position.x = robot_object_eigen.translation()[0];
-  robot_object_pose.position.y = robot_object_eigen.translation()[1];
-  robot_object_pose.position.z = robot_object_eigen.translation()[2];
-  robot_object_pose.orientation = quat_msg;
+  geometry_msgs::Pose object_mobilebaselink_pose;
+  object_mobilebaselink_pose.position.x = object_mobilebaselink_eigen.translation()[0];
+  object_mobilebaselink_pose.position.y = object_mobilebaselink_eigen.translation()[1];
+  object_mobilebaselink_pose.position.z = object_mobilebaselink_eigen.translation()[2];
+  object_mobilebaselink_pose.orientation = quat_msg;
 
   if(clean_path.cached_paths.size() == 0){
     ROS_ERROR("No cached path present");
     return;
   }
-  clean_path.cached_paths.at(0).nav_pose = robot_object_pose;
+  
+  clean_path.cached_paths.at(0).nav_pose = object_mobilebaselink_pose;
 
   // Set clean path
   peanut_cotyledon::SetCleanPath set_path_srv;
@@ -1347,7 +1387,6 @@ void PathPlanningWidget::goToNavPoseHelper(){
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
-  tf2_ros::TransformListener tfListener(tfBuffer_);
   geometry_msgs::Transform object_world_tf;
 
   Eigen::Affine3d object_world_eigen;
@@ -1434,7 +1473,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
 }
 
 void PathPlanningWidget::clearFaults(){
-  kortex_driver::ClearFaults srv;
+  kortex_driver::Base_ClearFaults srv;
   
   if (clear_faults_.call(srv)){
     ROS_INFO_STREAM("Clearing faults");
@@ -1846,6 +1885,59 @@ bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_p
   else{
     ROS_ERROR("Could not call set_clean_path service");
     return false;
+  }
+}
+
+void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj){
+  if(!ui_.save_path_checkbox->isChecked()){
+    return;
+  }
+
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(this, "Save", "Save cached trajectory?", QMessageBox::Yes|QMessageBox::No);
+  if (reply == QMessageBox::Yes){
+    ROS_INFO("Saving cached trajectory...");
+  }
+  else{
+    ROS_INFO("Did not save cached trajectory.");
+    return;
+  }
+
+  std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
+  std::string area_name = ui_.area_combo_box->currentText().toStdString();;
+  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string task_name = ui_.task_combo_box->currentText().toStdString();
+
+  // Get clean path
+  peanut_cotyledon::CleanPath clean_path;
+  peanut_cotyledon::GetCleanPath srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object_id = object_id;
+  srv.request.task_name = task_name;
+
+  if(get_clean_path_proxy_.call(srv))
+  {
+    clean_path = srv.response.clean_path;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("Could not call clean path service");
+    return;
+  }
+
+  // Update clean path cached trajectory 
+  if(clean_path.cached_paths.size() == 0){
+    peanut_cotyledon::CachedPath cached_path;
+    clean_path.cached_paths.push_back(cached_path);   
+  }
+  
+  clean_path.cached_paths.at(0).cached_path = traj;
+  if (SetCleanPath(clean_path)){
+    ROS_INFO("Cached trajectory saved");
+  }
+  else{
+    ROS_ERROR("Could not save cached trajectory");
   }
 }
 

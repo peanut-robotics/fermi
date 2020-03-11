@@ -65,52 +65,35 @@ void GenerateCartesianPath::init()
   ROS_INFO_STREAM("size of the end effectors is: "<<end_eff_joint_groups.size());
   tfListener = new tf2_ros::TransformListener(tfBuffer);
 
-  if (end_eff_joint_groups.empty())
-  {
+  if (end_eff_joint_groups.empty()){
     std::vector< std::string > group_names_tmp_;
     const moveit::core::JointModelGroup *  end_eff_joint_groups_tmp_;
     group_names_tmp_ = kmodel_->getJointModelGroupNames();
 
-    for(int i=0;i<group_names_tmp_.size();i++)
-    {
-
-    end_eff_joint_groups_tmp_ = kmodel_->getJointModelGroup(group_names_tmp_.at(i));
-    if(end_eff_joint_groups_tmp_->isChain())
-    {
-      group_names.push_back(group_names_tmp_.at(i));
-    }
-    else
-    {
-      ROS_WARN_STREAM("The group:" << end_eff_joint_groups_tmp_->getName() <<" is not a Chain. Depreciate it!!");
-    }
+    for(int i=0;i<group_names_tmp_.size();i++){
+      end_eff_joint_groups_tmp_ = kmodel_->getJointModelGroup(group_names_tmp_.at(i));
+      if(end_eff_joint_groups_tmp_->isChain()){
+        group_names.push_back(group_names_tmp_.at(i));
+      }
+      else{
+        ROS_WARN_STREAM("The group:" << end_eff_joint_groups_tmp_->getName() <<" is not a Chain. Depreciate it!!");
+      }
     }
   }
-  else
-  {
-  for(int i=0;i<end_eff_joint_groups.size();i++)
-  {
-    if(end_eff_joint_groups.at(i)->isChain())
-    {
-    const std::string& parent_group_name = end_eff_joint_groups.at(i)->getName();
-    group_names.push_back(parent_group_name);
-
-    ROS_INFO_STREAM("Group name:"<< group_names.at(i));
-    }
-    else
-    {
-        ROS_INFO_STREAM("This group is not a chain. Find the parent of the group");
-        const std::pair< std::string, std::string > & parent_group_name = end_eff_joint_groups.at(i)->getEndEffectorParentGroup();
-        group_names.push_back(parent_group_name.first);
+  else{
+    for(int i=0;i<end_eff_joint_groups.size();i++){ 
+      if(end_eff_joint_groups.at(i)->isChain()){
+        const std::string& parent_group_name = end_eff_joint_groups.at(i)->getName();
+        group_names.push_back(parent_group_name);
+        ROS_INFO_STREAM("Group name:"<< group_names.at(i));
+      }
+      else{
+          ROS_INFO_STREAM("This group is not a chain. Find the parent of the group");
+          const std::pair< std::string, std::string > & parent_group_name = end_eff_joint_groups.at(i)->getEndEffectorParentGroup();
+          group_names.push_back(parent_group_name.first);
+      }
     }
   }
-
-  // Cartesian planning and execution
-  cart_plan_action_client = new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true);
-  cart_plan_action_client->waitForServer(ros::Duration(2.0));
-
-  cart_exec_action_client = new actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>("/execute_trajectory", true);
-  cart_exec_action_client->waitForServer(ros::Duration(2.0));
-}
 
   ROS_INFO_STREAM("Group name:"<< group_names[selected_plan_group]);
 
@@ -119,6 +102,14 @@ void GenerateCartesianPath::init()
   kinematic_state_->setToDefaultValues();
 
   joint_model_group_ = kmodel_->getJointModelGroup(group_names[selected_plan_group]);
+
+  // Cartesian planning and execution
+  cart_plan_action_client = boost::shared_ptr<actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>>(new actionlib::SimpleActionClient<peanut_descartes::GetCartesianPathAction>("/compute_cartesian_path", true));
+  cart_plan_action_client->waitForServer(ros::Duration(2.0));
+
+  cart_exec_action_client = boost::shared_ptr<actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>>(new actionlib::SimpleActionClient<moveit_msgs::ExecuteTrajectoryAction>("/execute_trajectory", true));
+  cart_exec_action_client->waitForServer(ros::Duration(2.0));
+
 }
 
 void GenerateCartesianPath::setCartParams(double plan_time_,double cart_step_size_, double cart_jump_thresh_, bool moveit_replan_,bool avoid_collisions_, std::string robot_model_frame_, bool fix_start_state_)
@@ -167,7 +158,7 @@ void GenerateCartesianPath::moveToConfig(std::vector<double> config, bool plan_o
 }
 
 void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoints, const bool plan_only)
-{
+{ 
     Q_EMIT cartesianPathExecuteStarted();
     moveit::planning_interface::MoveItErrorCode freespace_error_code;
 
@@ -304,6 +295,10 @@ void GenerateCartesianPath::moveToPose(std::vector<geometry_msgs::Pose> waypoint
       Q_EMIT cartesianPathCompleted(100);
     }
 
+    trajectory_msgs::JointTrajectory traj;
+    traj =  cart_plan_result->solution.joint_trajectory;
+    Q_EMIT saveCachedCartesianTrajectory(traj);
+
     if (plan_only){
       Q_EMIT cartesianPathExecuteFinished();
       return;
@@ -357,6 +352,46 @@ void GenerateCartesianPath::cartesianPathHandler(std::vector<geometry_msgs::Pose
   */
   ROS_INFO("Starting concurrent process for Cartesian Path");
   QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::moveToPose, waypoints, plan_only);
+}
+
+void GenerateCartesianPath::executeCartesianTrajectory(const trajectory_msgs::JointTrajectory& traj){
+  QFuture<void> future = QtConcurrent::run(this, &GenerateCartesianPath::executeCartesianTrajectoryHelper, traj);
+}
+
+void GenerateCartesianPath::executeCartesianTrajectoryHelper(const trajectory_msgs::JointTrajectory& traj){
+  Q_EMIT cartesianPathExecuteStarted();
+  moveit::planning_interface::MoveItErrorCode freespace_error_code;
+  moveit::planning_interface::MoveGroupInterface::Plan freespace_plan;
+
+  moveit_group_->setPlanningTime(PLAN_TIME_);
+  moveit_group_->allowReplanning (MOVEIT_REPLAN_);
+  moveit_group_->setStartStateToCurrentState();
+ 
+  std::vector<double> start_config = traj.points.front().positions;
+  moveit_group_->setJointValueTarget(start_config);
+  bool success = (moveit_group_->plan(freespace_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+  
+  if (success){
+    freespace_error_code = moveit_group_->execute(freespace_plan);
+  }
+  else {
+    ROS_ERROR_STREAM("Could not compute freespace path to starting config of cartesian path");
+    Q_EMIT cartesianPathExecuteFinished();
+    return;
+  }
+
+  
+  // Update the starting point to be the correct time
+  if (freespace_error_code==freespace_error_code.SUCCESS){
+    moveit_msgs::ExecuteTrajectoryGoal cart_exec_goal;
+    cart_exec_goal.trajectory.joint_trajectory = traj;
+    cart_exec_goal.trajectory.joint_trajectory.header.stamp = ros::Time::now();
+    cart_exec_action_client->sendGoal(cart_exec_goal);
+    cart_exec_action_client->waitForResult();
+    moveit_msgs::ExecuteTrajectoryResultConstPtr cart_exec_result = cart_exec_action_client->getResult();
+  }
+
+  Q_EMIT cartesianPathExecuteFinished();
 }
 
 void GenerateCartesianPath::freespacePathHandler(std::vector<double> config, bool plan_only)
