@@ -13,7 +13,7 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::GetFloors>("/oil/cotyledon/get_floors", 20);
-  set_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloors>("/oil/cotyledon/set_floors", 20);
+  set_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloor>("/oil/cotyledon/set_floors", 20);
   get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20);
   set_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::SetAreas>("/oil/cotyledon/set_areas", 20);
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
@@ -146,8 +146,8 @@ void PathPlanningWidget::init()
     ROS_ERROR("Could not call get_floors_proxy_ service");
   }
   else{
-    for(const auto& floor : floors_srv.response.floors){
-      ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
+    for(const auto& floor : floors_srv.response.floor_names){
+      ui_.floor_combo_box->addItem(QString::fromStdString(floor));
     }
   }
 }
@@ -201,20 +201,20 @@ void PathPlanningWidget::addFloorCb(){
     ROS_ERROR("Could not call get_floors_proxy_ service");
     return;
   }
-  for(const auto& floor : floors_srv.response.floors){
-    if (floor.name == floor_name){
+  for(const auto& floor : floors_srv.response.floor_names){
+    if (floor == floor_name){
       ROS_ERROR_STREAM("Floor: "<<floor_name<<" already exists");
       return;
     }
   }
 
-  peanut_cotyledon::SetFloors set_floors_srv;
+  peanut_cotyledon::SetFloor set_floor_srv;
   peanut_cotyledon::Floor new_floor;
 
   new_floor.name = floor_name;
-  set_floors_srv.request.floors.push_back(new_floor);
+  set_floor_srv.request.floors.push_back(new_floor);
 
-  if (!set_floors_proxy_.call(set_floors_srv)){
+  if (!set_floors_proxy_.call(set_floor_srv)){
     ROS_ERROR("Could not call set_floors_srv service");
     return;
   }
@@ -417,8 +417,8 @@ void PathPlanningWidget::ResetMenu(){
     ROS_ERROR("Could not call get_floors_proxy_ service");
   }
   else{
-    for(const auto& floor : floors_srv.response.floors){
-      ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
+    for(const auto& floor : floors_srv.response.floor_names){
+      ui_.floor_combo_box->addItem(QString::fromStdString(floor));
     }
   }
 }

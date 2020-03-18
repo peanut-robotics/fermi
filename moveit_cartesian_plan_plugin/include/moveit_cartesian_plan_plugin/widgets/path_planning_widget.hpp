@@ -47,20 +47,20 @@
 
 // Cotyledon
 #include <peanut_cotyledon/GetFloors.h>
-#include <peanut_cotyledon/SetFloors.h>
+#include <peanut_cotyledon/SetFloor.h>
 #include <peanut_cotyledon/GetAreas.h>
-#include <peanut_cotyledon/SetAreas.h>
+#include <peanut_cotyledon/SetArea.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
-#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/SetObject.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/Task.h>
 #include <peanut_cotyledon/GetTasks.h>
-#include <peanut_cotyledon/SetTasks.h>
+#include <peanut_cotyledon/SetTask.h>
 #include <peanut_cotyledon/CachedPath.h>
 #include <peanut_cotyledon/Floor.h>
 
