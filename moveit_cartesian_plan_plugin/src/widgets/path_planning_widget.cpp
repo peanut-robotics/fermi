@@ -14,10 +14,10 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::GetFloors>("/oil/cotyledon/get_floors", 20); // Done
   set_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloor>("/oil/cotyledon/set_floors", 20); // Done
-  get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20);
-  set_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::SetArea>("/oil/cotyledon/set_area", 20);
-  get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
-  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
+  get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20); // Done
+  set_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::SetArea>("/oil/cotyledon/set_area", 20); // Done
+  get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20); // done
+  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20); //done
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
   set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
   get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
@@ -181,7 +181,7 @@ void PathPlanningWidget::executeCachedCartesianTrajectory(){
     return;
   }
   ROS_INFO("Sending emit signal");
-  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).cached_path);
+  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).joint_trajectory);
 }
 
 void PathPlanningWidget::addFloorCb(){
@@ -392,10 +392,6 @@ void PathPlanningWidget::addTaskCb(){
   set_path_srv.request.clean_path = clean_path;
   
   if(set_clean_path_proxy_.call(set_path_srv)){
-    if(!set_path_srv.response.success){
-      ROS_ERROR_STREAM("Unable to update clean path");
-      return; 
-    }
   }  
   else{
     ROS_INFO("Could not call set_clean_path service");
@@ -921,9 +917,9 @@ void PathPlanningWidget::loadPointsObject()
   }
 
   // Set starting config 
-  if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
+  if (!clean_path.cached_paths.at(0).joint_trajectory.points.empty()){
       ROS_INFO("Cache path is present, loading starting config");
-      std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
+      std::vector<double> startConfig = clean_path.cached_paths[0].joint_trajectory.points[0].positions;
       ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
       ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
       ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
@@ -1360,13 +1356,6 @@ void PathPlanningWidget::addNavPoseHelper()
   set_path_srv.request.clean_path = clean_path;
   
   if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO("Updated nav_pose for path");
-    }
-    else{
-      ROS_ERROR_STREAM("Could not update nav pose. Error: "<<set_path_srv.response.message);
-      return;
-    }
   }  
   
 }
@@ -1634,13 +1623,6 @@ void PathPlanningWidget::SetTool(){
   set_path_srv.request.clean_path = clean_path;
   
   if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO_STREAM("Updated tool name to "<<tool);
-    }
-    else{
-      ROS_ERROR_STREAM("Could not update tool. Error: "<<set_path_srv.response.message);
-      return;
-    }
   }  
 
 }
@@ -1870,14 +1852,7 @@ bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_p
   set_path_srv.request.clean_path = clean_path;
   
   if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO("Clean path set");
-      return true;
-    }
-    else{
-      ROS_ERROR_STREAM("Could not set clean path. Error: "<<set_path_srv.response.message);
-      return false;
-    }
+    return true;
   } 
   else{
     ROS_ERROR("Could not call set_clean_path service");
@@ -1929,7 +1904,7 @@ void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::Jo
     clean_path.cached_paths.push_back(cached_path);   
   }
   
-  clean_path.cached_paths.at(0).cached_path = traj;
+  clean_path.cached_paths.at(0).joint_trajectory = traj;
   if (SetCleanPath(clean_path)){
     ROS_INFO("Cached trajectory saved");
   }

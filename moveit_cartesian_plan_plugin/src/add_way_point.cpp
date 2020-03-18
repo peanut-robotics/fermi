@@ -1548,13 +1548,6 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
 
   if(set_clean_path_proxy_.call(srv))
   {
-    if(srv.response.success){
-      ROS_INFO("Clean path successfully saved");
-    }
-    else {
-      ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
-      return;
-    }
   }
   else
   {
