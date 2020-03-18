@@ -254,7 +254,7 @@ void PathPlanningWidget::addAreaCb(){
   peanut_cotyledon::Area new_area;
 
   new_area.name = area_name;
-  set_areas_srv.request.areas.push_back(new_area);
+  set_areas_srv.request.area = new_area;
   set_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
   if (!set_areas_proxy_.call(set_areas_srv)){
     ROS_ERROR("Could not call set_areas_srv service");
@@ -270,7 +270,6 @@ void PathPlanningWidget::addObjectCb(){
   QString text;
   bool ok;
   std::string object_name, object_type, object_model;
-  std::string object_name;
   peanut_cotyledon::Object desired_object;
 
   text = QInputDialog::getText(this, "Object Name","Object name:", QLineEdit::Normal,"", &ok);
@@ -848,7 +847,7 @@ void PathPlanningWidget::loadPointsObject()
   }
   else
   {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << std::to_string(object_name) << "task_name" << task_name << "not able to load");
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
     ui_.tabWidget->setEnabled(true);
     ui_.progressBar->hide();
     return;
@@ -1109,7 +1108,7 @@ void PathPlanningWidget::savePointsObject()
   }
   else
   {
-    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << std::to_string(object_name) << "task_name" << task_name << "not able to load");
+    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
     return;
   }
 
@@ -1316,7 +1315,7 @@ void PathPlanningWidget::addNavPoseHelper()
   }
   else
   {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << std::to_string(object_name) << "task_name" << task_name << "not able to load");
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
     return;
   }
 
@@ -1386,7 +1385,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   }
   else
   {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << std::to_string(object_name) << "task_name" << task_name << "not able to load");
+    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
     return;
   }
   
@@ -1587,7 +1586,7 @@ void PathPlanningWidget::SetTool(){
   }
   else
   {
-    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << std::to_string(object_name) << "task_name" << task_name << "not able to load");
+    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
     return;
   }
 

@@ -212,8 +212,8 @@ namespace moveit_cartesian_plan_plugin
 			void CheckAllPointsIK();
 
 			// Helpers
-			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
-			bool setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj);
+			bool getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj);
+			bool setObjectHelper(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object obj);
 
 			void ChangeStepSize();
 			void RobotIKPlanning();

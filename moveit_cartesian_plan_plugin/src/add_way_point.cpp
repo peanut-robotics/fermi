@@ -1549,7 +1549,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   }
   else
   {
-    ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_name " << std::to_string(object_name) << "task_name " << task_name << " not able to set");
+    ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_name " << object_name << "task_name " << task_name << " not able to set");
     return;
   }
 
