@@ -27,8 +27,9 @@
 #include <message_filters/subscriber.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
-#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/SetObject.h>
 #include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/GetObject.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/DeviceTriggerPoint.h>
 #include <trajectory_msgs/JointTrajectory.h>
@@ -110,7 +111,8 @@ public:
 	void makePointsInteractiveMarker();
 	ros::ServiceClient set_clean_path_proxy_;
 	ros::ServiceClient get_objects_proxy_;
-	ros::ServiceClient set_objects_proxy_;
+	ros::ServiceClient set_object_proxy_;
+	ros::ServiceClient get_object_proxy_;
 	ros::Publisher marker_pub_;
 	ros::NodeHandle nh_;
 	

@@ -55,6 +55,7 @@
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/GetObject.h>
 #include <peanut_cotyledon/SetObject.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_cotyledon/Object.h>
@@ -117,7 +118,8 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
-			ros::ServiceClient set_objects_proxy_;
+			ros::ServiceClient get_object_proxy_;
+			ros::ServiceClient set_object_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
 			ros::ServiceClient set_tasks_proxy_;
 			ros::ServiceClient add_task_proxy_;
@@ -264,7 +266,7 @@ namespace moveit_cartesian_plan_plugin
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    void saveToolBtn_press();
 			//! Save to file button has been pressed.
-		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name);
+		    void saveObjectBtn_press(std::string floor_name, std::string area_name, std::string object_name, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
 			// Signal to modify control marker
