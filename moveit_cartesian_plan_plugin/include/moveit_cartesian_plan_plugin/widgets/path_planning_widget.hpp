@@ -61,6 +61,7 @@
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/Task.h>
 #include <peanut_cotyledon/GetTasks.h>
+#include <peanut_cotyledon/GetTask.h>
 #include <peanut_cotyledon/SetTask.h>
 #include <peanut_cotyledon/CachedPath.h>
 #include <peanut_cotyledon/Floor.h>
@@ -121,7 +122,8 @@ namespace moveit_cartesian_plan_plugin
 			ros::ServiceClient get_object_proxy_;
 			ros::ServiceClient set_object_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
-			ros::ServiceClient set_tasks_proxy_;
+			ros::ServiceClient get_task_proxy_;
+			ros::ServiceClient set_task_proxy_;
 			ros::ServiceClient add_task_proxy_;
   			ros::Publisher robot_goal_pub;
 			

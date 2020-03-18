@@ -197,8 +197,8 @@ public Q_SLOTS:
 	void parseWayPoints(const bool plan_only);
 	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
-	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
-	bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
+	void saveWayPointsObject(std::string floor_name, std::string area_name, std::string object_name, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
+	bool getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();

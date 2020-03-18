@@ -1416,9 +1416,9 @@ void AddWayPoint::saveToolPath(){
   ROS_INFO_STREAM("Saved tool paths to " << fileName.toStdString().c_str());
 }
 
-bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj){
+bool AddWayPoint::getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj){
   // Get objects
-  peanut_cotyledon::GetObjects srv;
+  peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
   srv.request.object_name = object_name;
@@ -1533,8 +1533,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     clean_path.cached_paths = one_cached_path_vec;
   }
   clean_path.object_poses = waypoints_object_frame;
-  clean_path.cached_paths.at(0).robot_poses = waypoints_map_frame;
-  clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
+  clean_path.cached_paths.at(0).joint_trajectory = empty_joint_traj;
 
   // Set clean path
   peanut_cotyledon::SetCleanPath srv;
@@ -1557,7 +1556,7 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   peanut_cotyledon::SetObject set_srv;
   set_srv.request.floor_name = floor_name;
   set_srv.request.area_name = area_name;
-  set_srv.request.objects.push_back(desired_object);
+  set_srv.request.object = desired_object;
 
   if (set_object_proxy_.call(set_srv)){
   }
