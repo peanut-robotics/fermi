@@ -44,6 +44,7 @@
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <QInputDialog>
+#include <exception>
 
 // Cotyledon
 #include <peanut_cotyledon/GetFloors.h>

@@ -1422,14 +1422,22 @@ bool AddWayPoint::getObjectWithName(std::string floor_name, std::string area_nam
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
   srv.request.object_name = object_name;
-  if (get_object_proxy_.call(srv)){
-    desired_obj = srv.response.object;
-    return true;
+
+  try{
+    if (get_object_proxy_.call(srv)){
+      desired_obj = srv.response.object;
+      return true;
+    }
+    else{
+      ROS_ERROR("Could not call get objects service");
+      return false;
+    }
   }
-  else{
-    ROS_ERROR("Could not call get objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_object");
     return false;
   }
+
   return false;  
 }
 
@@ -1543,12 +1551,14 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   srv.request.task_name = task_name;
   srv.request.clean_path = clean_path;
 
-  if(set_clean_path_proxy_.call(srv))
-  {
+  try{
+    if(!set_clean_path_proxy_.call(srv)){
+      ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_name " << object_name << "task_name " << task_name << " not able to set");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_name " << object_name << "task_name " << task_name << " not able to set");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
     return;
   }
 
@@ -1558,10 +1568,14 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
   set_srv.request.area_name = area_name;
   set_srv.request.object = desired_object;
 
-  if (set_object_proxy_.call(set_srv)){
+  try{
+    if(!set_object_proxy_.call(set_srv)){
+      ROS_ERROR("Could not call set objects service");
+      return;
+    }
   }
-  else{
-    ROS_ERROR("Could not call set objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_object");
     return;
   }
 
