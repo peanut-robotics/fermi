@@ -114,9 +114,9 @@ namespace moveit_cartesian_plan_plugin
 			}
 			ros::NodeHandle nh_;
 			ros::ServiceClient get_floors_proxy_;
-			ros::ServiceClient set_floors_proxy_;
+			ros::ServiceClient set_floor_proxy_;
 			ros::ServiceClient get_areas_proxy_;
-			ros::ServiceClient set_areas_proxy_;
+			ros::ServiceClient set_area_proxy_;
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;

@@ -13,9 +13,9 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
   get_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::GetFloors>("/oil/cotyledon/get_floors", 20); 
-  set_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloor>("/oil/cotyledon/set_floors", 20); 
+  set_floor_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloor>("/oil/cotyledon/set_floor", 20); 
   get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20); 
-  set_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::SetArea>("/oil/cotyledon/set_area", 20); 
+  set_area_proxy_ = nh_.serviceClient<peanut_cotyledon::SetArea>("/oil/cotyledon/set_area", 20); 
   get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20); 
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20); 
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
@@ -236,7 +236,7 @@ void PathPlanningWidget::addFloorCb(){
   set_floor_srv.request.floor = new_floor;
   
   try{
-    if (!set_floors_proxy_.call(set_floor_srv)){
+    if (!set_floor_proxy_.call(set_floor_srv)){
       ROS_ERROR("Could not call set_floors_srv service");
       return;
     }
@@ -291,7 +291,7 @@ void PathPlanningWidget::addAreaCb(){
   set_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
 
   try{
-    if (!set_areas_proxy_.call(set_areas_srv)){
+    if (!set_area_proxy_.call(set_areas_srv)){
       ROS_ERROR("Could not call set_areas_srv service");
       return;
     }
@@ -1387,11 +1387,10 @@ void PathPlanningWidget::addNavPoseHelper()
 
   // Get objects
   bool found_tf = false;
-  std::string obj_name;
   peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_name = obj_name;
+  srv.request.object_name = object_name;
   try{
     if (get_object_proxy_.call(srv)){
       map_object_tf = srv.response.object.origin;
@@ -1679,6 +1678,7 @@ bool PathPlanningWidget::getObjectWithName(std::string floor_name, std::string a
   peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
+  srv.request.object_name = object_name;
 
   try{
     if (get_object_proxy_.call(srv)){
