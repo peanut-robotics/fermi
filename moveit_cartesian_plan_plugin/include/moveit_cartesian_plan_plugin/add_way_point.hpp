@@ -27,8 +27,9 @@
 #include <message_filters/subscriber.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
-#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/SetObject.h>
 #include <peanut_cotyledon/GetObjects.h>
+#include <peanut_cotyledon/GetObject.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/DeviceTriggerPoint.h>
 #include <trajectory_msgs/JointTrajectory.h>
@@ -110,7 +111,8 @@ public:
 	void makePointsInteractiveMarker();
 	ros::ServiceClient set_clean_path_proxy_;
 	ros::ServiceClient get_objects_proxy_;
-	ros::ServiceClient set_objects_proxy_;
+	ros::ServiceClient set_object_proxy_;
+	ros::ServiceClient get_object_proxy_;
 	ros::Publisher marker_pub_;
 	ros::NodeHandle nh_;
 	
@@ -195,8 +197,8 @@ public Q_SLOTS:
 	void parseWayPoints(const bool plan_only);
 	void saveToolPath();
 	//! Save all the Way-Points to a yaml file.
-	void saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
-	bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
+	void saveWayPointsObject(std::string floor_name, std::string area_name, std::string object_name, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string);
+	bool getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj);
 
 	//! clear all the 3d interaction point boxes
 	void clearAllInteractiveBoxes();

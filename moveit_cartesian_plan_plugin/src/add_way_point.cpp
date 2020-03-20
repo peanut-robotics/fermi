@@ -55,7 +55,8 @@ AddWayPoint::AddWayPoint(QWidget *parent) : rviz::Panel(parent) //, tf_()
   ARROW_INTERACTIVE_SCALE = 0.4;
   set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
-  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
+  get_object_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObject>("/oil/cotyledon/get_object", 20);
+  set_object_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObject>("/oil/cotyledon/set_object", 20);
 
   marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
@@ -126,7 +127,7 @@ void AddWayPoint::onInitialize()
   connect(this, SIGNAL(wayPoints_signal(std::vector<geometry_msgs::Pose>, bool)), path_generate, SLOT(cartesianPathHandler(std::vector<geometry_msgs::Pose>, bool)));
   connect(widget_, SIGNAL(parseConfigBtn_signal(std::vector<double>, bool)), path_generate, SLOT(freespacePathHandler(std::vector<double>, bool)));
   connect(widget_, SIGNAL(configEdited_signal(std::vector<double>)), this, SLOT(cacheConfig(std::vector<double>)));
-  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)), this, SLOT(saveWayPointsObject(std::string, std::string, int, std::string, peanut_cotyledon::CleanPath, std::string)));
+  connect(widget_, SIGNAL(saveObjectBtn_press(std::string, std::string, std::string, std::string, peanut_cotyledon::CleanPath, std::string)), this, SLOT(saveWayPointsObject(std::string, std::string, std::string, std::string, peanut_cotyledon::CleanPath, std::string)));
   connect(widget_, SIGNAL(saveToolBtn_press()), this, SLOT(saveToolPath()));
   connect(widget_, SIGNAL(clearAllPoints_signal()), this, SLOT(clearAllPointsRViz()));
   connect(widget_, SIGNAL(modifyMarkerControl_signal(std::string, geometry_msgs::Pose)), this, SLOT(modifyMarkerControl(std::string, geometry_msgs::Pose)));
@@ -1415,27 +1416,32 @@ void AddWayPoint::saveToolPath(){
   ROS_INFO_STREAM("Saved tool paths to " << fileName.toStdString().c_str());
 }
 
-bool AddWayPoint::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+bool AddWayPoint::getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj){
   // Get objects
-  peanut_cotyledon::GetObjects srv;
+  peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  if (get_objects_proxy_.call(srv)){
-    for(auto& obj : srv.response.objects){
-      if(obj.id == object_id){
-        desired_obj = obj;
-        return true;
-      }
+  srv.request.object_name = object_name;
+
+  try{
+    if (get_object_proxy_.call(srv)){
+      desired_obj = srv.response.object;
+      return true;
+    }
+    else{
+      ROS_ERROR("Could not call get objects service");
+      return false;
     }
   }
-  else{
-    ROS_ERROR("Could not call get objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_object");
     return false;
   }
+
   return false;  
 }
 
-void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name)
+void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_name, std::string object_name, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name)
 {
   /*! Function for saving all the Way-Points into yaml file.
         This function opens a Qt Dialog where the user can set the name of the Way-Points file and the location.
@@ -1474,10 +1480,10 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     ROS_ERROR("Unable to save because not able to transform");
     return;
   }
-//asdasd
+
   // Get object transform
-  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
-    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+  if (!getObjectWithName(floor_name, area_name, object_name, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with name "<<object_name);
     return;
   }
 
@@ -1535,46 +1541,41 @@ void AddWayPoint::saveWayPointsObject(std::string floor_name, std::string area_n
     clean_path.cached_paths = one_cached_path_vec;
   }
   clean_path.object_poses = waypoints_object_frame;
-  clean_path.cached_paths.at(0).robot_poses = waypoints_map_frame;
-  clean_path.cached_paths.at(0).cached_path = empty_joint_traj;
+  clean_path.cached_paths.at(0).joint_trajectory = empty_joint_traj;
 
   // Set clean path
   peanut_cotyledon::SetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
   srv.request.clean_path = clean_path;
 
-  if(set_clean_path_proxy_.call(srv))
-  {
-    if(srv.response.success){
-      ROS_INFO("Clean path successfully saved");
-    }
-    else {
-      ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+  try{
+    if(!set_clean_path_proxy_.call(srv)){
+      ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_name " << object_name << "task_name " << task_name << " not able to set");
       return;
     }
   }
-  else
-  {
-    ROS_ERROR_STREAM("clean path floor " << floor_name << " area " << area_name << " object_id " << std::to_string(object_id) << "task_name " << task_name << " not able to set");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
     return;
   }
 
   // Set objects 
-  peanut_cotyledon::SetObjects set_srv;
+  peanut_cotyledon::SetObject set_srv;
   set_srv.request.floor_name = floor_name;
   set_srv.request.area_name = area_name;
-  set_srv.request.objects.push_back(desired_object);
+  set_srv.request.object = desired_object;
 
-  if (set_objects_proxy_.call(set_srv)){
-    if (!set_srv.response.success){
-      ROS_ERROR("Could not set object");
+  try{
+    if(!set_object_proxy_.call(set_srv)){
+      ROS_ERROR("Could not call set objects service");
+      return;
     }
   }
-  else{
-    ROS_ERROR("Could not call set objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_object");
     return;
   }
 

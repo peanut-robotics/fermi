@@ -44,23 +44,26 @@
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <QInputDialog>
+#include <exception>
 
 // Cotyledon
 #include <peanut_cotyledon/GetFloors.h>
-#include <peanut_cotyledon/SetFloors.h>
+#include <peanut_cotyledon/SetFloor.h>
 #include <peanut_cotyledon/GetAreas.h>
-#include <peanut_cotyledon/SetAreas.h>
+#include <peanut_cotyledon/SetArea.h>
 #include <peanut_cotyledon/GetCleanPath.h>
 #include <peanut_cotyledon/SetCleanPath.h>
 #include <peanut_cotyledon/CleanPath.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/GetObjects.h>
-#include <peanut_cotyledon/SetObjects.h>
+#include <peanut_cotyledon/GetObject.h>
+#include <peanut_cotyledon/SetObject.h>
 #include <peanut_cotyledon/GetCleanPathRequest.h>
 #include <peanut_cotyledon/Object.h>
 #include <peanut_cotyledon/Task.h>
 #include <peanut_cotyledon/GetTasks.h>
-#include <peanut_cotyledon/SetTasks.h>
+#include <peanut_cotyledon/GetTask.h>
+#include <peanut_cotyledon/SetTask.h>
 #include <peanut_cotyledon/CachedPath.h>
 #include <peanut_cotyledon/Floor.h>
 
@@ -111,15 +114,17 @@ namespace moveit_cartesian_plan_plugin
 			}
 			ros::NodeHandle nh_;
 			ros::ServiceClient get_floors_proxy_;
-			ros::ServiceClient set_floors_proxy_;
+			ros::ServiceClient set_floor_proxy_;
 			ros::ServiceClient get_areas_proxy_;
-			ros::ServiceClient set_areas_proxy_;
+			ros::ServiceClient set_area_proxy_;
 			ros::ServiceClient get_clean_path_proxy_;
 			ros::ServiceClient set_clean_path_proxy_;
 			ros::ServiceClient get_objects_proxy_;
-			ros::ServiceClient set_objects_proxy_;
+			ros::ServiceClient get_object_proxy_;
+			ros::ServiceClient set_object_proxy_;
 			ros::ServiceClient get_tasks_proxy_;
-			ros::ServiceClient set_tasks_proxy_;
+			ros::ServiceClient get_task_proxy_;
+			ros::ServiceClient set_task_proxy_;
 			ros::ServiceClient add_task_proxy_;
   			ros::Publisher robot_goal_pub;
 			
@@ -210,8 +215,8 @@ namespace moveit_cartesian_plan_plugin
 			void CheckAllPointsIK();
 
 			// Helpers
-			bool getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj);
-			bool setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj);
+			bool getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj);
+			bool setObjectHelper(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object obj);
 
 			void ChangeStepSize();
 			void RobotIKPlanning();
@@ -264,7 +269,7 @@ namespace moveit_cartesian_plan_plugin
 			void parseConfigBtn_signal(std::vector<double> config, bool plan_only);
 		    void saveToolBtn_press();
 			//! Save to file button has been pressed.
-		    void saveObjectBtn_press(std::string floor_name, std::string area_name, int object_id, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name);
+		    void saveObjectBtn_press(std::string floor_name, std::string area_name, std::string object_name, std::string task_name, peanut_cotyledon::CleanPath clean_path, std::string mesh_name);
 		    //! Signal that clear all points button has been pressed.
 		    void clearAllPoints_signal();
 			// Signal to modify control marker

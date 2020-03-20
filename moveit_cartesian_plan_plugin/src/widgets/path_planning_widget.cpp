@@ -12,16 +12,18 @@ PathPlanningWidget::PathPlanningWidget(std::string ns) :
                                                          param_ns_(ns)
 {
   robot_goal_pub = nh_.advertise<moveit_msgs::DisplayRobotState>("arm_goal_state", 20);
-  get_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::GetFloors>("/oil/cotyledon/get_floors", 20);
-  set_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloors>("/oil/cotyledon/set_floors", 20);
-  get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20);
-  set_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::SetAreas>("/oil/cotyledon/set_areas", 20);
-  get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20);
-  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20);
+  get_floors_proxy_ = nh_.serviceClient<peanut_cotyledon::GetFloors>("/oil/cotyledon/get_floors", 20); 
+  set_floor_proxy_ = nh_.serviceClient<peanut_cotyledon::SetFloor>("/oil/cotyledon/set_floor", 20); 
+  get_areas_proxy_ = nh_.serviceClient<peanut_cotyledon::GetAreas>("/oil/cotyledon/get_areas", 20); 
+  set_area_proxy_ = nh_.serviceClient<peanut_cotyledon::SetArea>("/oil/cotyledon/set_area", 20); 
+  get_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::GetCleanPath>("/oil/cotyledon/get_clean_path", 20); 
+  set_clean_path_proxy_ = nh_.serviceClient<peanut_cotyledon::SetCleanPath>("/oil/cotyledon/set_clean_path", 20); 
   get_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObjects>("/oil/cotyledon/get_objects", 20);
-  set_objects_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObjects>("/oil/cotyledon/set_objects", 20);
+  get_object_proxy_ = nh_.serviceClient<peanut_cotyledon::GetObject>("/oil/cotyledon/get_object", 20);
+  set_object_proxy_ = nh_.serviceClient<peanut_cotyledon::SetObject>("/oil/cotyledon/set_object", 20);
   get_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTasks>("/oil/cotyledon/get_tasks", 20);
-  set_tasks_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTasks>("/oil/cotyledon/set_tasks", 20);
+  get_task_proxy_ = nh_.serviceClient<peanut_cotyledon::GetTask>("/oil/cotyledon/get_task", 20);
+  set_task_proxy_ = nh_.serviceClient<peanut_cotyledon::SetTask>("/oil/cotyledon/set_task", 20);
 
   move_elevator_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>>(new actionlib::SimpleActionClient<peanut_elevator_oil::MoveToHeightAction>(nh_, "/oil/elevator/move_to_height", true));
   move_base_ = boost::shared_ptr<actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>>(new actionlib::SimpleActionClient<peanut_navplanning_oil::MoveBaseAction>(nh_, "/oil/navigation/planning/move_base", true));
@@ -128,7 +130,7 @@ void PathPlanningWidget::init()
   // Cotyledon drop down menu updates
   connect(ui_.floor_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateAreaMenu(const QString&)));
   connect(ui_.area_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateObjectIDMenu(const QString&)));
-  connect(ui_.object_id_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateTaskMenu(const QString&)));
+  connect(ui_.object_name_combo_box, SIGNAL(currentIndexChanged(const QString)), this, SLOT(updateTaskMenu(const QString&)));
   connect(ui_.reset_menu, SIGNAL(clicked()), this, SLOT(ResetMenu()));
 
   // Add data buttons
@@ -142,13 +144,19 @@ void PathPlanningWidget::init()
 
   // Init cotyledon information
   peanut_cotyledon::GetFloors floors_srv;
-  if (!get_floors_proxy_.call(floors_srv)){
-    ROS_ERROR("Could not call get_floors_proxy_ service");
-  }
-  else{
-    for(const auto& floor : floors_srv.response.floors){
-      ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
+
+  try{
+    if (!get_floors_proxy_.call(floors_srv)){
+      ROS_ERROR("Could not call get_floors_proxy_ service");
     }
+    else{
+      for(const auto& floor : floors_srv.response.floor_names){
+        ui_.floor_combo_box->addItem(QString::fromStdString(floor));
+      }
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_floors");
   }
 }
 
@@ -158,21 +166,27 @@ void PathPlanningWidget::executeCachedCartesianTrajectory(){
   peanut_cotyledon::GetCleanPath srv;
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Could not call clean path service");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("Could not call clean path service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -181,7 +195,7 @@ void PathPlanningWidget::executeCachedCartesianTrajectory(){
     return;
   }
   ROS_INFO("Sending emit signal");
-  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).cached_path);
+  Q_EMIT executeCartesianTrajectory(clean_path.cached_paths.at(0).joint_trajectory);
 }
 
 void PathPlanningWidget::addFloorCb(){
@@ -197,25 +211,38 @@ void PathPlanningWidget::addFloorCb(){
 
   // Check if floor exists
   peanut_cotyledon::GetFloors floors_srv;
-  if (!get_floors_proxy_.call(floors_srv)){
-    ROS_ERROR("Could not call get_floors_proxy_ service");
-    return;
-  }
-  for(const auto& floor : floors_srv.response.floors){
-    if (floor.name == floor_name){
-      ROS_ERROR_STREAM("Floor: "<<floor_name<<" already exists");
+  
+  try{
+    if (!get_floors_proxy_.call(floors_srv)){
+      ROS_ERROR("Could not call get_floors_proxy_ service");
       return;
     }
+    for(const auto& floor : floors_srv.response.floor_names){
+      if (floor == floor_name){
+        ROS_ERROR_STREAM("Floor: "<<floor_name<<" already exists");
+        return;
+      }
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_floors");
+    return;
   }
 
-  peanut_cotyledon::SetFloors set_floors_srv;
+  peanut_cotyledon::SetFloor set_floor_srv;
   peanut_cotyledon::Floor new_floor;
 
   new_floor.name = floor_name;
-  set_floors_srv.request.floors.push_back(new_floor);
-
-  if (!set_floors_proxy_.call(set_floors_srv)){
-    ROS_ERROR("Could not call set_floors_srv service");
+  set_floor_srv.request.floor = new_floor;
+  
+  try{
+    if (!set_floor_proxy_.call(set_floor_srv)){
+      ROS_ERROR("Could not call set_floors_srv service");
+      return;
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_floor");
     return;
   }
 
@@ -238,25 +265,39 @@ void PathPlanningWidget::addAreaCb(){
   // Check if area exists 
   peanut_cotyledon::GetAreas get_areas_srv;
   get_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
-  if (!get_areas_proxy_.call(get_areas_srv)){
-    ROS_ERROR("Could not call get_areas_srv service");
-    return;
-  }
-  for(const auto& area : get_areas_srv.response.areas){
-    if (area.name == area_name){
-      ROS_ERROR_STREAM("Area: "<<area_name<<" already exists");
+
+  try{
+    if (!get_areas_proxy_.call(get_areas_srv)){
+      ROS_ERROR("Could not call get_areas_srv service");
       return;
     }
+    for(const auto& area : get_areas_srv.response.area_names){
+      if (area == area_name){
+        ROS_ERROR_STREAM("Area: "<<area_name<<" already exists");
+        return;
+      }
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_areas");
+    return;
   }
 
-  peanut_cotyledon::SetAreas set_areas_srv;
+  peanut_cotyledon::SetArea set_areas_srv;
   peanut_cotyledon::Area new_area;
 
   new_area.name = area_name;
-  set_areas_srv.request.areas.push_back(new_area);
+  set_areas_srv.request.area = new_area;
   set_areas_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
-  if (!set_areas_proxy_.call(set_areas_srv)){
-    ROS_ERROR("Could not call set_areas_srv service");
+
+  try{
+    if (!set_area_proxy_.call(set_areas_srv)){
+      ROS_ERROR("Could not call set_areas_srv service");
+      return;
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_area");
     return;
   }
   
@@ -269,21 +310,14 @@ void PathPlanningWidget::addObjectCb(){
   QString text;
   bool ok;
   std::string object_name, object_type, object_model;
-  int object_id;
   peanut_cotyledon::Object desired_object;
 
   text = QInputDialog::getText(this, "Object Name","Object name:", QLineEdit::Normal,"", &ok);
   if(!ok){
     return;
   }
-
-  text = QInputDialog::getText(this, "Object ID","Object ID:", QLineEdit::Normal,"", &ok);
-  if(!ok){
-    return;
-  }
-  object_id = text.toInt();
-
   object_name = text.toStdString();
+  
   text = QInputDialog::getText(this, "Object Type","Object type:", QLineEdit::Normal,"", &ok);
   if(!ok){
     return;
@@ -296,8 +330,8 @@ void PathPlanningWidget::addObjectCb(){
   object_model = text.toStdString();
 
   // Check if object exists
-  if (getObjectWithID(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_id, desired_object)){
-    ROS_ERROR_STREAM("Object with ID: "<<object_id<<" already exists");
+  if (getObjectWithName(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_name, desired_object)){
+    ROS_ERROR_STREAM("Object with name: "<<object_name<<" already exists");
     return;
   }
 
@@ -305,16 +339,15 @@ void PathPlanningWidget::addObjectCb(){
   peanut_cotyledon::Object new_obj;
   new_obj.name = object_name;
   new_obj.type = object_type;
-  new_obj.id = object_id;
   new_obj.model = object_model;
-  if(!setObjectHelper(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_id, new_obj)){
+  if(!setObjectHelper(ui_.floor_combo_box->currentText().toStdString(), ui_.area_combo_box->currentText().toStdString(), object_name, new_obj)){
     ROS_ERROR("Could not add object");
     return;
   }
 
-  ROS_DEBUG_STREAM("Added new object with ID: "<< object_id);
-  ui_.object_id_combo_box->addItem(QString::number(object_id));
-  ui_.object_id_combo_box->setCurrentText(QString::number(object_id));
+  ROS_DEBUG_STREAM("Added new object with name: "<< object_name);
+  ui_.object_name_combo_box->addItem(QString::fromStdString(object_name));
+  ui_.object_name_combo_box->setCurrentText(QString::fromStdString(object_name));
 }
 
 
@@ -326,7 +359,7 @@ void PathPlanningWidget::addTaskCb(){
 
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();
   std::string area_name = ui_.area_combo_box->currentText().toStdString();
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
 
   text = QInputDialog::getText(this, "Task Name","Task Name", QLineEdit::Normal,"", &ok);
   if(!ok){
@@ -344,41 +377,50 @@ void PathPlanningWidget::addTaskCb(){
   peanut_cotyledon::GetTasks tasks_srv;
   tasks_srv.request.floor_name = floor_name;
   tasks_srv.request.area_name = area_name;
-  tasks_srv.request.object_id = object_id;
-  if (!get_tasks_proxy_.call(tasks_srv)){
-    ROS_ERROR("Could not call get_tasks service");
+  tasks_srv.request.object_name = object_name;
+
+  try{
+    if (!get_tasks_proxy_.call(tasks_srv)){
+      ROS_ERROR("Could not call get_tasks service");
+      return;
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_tasks");
     return;
   }
 
-  for(auto& task: tasks_srv.response.tasks){
-    if (task.name == task_name){
+  for(auto& task: tasks_srv.response.task_names){
+    if (task == task_name){
       ROS_ERROR_STREAM("Task: "<<task_name<<" already exists");
       return;
     }
   }
   
   // Add new task
-  peanut_cotyledon::SetTasks set_tasks_srv;
+  peanut_cotyledon::SetTask set_tasks_srv;
   peanut_cotyledon::Task new_task;
   
   set_tasks_srv.request.floor_name = floor_name;
   set_tasks_srv.request.area_name = area_name;
-  set_tasks_srv.request.object_id = object_id;
+  set_tasks_srv.request.object_name = object_name;
   new_task.name = task_name;
   new_task.task_type = task_type;
-  set_tasks_srv.request.tasks.push_back(new_task);
+  set_tasks_srv.request.task = new_task;
 
-  if (set_tasks_proxy_.call(set_tasks_srv)){
-    if (!set_tasks_srv.response.success){
-      ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
+  try{
+    if (set_task_proxy_.call(set_tasks_srv)){
+    }
+    else{
+      ROS_ERROR("Could not call set_tasks service");
       return;
     }
   }
-  else{
-    ROS_ERROR("Could not call set_tasks service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_task");
     return;
   }
-  
+
   // Add empty clean path 
   peanut_cotyledon::CleanPath clean_path;
   peanut_cotyledon::CachedPath cached_path;
@@ -386,19 +428,21 @@ void PathPlanningWidget::addTaskCb(){
 
   set_path_srv.request.floor_name = floor_name;
   set_path_srv.request.area_name = area_name;
-  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.object_name = object_name;
   set_path_srv.request.task_name = task_name;
   clean_path.cached_paths.push_back(cached_path);
   set_path_srv.request.clean_path = clean_path;
   
-  if(set_clean_path_proxy_.call(set_path_srv)){
-    if(!set_path_srv.response.success){
-      ROS_ERROR_STREAM("Unable to update clean path");
-      return; 
+  try{
+    if(set_clean_path_proxy_.call(set_path_srv)){
+    }  
+    else{
+      ROS_INFO("Could not call set_clean_path service");
     }
-  }  
-  else{
-    ROS_INFO("Could not call set_clean_path service");
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
+    return;
   }
 
   ROS_DEBUG_STREAM("Added new task "<<task_name);
@@ -409,57 +453,78 @@ void PathPlanningWidget::addTaskCb(){
 void PathPlanningWidget::ResetMenu(){
   ui_.floor_combo_box->clear();
   ui_.area_combo_box->clear();
-  ui_.object_id_combo_box->clear();
+  ui_.object_name_combo_box->clear();
   ui_.task_combo_box->clear();
 
   peanut_cotyledon::GetFloors floors_srv;
-  if (!get_floors_proxy_.call(floors_srv)){
-    ROS_ERROR("Could not call get_floors_proxy_ service");
-  }
-  else{
-    for(const auto& floor : floors_srv.response.floors){
-      ui_.floor_combo_box->addItem(QString::fromStdString(floor.name));
+
+  try{
+    if (!get_floors_proxy_.call(floors_srv)){
+      ROS_ERROR("Could not call get_floors_proxy_ service");
     }
+    else{
+      for(const auto& floor : floors_srv.response.floor_names){
+        ui_.floor_combo_box->addItem(QString::fromStdString(floor));
+      }
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_floors");
+    return;
   }
 }
 
 void PathPlanningWidget::updateAreaMenu(const QString& floor_name){
   ROS_DEBUG("Updating area menu");
   ui_.area_combo_box->clear();
-  ui_.object_id_combo_box->clear();
+  ui_.object_name_combo_box->clear();
   ui_.task_combo_box->clear();
 
   peanut_cotyledon::GetAreas get_areas_srv;
   get_areas_srv.request.floor_name = floor_name.toStdString();
-  if (!get_areas_proxy_.call(get_areas_srv)){
-    ROS_ERROR("Could not call get_areas_srv service");
-    return;
+
+  try{
+    if (!get_areas_proxy_.call(get_areas_srv)){
+      ROS_ERROR("Could not call get_areas_srv service");
+      return;
+    }
+    for(const auto& area : get_areas_srv.response.area_names){
+        ui_.area_combo_box->addItem(QString::fromStdString(area));
+    }
   }
-  for(const auto& area : get_areas_srv.response.areas){
-      ui_.area_combo_box->addItem(QString::fromStdString(area.name));
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_areas");
+    return;
   }
 }
 
 void PathPlanningWidget::updateObjectIDMenu(const QString& area_name){
   ROS_DEBUG("Updating object menu");
-  ui_.object_id_combo_box->clear();
+  ui_.object_name_combo_box->clear();
   ui_.task_combo_box->clear();
 
   peanut_cotyledon::GetObjects srv;
   srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
   srv.request.area_name = area_name.toStdString();
-  if (get_objects_proxy_.call(srv)){
-    for(auto& obj : srv.response.objects){
-      ui_.object_id_combo_box->addItem(QString::number(obj.id));
+  
+  try{
+    if (get_objects_proxy_.call(srv)){
+      for(auto& obj : srv.response.object_names){
+        ui_.object_name_combo_box->addItem(QString::fromStdString(obj));
+      }
+    }
+    else{
+      ROS_ERROR("Could not call get objects service");
+      return;
     }
   }
-  else{
-    ROS_ERROR("Could not call get objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_objects");
     return;
   }
 }
 
-void PathPlanningWidget::updateTaskMenu(const QString& object_id){
+void PathPlanningWidget::updateTaskMenu(const QString& object_name){
   ROS_DEBUG("Updating task menu");
   ui_.task_combo_box->clear();
 
@@ -467,14 +532,21 @@ void PathPlanningWidget::updateTaskMenu(const QString& object_id){
   peanut_cotyledon::Task desired_task;
   tasks_srv.request.floor_name = ui_.floor_combo_box->currentText().toStdString();
   tasks_srv.request.area_name = ui_.area_combo_box->currentText().toStdString();
-  tasks_srv.request.object_id = object_id.toInt();
-  if (get_tasks_proxy_.call(tasks_srv)){
-    for(auto& task : tasks_srv.response.tasks){
-      ui_.task_combo_box->addItem(QString::fromStdString(task.name));
+  tasks_srv.request.object_name = object_name.toStdString();
+
+  try{
+    if (get_tasks_proxy_.call(tasks_srv)){
+      for(auto& task : tasks_srv.response.task_names){
+        ui_.task_combo_box->addItem(QString::fromStdString(task));
+      }
+    }
+    else{
+      ROS_ERROR("Could not call get_tasks service");
+      return;
     }
   }
-  else{
-     ROS_ERROR("Could not call get_tasks service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_tasks");
     return;
   }
 }
@@ -829,7 +901,7 @@ void PathPlanningWidget::loadPointsObject()
   // Clean path data
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
   peanut_cotyledon::CleanPath clean_path;
   peanut_cotyledon::Object desired_object;
@@ -849,18 +921,24 @@ void PathPlanningWidget::loadPointsObject()
   peanut_cotyledon::GetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
+      ui_.tabWidget->setEnabled(true);
+      ui_.progressBar->hide();
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
-    ui_.tabWidget->setEnabled(true);
-    ui_.progressBar->hide();
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -877,8 +955,8 @@ void PathPlanningWidget::loadPointsObject()
   num_robot_poses = clean_path.object_poses.size();
   
   // Get object transform
-  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
-    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+  if (!getObjectWithName(floor_name, area_name, object_name, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with name "<<object_name);
     return;
   }
   object_world_tfmsg = desired_object.origin;
@@ -921,9 +999,9 @@ void PathPlanningWidget::loadPointsObject()
   }
 
   // Set starting config 
-  if (!clean_path.cached_paths.at(0).cached_path.points.empty()){
+  if (!clean_path.cached_paths.at(0).joint_trajectory.points.empty()){
       ROS_INFO("Cache path is present, loading starting config");
-      std::vector<double> startConfig = clean_path.cached_paths[0].cached_path.points[0].positions;
+      std::vector<double> startConfig = clean_path.cached_paths[0].joint_trajectory.points[0].positions;
       ui_.LineEdit_j1->setText(QString::number(startConfig.at(0)));
       ui_.LineEdit_j2->setText(QString::number(startConfig.at(1)));
       ui_.LineEdit_j3->setText(QString::number(startConfig.at(2)));
@@ -1005,39 +1083,63 @@ void PathPlanningWidget::savePointsTool(){
 void PathPlanningWidget::saveRefNavPose(){
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
   std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
 
   // Check task data
-  if (object_id != 0){
-    ROS_ERROR_STREAM("Cannot save reference nav pose to object with ID: << "<<object_id<<". ID can only be 0");
-    return;
-  }
+  // if (object_name != 0){
+  //   ROS_ERROR_STREAM("Cannot save reference nav pose to object with name: << "<<object_name<<". name can only be 0");
+  //   return;
+  // }
 
   // Check if task exists
   peanut_cotyledon::GetTasks tasks_srv;
   peanut_cotyledon::Task desired_task;
   tasks_srv.request.floor_name = floor_name;
   tasks_srv.request.area_name = area_name;
-  tasks_srv.request.object_id = object_id;
-  if (!get_tasks_proxy_.call(tasks_srv)){
-    ROS_ERROR("Could not call get_tasks service");
+  tasks_srv.request.object_name = object_name;
+
+  try{
+    if (!get_tasks_proxy_.call(tasks_srv)){
+      ROS_ERROR("Could not call get_tasks service");
+      return;
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_tasks");
     return;
   }
 
   // Find task
   bool found_task = false;
-  for(auto& task: tasks_srv.response.tasks){
-    if (task.name == task_name){
-      desired_task = task;
+  for(auto& task: tasks_srv.response.task_names){
+    if (task == task_name){
       found_task = true;
       break;
     }
   }
 
   if(found_task){
+    // Get task 
+    peanut_cotyledon::GetTask task_srv;
+    task_srv.request.floor_name = floor_name;
+    task_srv.request.area_name = area_name;
+    task_srv.request.object_name = object_name;
+
+    try{
+      if (!get_task_proxy_.call(task_srv)){
+        ROS_ERROR("Could not call get_tasks service");
+        return;
+      }
+    }
+    catch(...){
+      ROS_ERROR_STREAM("Exception raised. Could not call get_tasks");
+      return;
+    }
+    desired_task = task_srv.response.task;
+
     // Check task type
     if(desired_task.task_type != peanut_cotyledon::Task::NAVIGATE){
       ROS_ERROR_STREAM("Existing task: "<<desired_task.name<<" is not of type NAVIGATE");
@@ -1051,21 +1153,22 @@ void PathPlanningWidget::saveRefNavPose(){
     new_task.name = task_name;
     new_task.task_type = peanut_cotyledon::Task::NAVIGATE;
 
-    peanut_cotyledon::SetTasks set_tasks_srv;
-    set_tasks_srv.request.floor_name = floor_name;
-    set_tasks_srv.request.area_name = area_name;
-    set_tasks_srv.request.object_id = object_id;
-    set_tasks_srv.request.tasks = tasks_srv.response.tasks;
-    set_tasks_srv.request.tasks.push_back(new_task);
+    peanut_cotyledon::SetTask set_task_srv;
+    set_task_srv.request.floor_name = floor_name;
+    set_task_srv.request.area_name = area_name;
+    set_task_srv.request.object_name = object_name;
+    set_task_srv.request.task = new_task;
 
-    if (set_tasks_proxy_.call(set_tasks_srv)){
-      if (!set_tasks_srv.response.success){
-        ROS_ERROR_STREAM("set_tasks service failed: "<<set_tasks_srv.response.message);
+    try{
+      if (set_task_proxy_.call(set_task_srv)){
+      }
+      else{
+        ROS_ERROR("Could not call set_tasks service");
         return;
       }
     }
-    else{
-      ROS_ERROR("Could not call set_tasks service");
+    catch(...){
+      ROS_ERROR_STREAM("Exception raised. Could not call set_task");
       return;
     }
   }
@@ -1074,15 +1177,22 @@ void PathPlanningWidget::saveRefNavPose(){
   peanut_cotyledon::GetCleanPath clean_path_srv;
   clean_path_srv.request.floor_name = floor_name;
   clean_path_srv.request.area_name = area_name;
-  clean_path_srv.request.object_id = object_id;
+  clean_path_srv.request.object_name = object_name;
   clean_path_srv.request.task_name = task_name;
-  if(get_clean_path_proxy_.call(clean_path_srv))
-  {
-    clean_path = clean_path_srv.response.clean_path;
+
+  try{
+    if(get_clean_path_proxy_.call(clean_path_srv))
+    {
+      clean_path = clean_path_srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Could not call get_clean_path service");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("Could not call get_clean_path service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -1102,7 +1212,7 @@ void PathPlanningWidget::savePointsObject()
        */
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
   std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
@@ -1111,15 +1221,22 @@ void PathPlanningWidget::savePointsObject()
   peanut_cotyledon::GetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
+
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
+      return;
+    }
   }
-  else
-  {
-    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -1143,7 +1260,7 @@ void PathPlanningWidget::savePointsObject()
   clean_path.jump_threshold = ui_.lnEdit_JmpThresh->text().toDouble();
   clean_path.tool_name = ui_.tool_name_lbl->text().toStdString();
 
-  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_id, task_name, clean_path, mesh_name);
+  Q_EMIT saveObjectBtn_press(floor_name, area_name, object_name, task_name, clean_path, mesh_name);
 }
 void PathPlanningWidget::transformPointsToFrame()
 {
@@ -1254,7 +1371,7 @@ void PathPlanningWidget::addNavPoseHelper()
   // Get data
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
@@ -1270,27 +1387,28 @@ void PathPlanningWidget::addNavPoseHelper()
 
   // Get objects
   bool found_tf = false;
-  std::string obj_name;
-  peanut_cotyledon::GetObjects srv;
+  peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  if (get_objects_proxy_.call(srv)){
-    for(auto& obj : srv.response.objects){
-      if(obj.id == object_id){
-        map_object_tf = obj.origin;
-        tf::transformMsgToEigen (map_object_tf, map_object_eigen);
-        found_tf = true;
-        break;
-      }
+  srv.request.object_name = object_name;
+  try{
+    if (get_object_proxy_.call(srv)){
+      map_object_tf = srv.response.object.origin;
+      tf::transformMsgToEigen (map_object_tf, map_object_eigen);
+      found_tf = true;
+    }
+    else{
+      ROS_ERROR("Could not call get objects service");
+      return;
     }
   }
-  else{
-    ROS_ERROR("Could not call get objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_object");
     return;
   }
 
   if(!found_tf){
-    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    ROS_ERROR_STREAM("Could not find object with name"<<object_name);
     return;
   }
 
@@ -1320,16 +1438,22 @@ void PathPlanningWidget::addNavPoseHelper()
   peanut_cotyledon::GetCleanPath path_srv;
   path_srv.request.floor_name = floor_name;
   path_srv.request.area_name = area_name;
-  path_srv.request.object_id = object_id;
+  path_srv.request.object_name = object_name;
   path_srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(path_srv))
-  {
-    clean_path = path_srv.response.clean_path;
+  try{
+    if(get_clean_path_proxy_.call(path_srv))
+    {
+      clean_path = path_srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -1355,19 +1479,22 @@ void PathPlanningWidget::addNavPoseHelper()
   peanut_cotyledon::SetCleanPath set_path_srv;
   set_path_srv.request.floor_name = floor_name;
   set_path_srv.request.area_name = area_name;
-  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.object_name = object_name;
   set_path_srv.request.task_name = task_name;
   set_path_srv.request.clean_path = clean_path;
   
-  if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO("Updated nav_pose for path");
+  try{
+    if(set_clean_path_proxy_.call(set_path_srv)){
     }
     else{
-      ROS_ERROR_STREAM("Could not update nav pose. Error: "<<set_path_srv.response.message);
-      return;
+      ROS_ERROR("Could not call set_clean_path");
     }
-  }  
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
+    return;
+  } 
+   
   
 }
 
@@ -1380,7 +1507,7 @@ void PathPlanningWidget::goToNavPoseHelper(){
   // Get data
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Transforms 
@@ -1397,42 +1524,51 @@ void PathPlanningWidget::goToNavPoseHelper(){
   peanut_cotyledon::GetCleanPath path_srv;
   path_srv.request.floor_name = floor_name;
   path_srv.request.area_name = area_name;
-  path_srv.request.object_id = object_id;
+  path_srv.request.object_name = object_name;
   path_srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(path_srv))
-  {
-    clean_path = path_srv.response.clean_path;
+  try{
+    if(get_clean_path_proxy_.call(path_srv))
+    {
+      clean_path = path_srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
   
   // Get object pose 
   std::string obj_name;
   bool found_tf = false;
-  peanut_cotyledon::GetObjects srv;
+  peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  if (get_objects_proxy_.call(srv)){
-    for(auto& obj : srv.response.objects){
-      if(obj.id == object_id){
-        object_world_tf = obj.origin;
-        tf::transformMsgToEigen (object_world_tf, object_world_eigen);
-        found_tf = true;
-        break;
-      }
+  srv.request.object_name = object_name;
+  
+  try{
+    if (get_object_proxy_.call(srv)){
+      object_world_tf = srv.response.object.origin;
+      tf::transformMsgToEigen (object_world_tf, object_world_eigen);
+      found_tf = true;
+    }
+    else{
+      ROS_ERROR("Could not call get objects service");
+      return;
     }
   }
-  else{
-    ROS_ERROR("Could not call get objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_object_path");
     return;
   }
 
   if(!found_tf){
-    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+    ROS_ERROR_STREAM("Could not find object with name"<<object_name);
     return;
   }
 
@@ -1537,43 +1673,47 @@ void PathPlanningWidget::CheckAllPointsIK(){
   Q_EMIT CheckAllPointsIK_signal();
 }
 
-bool PathPlanningWidget::getObjectWithID(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object& desired_obj){
+bool PathPlanningWidget::getObjectWithName(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object& desired_obj){
   // Get objects
-  peanut_cotyledon::GetObjects srv;
+  peanut_cotyledon::GetObject srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  if (get_objects_proxy_.call(srv)){
-    for(auto& obj : srv.response.objects){
-      if(obj.id == object_id){
-        desired_obj = obj;
-        return true;
-      }
-    }
-  }
-  else{
-    ROS_ERROR("Could not call get objects service");
-    return false;
-  }
-  return false;  
-}
+  srv.request.object_name = object_name;
 
-bool PathPlanningWidget::setObjectHelper(std::string floor_name, std::string area_name, int object_id, peanut_cotyledon::Object obj){
-  // Set objects
-  peanut_cotyledon::SetObjects srv;
-  srv.request.floor_name = floor_name;
-  srv.request.area_name = area_name;
-  srv.request.objects.push_back(obj);
-
-  if (set_objects_proxy_.call(srv)){
-    if(srv.response.success){
+  try{
+    if (get_object_proxy_.call(srv)){
+      desired_obj = srv.response.object;
       return true;
     }
     else{
-      ROS_INFO_STREAM("Unable to set object.Error: "<<srv.response.message);
+      ROS_ERROR("Could not call get objects service");
+      return false;
     }
   }
-  else{
-    ROS_ERROR("Could not call set objects service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_object");
+    return false;
+  }
+}
+
+bool PathPlanningWidget::setObjectHelper(std::string floor_name, std::string area_name, std::string object_name, peanut_cotyledon::Object obj){
+  // Set objects
+  peanut_cotyledon::SetObject srv;
+  srv.request.floor_name = floor_name;
+  srv.request.area_name = area_name;
+  srv.request.object = obj;
+
+  try{
+    if (set_object_proxy_.call(srv)){
+      return true;
+    }
+    else{
+      ROS_ERROR("Could not call set objects service");
+      return false;
+    }
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_object");
     return false;
   } 
 }
@@ -1601,7 +1741,7 @@ void PathPlanningWidget::SetTool(){
   std::string tool = ui_.tool_name_lbl->text().toStdString();
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
   std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::CleanPath clean_path;
@@ -1610,15 +1750,22 @@ void PathPlanningWidget::SetTool(){
   peanut_cotyledon::GetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
+
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_name" << object_name << "task_name" << task_name << "not able to load");
+      return;
+    }
   }
-  else
-  {
-    ROS_INFO_STREAM("clean path floor" << floor_name << "area" << area_name << "object_id" << std::to_string(object_id) << "task_name" << task_name << "not able to load");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -1629,33 +1776,32 @@ void PathPlanningWidget::SetTool(){
   peanut_cotyledon::SetCleanPath set_path_srv;
   set_path_srv.request.floor_name = floor_name;
   set_path_srv.request.area_name = area_name;
-  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.object_name = object_name;
   set_path_srv.request.task_name = task_name;
   set_path_srv.request.clean_path = clean_path;
   
-  if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO_STREAM("Updated tool name to "<<tool);
+  try{
+    if(!set_clean_path_proxy_.call(set_path_srv)){
+      ROS_ERROR("Could not call set_clean_path");
     }
-    else{
-      ROS_ERROR_STREAM("Could not update tool. Error: "<<set_path_srv.response.message);
-      return;
-    }
+  } 
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
+    return;
   }  
-
 }
 
 void PathPlanningWidget::SetMesh(){
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
   std::string mesh_name = ui_.mesh_name_lbl->text().toStdString();
   peanut_cotyledon::Object desired_object;
 
   // Get object transform
-  if (!getObjectWithID(floor_name, area_name, object_id, desired_object)){
-    ROS_ERROR_STREAM("Could not find object with ID"<<object_id);
+  if (!getObjectWithName(floor_name, area_name, object_name, desired_object)){
+    ROS_ERROR_STREAM("Could not find object with name"<<object_name);
     return;
   }
 
@@ -1664,7 +1810,7 @@ void PathPlanningWidget::SetMesh(){
   desired_object.geometry_path.push_back(mesh_name);
 
   // Set object
-  if(setObjectHelper(floor_name, area_name, object_id, desired_object)){
+  if(setObjectHelper(floor_name, area_name, object_name, desired_object)){
     ROS_INFO("Updated mesh name for object");
   }
   else{
@@ -1832,24 +1978,30 @@ bool PathPlanningWidget::GetCleanPath(peanut_cotyledon::CleanPath& clean_path){
   // Clean path data
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Get clean path
   peanut_cotyledon::GetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
-    return true;
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+      return true;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Could not call clean path service");
+      return false;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("Could not call clean path service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return false;
   }
 }
@@ -1858,29 +2010,28 @@ bool PathPlanningWidget::SetCleanPath(const peanut_cotyledon::CleanPath& clean_p
   // Clean path data
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Set clean path
   peanut_cotyledon::SetCleanPath set_path_srv;
   set_path_srv.request.floor_name = floor_name;
   set_path_srv.request.area_name = area_name;
-  set_path_srv.request.object_id = object_id;
+  set_path_srv.request.object_name = object_name;
   set_path_srv.request.task_name = task_name;
   set_path_srv.request.clean_path = clean_path;
   
-  if(set_clean_path_proxy_.call(set_path_srv)){
-    if(set_path_srv.response.success){
-      ROS_INFO("Clean path set");
+  try{
+    if(set_clean_path_proxy_.call(set_path_srv)){
       return true;
-    }
+    } 
     else{
-      ROS_ERROR_STREAM("Could not set clean path. Error: "<<set_path_srv.response.message);
+      ROS_ERROR("Could not call set_clean_path service");
       return false;
     }
-  } 
-  else{
-    ROS_ERROR("Could not call set_clean_path service");
+  }
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call set_clean_path");
     return false;
   }
 }
@@ -1902,7 +2053,7 @@ void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::Jo
 
   std::string floor_name = ui_.floor_combo_box->currentText().toStdString();;
   std::string area_name = ui_.area_combo_box->currentText().toStdString();;
-  int object_id = ui_.object_id_combo_box->currentText().toInt();
+  std::string object_name = ui_.object_name_combo_box->currentText().toStdString();
   std::string task_name = ui_.task_combo_box->currentText().toStdString();
 
   // Get clean path
@@ -1910,16 +2061,22 @@ void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::Jo
   peanut_cotyledon::GetCleanPath srv;
   srv.request.floor_name = floor_name;
   srv.request.area_name = area_name;
-  srv.request.object_id = object_id;
+  srv.request.object_name = object_name;
   srv.request.task_name = task_name;
 
-  if(get_clean_path_proxy_.call(srv))
-  {
-    clean_path = srv.response.clean_path;
+  try{
+    if(get_clean_path_proxy_.call(srv))
+    {
+      clean_path = srv.response.clean_path;
+    }
+    else
+    {
+      ROS_ERROR_STREAM("Could not call clean path service");
+      return;
+    }
   }
-  else
-  {
-    ROS_ERROR_STREAM("Could not call clean path service");
+  catch(...){
+    ROS_ERROR_STREAM("Exception raised. Could not call get_clean_path");
     return;
   }
 
@@ -1929,7 +2086,7 @@ void PathPlanningWidget::saveCachedCartesianTrajectory(const trajectory_msgs::Jo
     clean_path.cached_paths.push_back(cached_path);   
   }
   
-  clean_path.cached_paths.at(0).cached_path = traj;
+  clean_path.cached_paths.at(0).joint_trajectory = traj;
   if (SetCleanPath(clean_path)){
     ROS_INFO("Cached trajectory saved");
   }
