@@ -85,8 +85,6 @@ if(NOT EXISTS "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_INCLUDE_DESTINATION}")
   file(MAKE_DIRECTORY "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_INCLUDE_DESTINATION}")
  endif()
 
-
-
 catkin_package(
   INCLUDE_DIRS ${moveit_cartesian_plan_plugin_INCLUDE_DIRECTORIES}
   LIBRARIES ${PROJECT_NAME}
@@ -118,6 +116,7 @@ endif()
 
 set(CMAKE_CURRENT_BINARY_DIR "${_cmake_current_binary_dir}")
 
+
 include_directories(${moveit_cartesian_plan_plugin_INCLUDE_DIRECTORIES} ${catkin_INCLUDE_DIRS} ${peanut_kinematics_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} ${moveit_cartesian_plan_plugin_SRCS} ${moveit_cartesian_plan_plugin_MOCS} ${moveit_cartesian_plan_plugin_UIS_H}) # ${moveit_cartesian_plan_plugin_UIS_H}
 target_link_libraries(${PROJECT_NAME}
@@ -126,6 +125,7 @@ target_link_libraries(${PROJECT_NAME}
   yaml-cpp
   ${Boost_LIBRARIES}
   ${QT_LIBRARIES})
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 find_package(class_loader)
 class_loader_hide_library_symbols(${PROJECT_NAME})
